@@ -7,6 +7,47 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.9.0] - 2026-06-09
+
+### Added
+- **Receipt System (Customizable) (Phase 10):**
+  - Created domain entity `ReceiptSetting` to store logo path, headers, footers, display toggles, layouts (Thermal vs A4), and hex branding color.
+  - Setup DbSet configurations, unique constraints (one settings context per branch/business), global query filters, and generated migration `AddReceiptCustomization`.
+  - Implemented `ReceiptsController` with endpoints to retrieve, update, and upload brand logo images (handling size limits and file extensions).
+  - Configured static file routing (`UseStaticFiles`) to serve logo assets from `wwwroot/uploads/logos/`.
+  - Added public unauthenticated verification endpoint `GET /api/sales/verify/{id}` using `VerifiedSaleDto` to hide profit margins and cost prices.
+  - Built public verification frontend route `/verify-receipt/[id]` to display digital validation.
+  - Updated Cashier dashboard with customizable print preview modal and media print layout styling.
+  - Built Receipt Settings tab in Owner and Manager dashboards with live previews and logo uploads.
+  - Created and executed PowerShell verification script `verify_phase10.ps1`.
+
+## [0.8.0] - 2026-06-09
+
+### Added
+- **Discounts & Coupons System (Phase 9):**
+  - Created domain entities `Discount` and `Coupon` with enums `DiscountType` and `DiscountTarget`.
+  - Updated `Sale` table with coupon auditing columns `AppliedCouponId` and `AppliedCouponCode`.
+  - Configured query filters, decimal precision, unique index per business on coupon codes, and applied migration `AddPromoSystem`.
+  - Implemented `DiscountsController` and `CouponsController` CRUD endpoints.
+  - Created a real-time coupon code validation endpoint (`GET /api/coupons/validate/{code}`).
+  - Integrated validation checks during Checkout:
+    - Enforced Cashier manual discount limits (max $50.00 and 15% subtotal).
+    - Validated and decremented coupon usage counts.
+  - Updated Cashier dashboard with coupon input fields, real-time code validations, and cashiers manual limit warnings.
+  - Updated Owner/Manager dashboards with Promotions management tab.
+  - Created and executed PowerShell verification script `verify_phase9.ps1`.
+
+## [0.7.0] - 2026-06-09
+
+### Added
+- **POS System Core (Phase 8):**
+  - Created domain models `Sale` and `SaleItem` along with payment method enums.
+  - Configured relationships, cascade rules, decimal precision, global query filters, and applied migration `AddSalesSystem`.
+  - Implemented `SalesController` with transaction locking (`SemaphoreSlim`), stock validation/deduction, and branch isolation.
+  - Updated Cashier dashboard with checkout cart, payment type selectors (Cash, Card, Mixed), split payment math validations, and print-styled thermal receipt outputs.
+  - Updated Owner and Manager dashboards with transaction history listings, detailed receipt lookups, and sales metrics cards.
+  - Created and executed PowerShell verification script `verify_phase8.ps1`.
+
 ## [0.6.0] - 2026-06-09
 
 ### Added

@@ -29,6 +29,7 @@ public class ApplicationDbContext : IdentityDbContext<User, IdentityRole<Guid>, 
     public DbSet<SaleItem> SaleItems => Set<SaleItem>();
     public DbSet<Discount> Discounts => Set<Discount>();
     public DbSet<Coupon> Coupons => Set<Coupon>();
+    public DbSet<ReceiptSetting> ReceiptSettings => Set<ReceiptSetting>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -366,6 +367,40 @@ public class ApplicationDbContext : IdentityDbContext<User, IdentityRole<Guid>, 
 
             // Tenant Filter
             entity.HasQueryFilter(c => !_tenantProvider.TenantId.HasValue || c.BusinessId == _tenantProvider.TenantId);
+        });
+
+        // Configure ReceiptSetting entity
+        builder.Entity<ReceiptSetting>(entity =>
+        {
+            entity.HasKey(rs => rs.Id);
+            entity.Property(rs => rs.HeaderText).HasMaxLength(1000);
+            entity.Property(rs => rs.FooterText).HasMaxLength(1000);
+            entity.Property(rs => rs.LogoUrl).HasMaxLength(1000);
+            entity.Property(rs => rs.ReceiptLayout).HasMaxLength(50).HasDefaultValue("Thermal");
+            entity.Property(rs => rs.CustomBrandingColor).HasMaxLength(7); // hex code like #6366F1
+
+            // Unique constraint on BusinessId + BranchId
+            entity.HasIndex(rs => new { rs.BusinessId, rs.BranchId }).IsUnique();
+
+            // Filtered index to ensure only one business-level settings row exists per Business
+            entity.HasIndex(rs => rs.BusinessId)
+                .HasDatabaseName("IX_ReceiptSettings_BusinessId_GlobalOnly")
+                .HasFilter("\"BranchId\" IS NULL")
+                .IsUnique();
+
+            // Relationships
+            entity.HasOne(rs => rs.Business)
+                .WithMany()
+                .HasForeignKey(rs => rs.BusinessId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(rs => rs.Branch)
+                .WithMany()
+                .HasForeignKey(rs => rs.BranchId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // Tenant Filter
+            entity.HasQueryFilter(rs => !_tenantProvider.TenantId.HasValue || rs.BusinessId == _tenantProvider.TenantId);
         });
     }
 }

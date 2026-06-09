@@ -395,4 +395,48 @@ public class SalesController : ControllerBase
 
         return Ok(dto);
     }
+
+    [AllowAnonymous]
+    [HttpGet("verify/{id}")]
+    public async Task<IActionResult> VerifySale(Guid id)
+    {
+        var sale = await _context.Sales
+            .IgnoreQueryFilters()
+            .Include(s => s.Business)
+            .Include(s => s.Branch)
+            .Include(s => s.User)
+            .Include(s => s.SaleItems)
+                .ThenInclude(si => si.Product)
+            .FirstOrDefaultAsync(s => s.Id == id);
+
+        if (sale == null)
+        {
+            return NotFound(new { Message = "Receipt not found or invalid verification ID." });
+        }
+
+        var dto = new VerifiedSaleDto
+        {
+            SaleId = sale.Id,
+            BusinessName = sale.Business.Name,
+            BranchName = sale.Branch?.Name ?? "Global/Shared",
+            BranchAddress = sale.Branch?.Address,
+            BranchPhone = sale.Branch?.Phone,
+            CashierName = $"{sale.User.FirstName} {sale.User.LastName}",
+            Subtotal = sale.Subtotal,
+            DiscountAmount = sale.DiscountAmount,
+            TaxAmount = sale.TaxAmount,
+            Total = sale.Total,
+            PaymentMethod = sale.PaymentMethod.ToString(),
+            CreatedAt = sale.CreatedAt,
+            Items = sale.SaleItems.Select(si => new VerifiedSaleItemDto
+            {
+                ProductName = si.Product?.Name ?? "Product",
+                Quantity = si.Quantity,
+                UnitPrice = si.UnitPrice,
+                Total = si.Total
+            }).ToList()
+        };
+
+        return Ok(dto);
+    }
 }

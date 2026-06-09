@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/context/AuthContext";
+import { Printer } from "lucide-react";
 
 interface CartItem {
   id: string;
@@ -16,6 +17,9 @@ export default function CashierDashboard() {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [showSuccess, setShowSuccess] = useState(false);
   const [branchName, setBranchName] = useState("Loading branch...");
+  const [branchAddress, setBranchAddress] = useState("");
+  const [branchPhone, setBranchPhone] = useState("");
+  const [receiptSetting, setReceiptSetting] = useState<any>(null);
   const [products, setProducts] = useState<any[]>([]);
   const [loadingProducts, setLoadingProducts] = useState(false);
   
@@ -94,6 +98,8 @@ export default function CashierDashboard() {
       if (res.ok) {
         const data = await res.json();
         setBranchName(data.name);
+        setBranchAddress(data.address || "");
+        setBranchPhone(data.phone || "");
       } else {
         setBranchName("Unknown Branch");
       }
@@ -120,10 +126,29 @@ export default function CashierDashboard() {
     }
   };
 
+  const fetchReceiptSetting = async () => {
+    if (!token) return;
+    try {
+      const url = user?.branchId 
+        ? `http://localhost:5149/api/receipts?branchId=${user.branchId}`
+        : `http://localhost:5149/api/receipts`;
+      const res = await fetch(url, {
+        headers: { "Authorization": `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setReceiptSetting(data);
+      }
+    } catch (err) {
+      console.error("Failed to fetch receipt settings", err);
+    }
+  };
+
   useEffect(() => {
     if (token) {
       fetchBranchInfo();
       fetchProducts();
+      fetchReceiptSetting();
     }
   }, [token, user?.branchId]);
 
@@ -310,7 +335,8 @@ export default function CashierDashboard() {
   // Calculations moved to top of component
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col h-screen overflow-hidden font-sans">
+    <>
+      <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col h-screen overflow-hidden font-sans print:hidden">
       {/* Header */}
       <header className="border-b border-slate-900 bg-slate-900/40 backdrop-blur-md h-16 shrink-0">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-full flex items-center justify-between">
@@ -721,101 +747,532 @@ export default function CashierDashboard() {
         </div>
       )}
 
-      {/* Thermal Receipt Print Modal */}
+      {/* Receipt Print Modal */}
       {showReceiptModal && completedSale && (
-        <div className="fixed inset-0 bg-slate-950/70 backdrop-blur-md flex justify-center items-center p-4 z-50 animate-in fade-in duration-200">
-          <div className="w-full max-w-sm p-6 bg-white text-slate-900 border border-slate-200 rounded-2xl shadow-2xl flex flex-col font-mono text-xs">
-            {/* Store details */}
-            <div className="text-center space-y-1 pb-4 border-b border-dashed border-slate-300">
-              <h3 className="text-sm font-bold tracking-wider">VENDORA POS PRO</h3>
-              <p className="text-[10px] text-slate-500">{completedSale.branchName}</p>
-              <p className="text-[9px] text-slate-400">Date: {new Date(completedSale.createdAt).toLocaleString()}</p>
-              <p className="text-[9px] text-slate-400">Receipt ID: {completedSale.id.substring(0, 8).toUpperCase()}</p>
+        <div className="fixed inset-0 bg-slate-950/70 backdrop-blur-md flex justify-center items-center p-4 z-50 animate-in fade-in duration-200 overflow-y-auto">
+          <div className="w-full max-w-lg p-6 bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl flex flex-col my-8">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-bold text-slate-100">Receipt Preview</h3>
+              <span className="text-xs bg-slate-850 px-2 py-1 rounded text-slate-400 font-medium">
+                Layout: {receiptSetting?.receiptLayout || "Thermal"}
+              </span>
             </div>
 
-            {/* Cashier information */}
-            <div className="py-2 border-b border-dashed border-slate-300 text-[9px] text-slate-500">
-              <span>Cashier: {completedSale.cashierName}</span>
-            </div>
-
-            {/* Sales Items */}
-            <div className="flex-1 py-4 space-y-3 max-h-60 overflow-y-auto">
-              {completedSale.items.map((item: any) => (
-                <div key={item.id} className="flex justify-between items-start text-[10px]">
-                  <div className="space-y-0.5">
-                    <p className="font-bold">{item.productName}</p>
-                    <p className="text-[9px] text-slate-500">{item.sku}</p>
-                    <p className="text-[9px] text-slate-500">
-                      {item.quantity} x ${item.unitPrice.toFixed(2)}
-                    </p>
+            {/* Preview Box */}
+            <div className="flex-1 bg-white text-slate-900 p-6 rounded-xl overflow-y-auto max-h-[60vh] border border-slate-200">
+              {receiptSetting?.receiptLayout === "A4" ? (
+                /* A4 Invoice Preview */
+                <div className="font-sans text-xs space-y-6" style={{ borderColor: receiptSetting?.customBrandingColor || "#6366F1" }}>
+                  {/* Top Header */}
+                  <div className="flex justify-between items-start border-b pb-4" style={{ borderBottomColor: receiptSetting?.customBrandingColor || "#6366F1" }}>
+                    <div>
+                      {receiptSetting?.showLogo && receiptSetting?.logoUrl ? (
+                        <img src={receiptSetting.logoUrl} alt="Logo" className="max-h-12 max-w-[150px] mb-2 object-contain" />
+                      ) : (
+                        <div className="h-10 w-10 bg-slate-200 rounded flex items-center justify-center font-bold text-slate-600 mb-2">Logo</div>
+                      )}
+                      <h2 className="text-base font-black tracking-tight">{receiptSetting?.businessName || "VENDORA POS PRO"}</h2>
+                      {receiptSetting?.showBranchDetails && (
+                        <div className="text-[10px] text-slate-500 mt-1 leading-relaxed">
+                          <p className="font-semibold text-slate-700">{completedSale.branchName}</p>
+                          {branchAddress && <p>{branchAddress}</p>}
+                          {branchPhone && <p>Phone: {branchPhone}</p>}
+                        </div>
+                      )}
+                    </div>
+                    <div className="text-right">
+                      <h1 className="text-lg font-black uppercase tracking-wider" style={{ color: receiptSetting?.customBrandingColor || "#6366F1" }}>INVOICE</h1>
+                      <p className="text-[10px] font-semibold text-slate-500 mt-1">Invoice ID: {completedSale.id.toUpperCase()}</p>
+                      <p className="text-[10px] text-slate-500">Date: {new Date(completedSale.createdAt).toLocaleString()}</p>
+                      {receiptSetting?.showCashierInfo && (
+                        <p className="text-[10px] text-slate-500 mt-2">
+                          Cashier: <span className="font-semibold">{completedSale.cashierName}</span>
+                        </p>
+                      )}
+                    </div>
                   </div>
-                  <span className="font-bold">${item.total.toFixed(2)}</span>
-                </div>
-              ))}
-            </div>
 
-            {/* Calculations summaries */}
-            <div className="border-t border-dashed border-slate-300 pt-3 space-y-1.5 text-[10px]">
-              <div className="flex justify-between">
-                <span>Subtotal</span>
-                <span>${completedSale.subtotal.toFixed(2)}</span>
-              </div>
-              {completedSale.discountAmount > 0 && (
-                <div className="flex justify-between text-red-650 font-bold">
-                  <span>Discount</span>
-                  <span>-${completedSale.discountAmount.toFixed(2)}</span>
-                </div>
-              )}
-              <div className="flex justify-between">
-                <span>Sales Tax</span>
-                <span>${completedSale.taxAmount.toFixed(2)}</span>
-              </div>
-              <div className="flex justify-between text-sm font-bold border-t border-double border-slate-400 pt-2 text-slate-900">
-                <span>TOTAL</span>
-                <span>${completedSale.total.toFixed(2)}</span>
-              </div>
-            </div>
+                  {/* Bill To */}
+                  <div>
+                    <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Transaction Details</h4>
+                    <p className="font-semibold text-slate-700">Payment: {completedSale.paymentMethod}</p>
+                    {completedSale.paymentMethod === "Mixed" && completedSale.paymentDetails && (
+                      (() => {
+                        try {
+                          const parsed = JSON.parse(completedSale.paymentDetails);
+                          return (
+                            <p className="text-[10px] text-slate-500">
+                              (Cash: ${parsed.cash.toFixed(2)} | Transfer: ${parsed.transfer.toFixed(2)} | Card: ${parsed.pos.toFixed(2)})
+                            </p>
+                          );
+                        } catch (e) { return null; }
+                      })()
+                    )}
+                  </div>
 
-            {/* Payment Details */}
-            <div className="mt-4 p-2.5 bg-slate-50 border border-slate-100 rounded-lg space-y-1 text-[9px] text-slate-600">
-              <div className="flex justify-between">
-                <span>Payment Mode:</span>
-                <span className="font-bold tracking-wide">{completedSale.paymentMethod}</span>
-              </div>
-              {completedSale.paymentMethod === "Mixed" && completedSale.paymentDetails && (
-                (() => {
-                  try {
-                    const parsed = JSON.parse(completedSale.paymentDetails);
-                    return (
-                      <div className="pl-2 border-l border-slate-200 space-y-0.5 mt-1 font-bold">
-                        {parsed.cash > 0 && <div className="flex justify-between"><span>• Cash:</span><span>${parsed.cash.toFixed(2)}</span></div>}
-                        {parsed.transfer > 0 && <div className="flex justify-between"><span>• Transfer:</span><span>${parsed.transfer.toFixed(2)}</span></div>}
-                        {parsed.pos > 0 && <div className="flex justify-between"><span>• Card POS:</span><span>${parsed.pos.toFixed(2)}</span></div>}
+                  {/* Invoice Table */}
+                  <table className="w-full text-left border-collapse text-xs">
+                    <thead>
+                      <tr className="border-b text-[10px] text-slate-500 uppercase font-semibold" style={{ borderBottomColor: receiptSetting?.customBrandingColor || "#6366F1" }}>
+                        <th className="py-2">SKU</th>
+                        <th className="py-2">Item Description</th>
+                        <th className="py-2 text-right">Qty</th>
+                        <th className="py-2 text-right">Price</th>
+                        <th className="py-2 text-right">Total</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {completedSale.items.map((item: any) => (
+                        <tr key={item.id}>
+                          <td className="py-2.5 font-mono text-[10px] text-slate-500">{item.sku}</td>
+                          <td className="py-2.5 font-semibold text-slate-800">{item.productName}</td>
+                          <td className="py-2.5 text-right text-slate-650">{item.quantity}</td>
+                          <td className="py-2.5 text-right text-slate-650">${item.unitPrice.toFixed(2)}</td>
+                          <td className="py-2.5 text-right font-bold text-slate-800">${item.total.toFixed(2)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+
+                  {/* Calculations */}
+                  <div className="flex justify-end pt-4">
+                    <div className="w-48 space-y-1.5 text-right">
+                      <div className="flex justify-between text-[10px] text-slate-500">
+                        <span>Subtotal</span>
+                        <span className="font-medium text-slate-800">${completedSale.subtotal.toFixed(2)}</span>
                       </div>
-                    );
-                  } catch (e) { return null; }
-                })()
+                      {completedSale.discountAmount > 0 && (
+                        <div className="flex justify-between text-[10px] text-red-600 font-semibold">
+                          <span>Discount</span>
+                          <span>-${completedSale.discountAmount.toFixed(2)}</span>
+                        </div>
+                      )}
+                      <div className="flex justify-between text-[10px] text-slate-500">
+                        <span>Sales Tax (8%)</span>
+                        <span className="font-medium text-slate-800">${completedSale.taxAmount.toFixed(2)}</span>
+                      </div>
+                      <div className="flex justify-between border-t pt-2 text-sm font-black" style={{ borderTopColor: receiptSetting?.customBrandingColor || "#6366F1", color: receiptSetting?.customBrandingColor || "#6366F1" }}>
+                        <span>Total Paid</span>
+                        <span>${completedSale.total.toFixed(2)}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Bottom Footer & QR Verification */}
+                  <div className="flex justify-between items-end border-t pt-4 border-slate-100 mt-6">
+                    <div className="max-w-[70%] space-y-2">
+                      {receiptSetting?.headerText && (
+                        <p className="text-[10px] text-slate-550 italic leading-relaxed">
+                          Note: {receiptSetting.headerText}
+                        </p>
+                      )}
+                      {receiptSetting?.footerText && (
+                        <p className="text-[10px] font-medium text-slate-600">
+                          {receiptSetting.footerText}
+                        </p>
+                      )}
+                    </div>
+                    {receiptSetting?.showQRCode && (
+                      <div className="text-center space-y-1">
+                        <img 
+                          src={`https://api.qrserver.com/v1/create-qr-code/?size=70x70&data=${encodeURIComponent(`${window.location.origin}/verify-receipt/${completedSale.id}`)}`}
+                          alt="Verification QR"
+                          className="w-16 h-16 object-contain border p-1 rounded"
+                        />
+                        <p className="text-[8px] font-bold text-slate-400 uppercase tracking-wider">Verify Receipt</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                /* Thermal Layout Preview */
+                <div className="font-mono text-[11px] leading-relaxed text-slate-800 space-y-4">
+                  {/* Top Header */}
+                  <div className="text-center space-y-1 pb-3 border-b border-dashed">
+                    {receiptSetting?.showLogo && receiptSetting?.logoUrl && (
+                      <div className="flex justify-center mb-2">
+                        <img src={receiptSetting.logoUrl} alt="Logo" className="max-h-10 max-w-[120px] object-contain" />
+                      </div>
+                    )}
+                    <h3 className="text-xs font-black tracking-wider">{receiptSetting?.businessName || "VENDORA POS PRO"}</h3>
+                    {receiptSetting?.showBranchDetails && (
+                      <div className="text-[10px] text-slate-500">
+                        <p className="font-bold">{completedSale.branchName}</p>
+                        {branchAddress && <p>{branchAddress}</p>}
+                        {branchPhone && <p>Phone: {branchPhone}</p>}
+                      </div>
+                    )}
+                    {receiptSetting?.headerText && (
+                      <p className="text-[10px] text-slate-600 italic pt-1">{receiptSetting.headerText}</p>
+                    )}
+                    <p className="text-[9px] text-slate-400 mt-1">Date: {new Date(completedSale.createdAt).toLocaleString()}</p>
+                    <p className="text-[9px] text-slate-400">ID: {completedSale.id.substring(0, 8).toUpperCase()}</p>
+                  </div>
+
+                  {/* Cashier */}
+                  {receiptSetting?.showCashierInfo && (
+                    <div className="text-[9px] text-slate-500">
+                      <span>Cashier: {completedSale.cashierName}</span>
+                    </div>
+                  )}
+
+                  {/* Sales Items */}
+                  <div className="space-y-2 py-2 border-b border-dashed">
+                    {completedSale.items.map((item: any) => (
+                      <div key={item.id} className="flex justify-between items-start">
+                        <div className="space-y-0.5">
+                          <p className="font-bold">{item.productName}</p>
+                          <p className="text-[9px] text-slate-500">{item.sku}</p>
+                          <p className="text-[9px] text-slate-500">
+                            {item.quantity} x ${item.unitPrice.toFixed(2)}
+                          </p>
+                        </div>
+                        <span className="font-bold">${item.total.toFixed(2)}</span>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Calculations */}
+                  <div className="space-y-1 pt-1 text-[10px]">
+                    <div className="flex justify-between">
+                      <span>Subtotal</span>
+                      <span>${completedSale.subtotal.toFixed(2)}</span>
+                    </div>
+                    {completedSale.discountAmount > 0 && (
+                      <div className="flex justify-between text-red-650 font-bold">
+                        <span>Discount</span>
+                        <span>-${completedSale.discountAmount.toFixed(2)}</span>
+                      </div>
+                    )}
+                    <div className="flex justify-between">
+                      <span>Sales Tax</span>
+                      <span>${completedSale.taxAmount.toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between text-xs font-bold border-t border-double pt-2 text-slate-900">
+                      <span>TOTAL</span>
+                      <span>${completedSale.total.toFixed(2)}</span>
+                    </div>
+                  </div>
+
+                  {/* Payment Details */}
+                  <div className="p-2 bg-slate-50 border rounded space-y-1 text-[9px] text-slate-655">
+                    <div className="flex justify-between">
+                      <span>Payment Mode:</span>
+                      <span className="font-bold">{completedSale.paymentMethod}</span>
+                    </div>
+                    {completedSale.paymentMethod === "Mixed" && completedSale.paymentDetails && (
+                      (() => {
+                        try {
+                          const parsed = JSON.parse(completedSale.paymentDetails);
+                          return (
+                            <div className="pl-2 border-l space-y-0.5 mt-1 font-bold">
+                              {parsed.cash > 0 && <div className="flex justify-between"><span>• Cash:</span><span>${parsed.cash.toFixed(2)}</span></div>}
+                              {parsed.transfer > 0 && <div className="flex justify-between"><span>• Transfer:</span><span>${parsed.transfer.toFixed(2)}</span></div>}
+                              {parsed.pos > 0 && <div className="flex justify-between"><span>• Card:</span><span>${parsed.pos.toFixed(2)}</span></div>}
+                            </div>
+                          );
+                        } catch (e) { return null; }
+                      })()
+                    )}
+                  </div>
+
+                  {/* Footer message */}
+                  <div className="text-center pt-3 border-t border-dashed text-[9px] text-slate-550 space-y-1">
+                    {receiptSetting?.footerText ? (
+                      <p className="font-bold">{receiptSetting.footerText}</p>
+                    ) : (
+                      <p className="font-bold">Thank you for your patronage!</p>
+                    )}
+                    <p>Please keep this receipt.</p>
+                  </div>
+
+                  {/* QR Verification */}
+                  {receiptSetting?.showQRCode && (
+                    <div className="flex flex-col items-center pt-4 mt-2 border-t border-dashed space-y-1.5">
+                      <img 
+                        src={`https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${encodeURIComponent(`${window.location.origin}/verify-receipt/${completedSale.id}`)}`}
+                        alt="Verification QR"
+                        className="w-20 h-20 object-contain p-1 border rounded bg-white"
+                      />
+                      <p className="text-[8px] font-bold text-slate-450 uppercase tracking-wider text-center">Verify Transaction</p>
+                    </div>
+                  )}
+                </div>
               )}
             </div>
 
-            {/* Footer message */}
-            <div className="text-center pt-6 mt-4 border-t border-dashed border-slate-300 text-[9px] text-slate-400 space-y-0.5">
-              <p className="font-bold text-slate-600">Thank you for your patronage!</p>
-              <p>Please keep this receipt as proof of purchase.</p>
+            {/* Modal Controls */}
+            <div className="grid grid-cols-2 gap-3 mt-4">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowReceiptModal(false);
+                  setCompletedSale(null);
+                }}
+                className="py-2.5 bg-slate-800 text-slate-300 text-xs font-bold rounded-xl hover:bg-slate-750 transition-colors"
+              >
+                Close Window
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  window.print();
+                }}
+                className="py-2.5 bg-indigo-650 text-white text-xs font-bold rounded-xl hover:bg-indigo-700 transition-colors flex items-center justify-center gap-2"
+              >
+                <Printer className="w-4 h-4" /> Print Receipt
+              </button>
             </div>
-
-            <button
-              onClick={() => {
-                setShowReceiptModal(false);
-                setCompletedSale(null);
-              }}
-              className="mt-6 py-2.5 w-full bg-slate-900 text-white font-bold rounded-xl text-xs hover:bg-slate-800 transition-colors"
-            >
-              Close Receipt
-            </button>
           </div>
         </div>
       )}
-    </div>
+
+      {/* Print-only container */}
+      {completedSale && (
+        <div className="hidden print:block font-sans text-slate-900 bg-white min-h-screen">
+          {receiptSetting?.receiptLayout === "A4" ? (
+            /* A4 Print Layout */
+            <div className="p-8 max-w-[210mm] mx-auto space-y-8" style={{ fontSize: "12px" }}>
+              {/* Top Header */}
+              <div className="flex justify-between items-start border-b pb-6" style={{ borderColor: receiptSetting?.customBrandingColor || "#6366F1" }}>
+                <div>
+                  {receiptSetting?.showLogo && receiptSetting?.logoUrl && (
+                    <img src={receiptSetting.logoUrl} alt="Logo" className="max-h-16 max-w-[200px] mb-3 object-contain" />
+                  )}
+                  <h1 className="text-xl font-black tracking-tight">{receiptSetting?.businessName || "VENDORA POS PRO"}</h1>
+                  {receiptSetting?.showBranchDetails && (
+                    <div className="text-[11px] text-slate-500 mt-2 leading-relaxed">
+                      <p className="font-bold text-slate-700">{completedSale.branchName}</p>
+                      {branchAddress && <p>{branchAddress}</p>}
+                      {branchPhone && <p>Phone: {branchPhone}</p>}
+                    </div>
+                  )}
+                </div>
+                <div className="text-right">
+                  <h2 className="text-2xl font-black uppercase tracking-wider" style={{ color: receiptSetting?.customBrandingColor || "#6366F1" }}>INVOICE</h2>
+                  <p className="text-xs font-semibold text-slate-500 mt-1">Invoice ID: {completedSale.id.toUpperCase()}</p>
+                  <p className="text-xs text-slate-500">Date: {new Date(completedSale.createdAt).toLocaleString()}</p>
+                  {receiptSetting?.showCashierInfo && (
+                    <p className="text-xs text-slate-500 mt-2">
+                      Cashier: <span className="font-semibold">{completedSale.cashierName}</span>
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              {/* Bill/Pay Info */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <h3 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">Payment Details</h3>
+                  <p className="font-bold text-slate-750">{completedSale.paymentMethod}</p>
+                  {completedSale.paymentMethod === "Mixed" && completedSale.paymentDetails && (
+                    (() => {
+                      try {
+                        const parsed = JSON.parse(completedSale.paymentDetails);
+                        return (
+                          <div className="text-xs text-slate-500 space-y-0.5 mt-1">
+                            {parsed.cash > 0 && <p>Cash: ${parsed.cash.toFixed(2)}</p>}
+                            {parsed.transfer > 0 && <p>Transfer: ${parsed.transfer.toFixed(2)}</p>}
+                            {parsed.pos > 0 && <p>Card POS: ${parsed.pos.toFixed(2)}</p>}
+                          </div>
+                        );
+                      } catch (e) { return null; }
+                    })()
+                  )}
+                </div>
+              </div>
+
+              {/* Items Table */}
+              <table className="w-full text-left border-collapse" style={{ fontSize: "11px" }}>
+                <thead>
+                  <tr className="border-b uppercase font-bold text-slate-500" style={{ borderColor: receiptSetting?.customBrandingColor || "#6366F1" }}>
+                    <th className="py-2.5">SKU</th>
+                    <th className="py-2.5">Item Description</th>
+                    <th className="py-2.5 text-right">Qty</th>
+                    <th className="py-2.5 text-right">Unit Price</th>
+                    <th className="py-2.5 text-right">Total</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {completedSale.items.map((item: any) => (
+                    <tr key={item.id}>
+                      <td className="py-3 font-mono text-slate-500">{item.sku}</td>
+                      <td className="py-3 font-semibold text-slate-800">{item.productName}</td>
+                      <td className="py-3 text-right text-slate-600">{item.quantity}</td>
+                      <td className="py-3 text-right text-slate-600">${item.unitPrice.toFixed(2)}</td>
+                      <td className="py-3 text-right font-bold text-slate-800">${item.total.toFixed(2)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+
+              {/* Summary Calculations */}
+              <div className="flex justify-end pt-4">
+                <div className="w-64 space-y-2 text-right">
+                  <div className="flex justify-between text-slate-500">
+                    <span>Subtotal</span>
+                    <span className="font-semibold text-slate-800">${completedSale.subtotal.toFixed(2)}</span>
+                  </div>
+                  {completedSale.discountAmount > 0 && (
+                    <div className="flex justify-between text-red-600 font-bold">
+                      <span>Discount</span>
+                      <span>-${completedSale.discountAmount.toFixed(2)}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between text-slate-500">
+                    <span>Sales Tax (8%)</span>
+                    <span className="font-semibold text-slate-800">${completedSale.taxAmount.toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between border-t pt-2.5 text-base font-black" style={{ borderColor: receiptSetting?.customBrandingColor || "#6366F1", color: receiptSetting?.customBrandingColor || "#6366F1" }}>
+                    <span>Total Paid</span>
+                    <span>${completedSale.total.toFixed(2)}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Bottom section */}
+              <div className="flex justify-between items-end border-t pt-6 border-slate-100 mt-12">
+                <div className="max-w-[65%] space-y-2">
+                  {receiptSetting?.headerText && (
+                    <p className="text-[10px] text-slate-500 italic leading-relaxed">
+                      Note: {receiptSetting.headerText}
+                    </p>
+                  )}
+                  {receiptSetting?.footerText && (
+                    <p className="text-[11px] font-bold text-slate-600">
+                      {receiptSetting.footerText}
+                    </p>
+                  )}
+                </div>
+                {receiptSetting?.showQRCode && (
+                  <div className="text-center space-y-1">
+                    <img 
+                      src={`https://api.qrserver.com/v1/create-qr-code/?size=90x90&data=${encodeURIComponent(`${window.location.origin}/verify-receipt/${completedSale.id}`)}`}
+                      alt="Verification QR"
+                      className="w-20 h-20 object-contain p-1 border rounded bg-white"
+                    />
+                    <p className="text-[8px] font-black text-slate-450 tracking-wider uppercase">Verify Receipt</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          ) : (
+            /* Thermal Print Layout (80mm Width optimized) */
+            <div className="mx-auto p-4 w-[74mm] font-mono" style={{ fontSize: "11px", lineHeight: "1.4" }}>
+              {/* Store Header */}
+              <div className="text-center space-y-1 pb-3 border-b border-dashed border-slate-400">
+                {receiptSetting?.showLogo && receiptSetting?.logoUrl && (
+                  <div className="flex justify-center mb-2">
+                    <img src={receiptSetting.logoUrl} alt="Logo" className="max-h-12 max-w-[150px] object-contain" />
+                  </div>
+                )}
+                <h3 className="text-xs font-black tracking-widest">{receiptSetting?.businessName || "VENDORA POS PRO"}</h3>
+                {receiptSetting?.showBranchDetails && (
+                  <div className="text-[10px] text-slate-600">
+                    <p className="font-bold">{completedSale.branchName}</p>
+                    {branchAddress && <p>{branchAddress}</p>}
+                    {branchPhone && <p>Phone: {branchPhone}</p>}
+                  </div>
+                )}
+                {receiptSetting?.headerText && (
+                  <p className="text-[9px] text-slate-650 italic pt-0.5">{receiptSetting.headerText}</p>
+                )}
+                <p className="text-[9px] text-slate-500 mt-1">Date: {new Date(completedSale.createdAt).toLocaleString()}</p>
+                <p className="text-[9px] text-slate-500 font-bold">ID: {completedSale.id.toUpperCase()}</p>
+              </div>
+
+              {/* Cashier Info */}
+              {receiptSetting?.showCashierInfo && (
+                <div className="py-2 border-b border-dashed border-slate-400 text-[9px] text-slate-600">
+                  <span>Cashier: {completedSale.cashierName}</span>
+                </div>
+              )}
+
+              {/* Items List */}
+              <div className="py-3 border-b border-dashed border-slate-400 space-y-2">
+                {completedSale.items.map((item: any) => (
+                  <div key={item.id} className="flex justify-between items-start text-[10px]">
+                    <div className="space-y-0.5 pr-2">
+                      <p className="font-bold">{item.productName}</p>
+                      <p className="text-[9px] text-slate-500">{item.sku}</p>
+                      <p className="text-[9px] text-slate-500">
+                        {item.quantity} x ${item.unitPrice.toFixed(2)}
+                      </p>
+                    </div>
+                    <span className="font-bold shrink-0">${item.total.toFixed(2)}</span>
+                  </div>
+                ))}
+              </div>
+
+              {/* Financial calculations */}
+              <div className="py-2 space-y-1 text-[10px]">
+                <div className="flex justify-between">
+                  <span>Subtotal</span>
+                  <span>${completedSale.subtotal.toFixed(2)}</span>
+                </div>
+                {completedSale.discountAmount > 0 && (
+                  <div className="flex justify-between font-bold text-red-600">
+                    <span>Discount</span>
+                    <span>-${completedSale.discountAmount.toFixed(2)}</span>
+                  </div>
+                )}
+                <div className="flex justify-between">
+                  <span>Sales Tax (8%)</span>
+                  <span>${completedSale.taxAmount.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between text-xs font-black border-t border-double border-slate-900 pt-2">
+                  <span>TOTAL PAID</span>
+                  <span>${completedSale.total.toFixed(2)}</span>
+                </div>
+              </div>
+
+              {/* Payment Details */}
+              <div className="p-2 bg-slate-50 border rounded-md text-[9px] text-slate-655 space-y-1">
+                <div className="flex justify-between font-bold">
+                  <span>Payment Mode:</span>
+                  <span>{completedSale.paymentMethod}</span>
+                </div>
+                {completedSale.paymentMethod === "Mixed" && completedSale.paymentDetails && (
+                  (() => {
+                    try {
+                      const parsed = JSON.parse(completedSale.paymentDetails);
+                      return (
+                        <div className="pl-2 border-l border-slate-300 space-y-0.5 mt-1">
+                          {parsed.cash > 0 && <div className="flex justify-between"><span>• Cash:</span><span>${parsed.cash.toFixed(2)}</span></div>}
+                          {parsed.transfer > 0 && <div className="flex justify-between"><span>• Transfer:</span><span>${parsed.transfer.toFixed(2)}</span></div>}
+                          {parsed.pos > 0 && <div className="flex justify-between"><span>• Card POS:</span><span>${parsed.pos.toFixed(2)}</span></div>}
+                        </div>
+                      );
+                    } catch (e) { return null; }
+                  })()
+                )}
+              </div>
+
+              {/* Footer text */}
+              <div className="text-center pt-4 text-[9px] text-slate-650 space-y-1">
+                {receiptSetting?.footerText ? (
+                  <p className="font-bold">{receiptSetting.footerText}</p>
+                ) : (
+                  <p className="font-bold">Thank you for your patronage!</p>
+                )}
+                <p>Please keep this receipt for verification.</p>
+              </div>
+
+              {/* QR Code */}
+              {receiptSetting?.showQRCode && (
+                <div className="flex flex-col items-center pt-4 border-t border-dashed border-slate-400 mt-4 space-y-1.5">
+                  <img 
+                    src={`https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${encodeURIComponent(`${window.location.origin}/verify-receipt/${completedSale.id}`)}`}
+                    alt="Verification QR"
+                    className="w-24 h-24 object-contain border p-1 bg-white rounded"
+                  />
+                  <p className="text-[8px] font-bold text-slate-450 tracking-wide uppercase">Scan to Verify</p>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+    </>
   );
 }

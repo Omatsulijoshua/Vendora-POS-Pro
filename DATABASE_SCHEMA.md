@@ -87,6 +87,76 @@ erDiagram
         DateTime CreatedAt
         DateTime UpdatedAt
     }
+    Sales {
+        Guid Id PK
+        Guid BusinessId FK
+        Guid BranchId FK
+        Guid UserId FK
+        decimal Subtotal
+        decimal DiscountAmount
+        decimal TaxAmount
+        decimal Total
+        int PaymentMethod
+        string PaymentDetails
+        Guid AppliedCouponId FK
+        string AppliedCouponCode
+        DateTime CreatedAt
+    }
+    SaleItems {
+        Guid Id PK
+        Guid SaleId FK
+        Guid ProductId FK
+        int Quantity
+        decimal UnitPrice
+        decimal CostPrice
+        decimal DiscountAmount
+        decimal Total
+    }
+    Discounts {
+        Guid Id PK
+        Guid BusinessId FK
+        string Name
+        string Description
+        int Type
+        decimal Value
+        int Target
+        Guid ProductId FK
+        decimal MinCartAmount
+        DateTime StartDate
+        DateTime EndDate
+        bool IsActive
+        DateTime CreatedAt
+    }
+    Coupons {
+        Guid Id PK
+        Guid BusinessId FK
+        string Code
+        int Type
+        decimal Value
+        decimal MinCartAmount
+        int UsageLimit
+        int UsageCount
+        DateTime StartDate
+        DateTime EndDate
+        bool IsActive
+        DateTime CreatedAt
+    }
+    ReceiptSettings {
+        Guid Id PK
+        Guid BusinessId FK
+        Guid BranchId FK
+        string LogoUrl
+        string HeaderText
+        string FooterText
+        bool ShowLogo
+        bool ShowBranchDetails
+        bool ShowCashierInfo
+        bool ShowQRCode
+        string ReceiptLayout
+        string CustomBrandingColor
+        DateTime CreatedAt
+        DateTime UpdatedAt
+    }
 
     AspNetUsers }o--o| Businesses : "operates in active business"
     AspNetUsers }o--o| Branches : "works in active branch"
@@ -106,6 +176,17 @@ erDiagram
     StockTransfers }o--|| Branches : "destination to"
     StockTransfers }o--|| AspNetUsers : "initiated by"
     StockTransfers }o--o| AspNetUsers : "resolved by"
+    Businesses ||--o{ Sales : "has sales"
+    Branches ||--o{ Sales : "recorded at"
+    AspNetUsers ||--o{ Sales : "processed by"
+    Sales ||--|{ SaleItems : "contains"
+    Products ||--o{ SaleItems : "sold in"
+    Sales }o--o| Coupons : "applied coupon"
+    Businesses ||--o{ Discounts : "defines"
+    Products ||--o{ Discounts : "discounted by"
+    Businesses ||--o{ Coupons : "creates"
+    Businesses ||--o{ ReceiptSettings : "configures"
+    Branches ||--o{ ReceiptSettings : "overrides"
 ```
 
 ---
@@ -227,3 +308,110 @@ Tracks stock transfers between branches within the business, maintaining full st
 | `RejectionReason` | `varchar(500)` | `NULL` | Explanation for transfer rejection |
 | `CreatedAt` | `timestamp` | `NOT NULL` | Initiation timestamp |
 | `UpdatedAt` | `timestamp` | `NOT NULL` | Resolution timestamp |
+
+---
+
+## 4. Sales & Transactions Tables
+
+### `Sales`
+Stores transaction headers for all branch/business sales.
+
+| Column | Type | Constraints | Description |
+| :--- | :--- | :--- | :--- |
+| `Id` | `uuid` | `PRIMARY KEY` | Unique identifier |
+| `BusinessId` | `uuid` | `NOT NULL, FOREIGN KEY` | References `Businesses.Id` |
+| `BranchId` | `uuid` | `NULL, FOREIGN KEY` | References `Branches.Id` (Null if SharedStockMode is active) |
+| `UserId` | `uuid` | `NOT NULL, FOREIGN KEY` | References `AspNetUsers.Id` (Cashier/Manager) |
+| `Subtotal` | `numeric(18,2)` | `NOT NULL` | Sale subtotal before discounts |
+| `DiscountAmount` | `numeric(18,2)` | `NOT NULL` | Applied discount amount |
+| `TaxAmount` | `numeric(18,2)` | `NOT NULL` | Applied tax amount |
+| `Total` | `numeric(18,2)` | `NOT NULL` | Final checkout total |
+| `PaymentMethod` | `integer` | `NOT NULL` | Payment method enum (0=Cash, 1=Card, 2=Mixed) |
+| `PaymentDetails` | `varchar(1000)` | `NULL` | JSON metadata for split payments |
+| `AppliedCouponId` | `uuid` | `NULL, FOREIGN KEY` | References `Coupons.Id` |
+| `AppliedCouponCode` | `varchar(50)` | `NULL` | Audit copy of the coupon code used |
+| `CreatedAt` | `timestamp` | `NOT NULL` | Sale creation timestamp |
+
+### `SaleItems`
+Stores line items for each transaction.
+
+| Column | Type | Constraints | Description |
+| :--- | :--- | :--- | :--- |
+| `Id` | `uuid` | `PRIMARY KEY` | Unique identifier |
+| `SaleId` | `uuid` | `NOT NULL, FOREIGN KEY` | References `Sales.Id` (Cascade delete) |
+| `ProductId` | `uuid` | `NOT NULL, FOREIGN KEY` | References `Products.Id` (Restrict delete) |
+| `Quantity` | `integer` | `NOT NULL` | Number of items purchased |
+| `UnitPrice` | `numeric(18,2)` | `NOT NULL` | Unit price at purchase time |
+| `CostPrice` | `numeric(18,2)` | `NOT NULL` | Cost price captured at purchase time |
+| `DiscountAmount` | `numeric(18,2)` | `NOT NULL` | Line-item specific discount |
+| `Total` | `numeric(18,2)` | `NOT NULL` | Final line total |
+
+---
+
+## 5. Promotions & Discounts Tables
+
+### `Discounts`
+Stores active promotion campaigns linked to products or order rules.
+
+| Column | Type | Constraints | Description |
+| :--- | :--- | :--- | :--- |
+| `Id` | `uuid` | `PRIMARY KEY` | Unique identifier |
+| `BusinessId` | `uuid` | `NOT NULL, FOREIGN KEY` | References `Businesses.Id` |
+| `Name` | `varchar(200)` | `NOT NULL` | Name of the discount |
+| `Description` | `varchar(500)` | `NULL` | Description of the discount |
+| `Type` | `integer` | `NOT NULL` | DiscountType enum (0=Percentage, 1=FixedAmount) |
+| `Value` | `numeric(18,2)` | `NOT NULL` | Discount value (e.g. 10% or $10.00) |
+| `Target` | `integer` | `NOT NULL` | DiscountTarget enum (0=Product, 1=Cart) |
+| `ProductId` | `uuid` | `NULL, FOREIGN KEY` | Product targeted by discount (if any) |
+| `MinCartAmount` | `numeric(18,2)` | `NULL` | Minimum spend to trigger discount |
+| `StartDate` | `timestamp` | `NOT NULL` | Promotion valid from |
+| `EndDate` | `timestamp` | `NOT NULL` | Promotion valid until |
+| `IsActive` | `boolean` | `NOT NULL, DEFAULT true` | Active flag |
+| `CreatedAt` | `timestamp` | `NOT NULL` | Creation timestamp |
+
+### `Coupons`
+Stores business-specific coupon codes with usage limits.
+
+| Column | Type | Constraints | Description |
+| :--- | :--- | :--- | :--- |
+| `Id` | `uuid` | `PRIMARY KEY` | Unique identifier |
+| `BusinessId` | `uuid` | `NOT NULL, FOREIGN KEY` | References `Businesses.Id` |
+| `Code` | `varchar(50)` | `NOT NULL` | Promo code string (Unique within Business) |
+| `Type` | `integer` | `NOT NULL` | DiscountType enum (0=Percentage, 1=FixedAmount) |
+| `Value` | `numeric(18,2)` | `NOT NULL` | Promo value |
+| `MinCartAmount` | `numeric(18,2)` | `NULL` | Minimum spend required |
+| `UsageLimit` | `integer` | `NULL` | Max allowed uses of this coupon |
+| `UsageCount` | `integer` | `NOT NULL, DEFAULT 0` | Current number of times applied |
+| `StartDate` | `timestamp` | `NOT NULL` | Coupon valid from |
+| `EndDate` | `timestamp` | `NOT NULL` | Coupon valid until |
+| `IsActive` | `boolean` | `NOT NULL, DEFAULT true` | Active flag |
+| `CreatedAt` | `timestamp` | `NOT NULL` | Creation timestamp |
+
+---
+
+## 6. Customization & Settings Tables
+
+### `ReceiptSettings`
+Stores business and branch customizable layouts and print preferences.
+
+| Column | Type | Constraints | Description |
+| :--- | :--- | :--- | :--- |
+| `Id` | `uuid` | `PRIMARY KEY` | Unique identifier |
+| `BusinessId` | `uuid` | `NOT NULL, FOREIGN KEY` | References `Businesses.Id` |
+| `BranchId` | `uuid` | `NULL, FOREIGN KEY` | References `Branches.Id` (Null if business default) |
+| `LogoUrl` | `varchar(1000)` | `NULL` | Public path to uploaded logo image |
+| `HeaderText` | `varchar(1000)` | `NULL` | Custom header note printed at top |
+| `FooterText` | `varchar(1000)` | `NULL` | Custom footer note printed at bottom |
+| `ShowLogo` | `boolean` | `NOT NULL, DEFAULT true` | Toggle to print logo |
+| `ShowBranchDetails`| `boolean` | `NOT NULL, DEFAULT true` | Toggle to print branch info |
+| `ShowCashierInfo` | `boolean` | `NOT NULL, DEFAULT true` | Toggle to print cashier name |
+| `ShowQRCode` | `boolean` | `NOT NULL, DEFAULT true` | Toggle to print public receipt verification QR |
+| `ReceiptLayout` | `varchar(50)` | `NOT NULL, DEFAULT 'Thermal'`| Print layout style ("Thermal" or "A4") |
+| `CustomBrandingColor`| `varchar(7)`| `NULL` | Hex color code for A4/branded accents |
+| `CreatedAt` | `timestamp` | `NOT NULL` | Creation timestamp |
+| `UpdatedAt` | `timestamp` | `NOT NULL` | Update timestamp |
+
+> Unique constraints: 
+> - Unique index on `(BusinessId, BranchId)` restricts each context to one settings row.
+> - A filtered index `IX_ReceiptSettings_BusinessId_GlobalOnly` on `BusinessId` where `"BranchId" IS NULL` ensures exactly one global defaults record per business.
+

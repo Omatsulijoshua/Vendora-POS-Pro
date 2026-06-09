@@ -8,7 +8,7 @@ export default function ManagerDashboard() {
   const [branchName, setBranchName] = useState("Loading branch...");
   const [products, setProducts] = useState<any[]>([]);
   const [loadingProducts, setLoadingProducts] = useState(false);
-  const [activeTab, setActiveTab] = useState<"overview" | "stock" | "transfers" | "sales" | "promo">("overview");
+  const [activeTab, setActiveTab] = useState<"overview" | "stock" | "transfers" | "sales" | "promo" | "receipt">("overview");
 
   // Phase 7 Stock Transfers
   const [transfers, setTransfers] = useState<any[]>([]);
@@ -551,10 +551,127 @@ export default function ManagerDashboard() {
       if (res.ok) {
         fetchCoupons();
       }
+  // Phase 10 Receipt settings states
+  const [receiptHeaderText, setReceiptHeaderText] = useState("");
+  const [receiptFooterText, setReceiptFooterText] = useState("");
+  const [receiptShowLogo, setReceiptShowLogo] = useState(true);
+  const [receiptShowBranchDetails, setReceiptShowBranchDetails] = useState(true);
+  const [receiptShowCashierInfo, setReceiptShowCashierInfo] = useState(true);
+  const [receiptShowQRCode, setReceiptShowQRCode] = useState(true);
+  const [receiptLayout, setReceiptLayout] = useState("Thermal");
+  const [receiptCustomBrandingColor, setReceiptCustomBrandingColor] = useState("#6366F1");
+  const [receiptLogoUrl, setReceiptLogoUrl] = useState<string | null>(null);
+  const [uploadingLogo, setUploadingLogo] = useState(false);
+  const [receiptSaveSuccess, setReceiptSaveSuccess] = useState("");
+  const [receiptSaveError, setReceiptSaveError] = useState("");
+  const [receiptConfigName, setReceiptConfigName] = useState("Vendora POS Pro");
+
+  const fetchReceiptSettingsForManager = async () => {
+    if (!token || !user?.branchId) return;
+    try {
+      const res = await fetch(`http://localhost:5149/api/receipts?branchId=${user.branchId}`, {
+        headers: { "Authorization": `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setReceiptHeaderText(data.headerText || "");
+        setReceiptFooterText(data.footerText || "");
+        setReceiptShowLogo(data.showLogo);
+        setReceiptShowBranchDetails(data.showBranchDetails);
+        setReceiptShowCashierInfo(data.showCashierInfo);
+        setReceiptShowQRCode(data.showQRCode);
+        setReceiptLayout(data.receiptLayout || "Thermal");
+        setReceiptCustomBrandingColor(data.customBrandingColor || "#6366F1");
+        setReceiptLogoUrl(data.logoUrl);
+        setReceiptConfigName(data.businessName || "Vendora POS Pro");
+      }
     } catch (err) {
       console.error(err);
     }
   };
+
+  const handleSaveReceiptSettings = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setReceiptSaveSuccess("");
+    setReceiptSaveError("");
+    try {
+      const payload = {
+        branchId: user?.branchId,
+        logoUrl: receiptLogoUrl,
+        headerText: receiptHeaderText.trim() || null,
+        footerText: receiptFooterText.trim() || null,
+        showLogo: receiptShowLogo,
+        showBranchDetails: receiptShowBranchDetails,
+        showCashierInfo: receiptShowCashierInfo,
+        showQRCode: receiptShowQRCode,
+        receiptLayout: receiptLayout,
+        customBrandingColor: receiptCustomBrandingColor
+      };
+      
+      const res = await fetch("http://localhost:5149/api/receipts", {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify(payload)
+      });
+      
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.message || "Failed to update receipt settings.");
+      }
+      
+      setReceiptSaveSuccess("Receipt settings updated successfully!");
+      setTimeout(() => setReceiptSaveSuccess(""), 4000);
+      
+      fetchReceiptSettingsForManager();
+    } catch (err: any) {
+      setReceiptSaveError(err.message || "Failed to save settings.");
+    }
+  };
+
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    setUploadingLogo(true);
+    setReceiptSaveSuccess("");
+    setReceiptSaveError("");
+    
+    const formData = new FormData();
+    formData.append("file", file);
+    
+    try {
+      const res = await fetch("http://localhost:5149/api/receipts/upload-logo", {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${token}`
+        },
+        body: formData
+      });
+      
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.message || "Failed to upload logo.");
+      }
+      
+      const data = await res.json();
+      setReceiptLogoUrl(data.logoUrl);
+      setReceiptSaveSuccess("Logo uploaded successfully! Remember to save settings.");
+      setTimeout(() => setReceiptSaveSuccess(""), 4000);
+    } catch (err: any) {
+      setReceiptSaveError(err.message || "Failed to upload logo.");
+    } finally {
+      setUploadingLogo(false);
+    }
+  };
+
+  useEffect(() => {
+    if (token && user?.branchId) {
+      fetchReceiptSettingsForManager();
+    }
+  }, [token, user?.branchId]);
 
   // Derived stats
   const lowStockItems = products.filter(p => p.underStockAlert);
@@ -648,6 +765,12 @@ export default function ManagerDashboard() {
             className={`pb-3 border-b-2 transition-colors ${activeTab === "promo" ? "border-emerald-500 text-emerald-450" : "border-transparent text-slate-400 hover:text-slate-200"}`}
           >
             Discounts & Coupons
+          </button>
+          <button
+            onClick={() => setActiveTab("receipt")}
+            className={`pb-3 border-b-2 transition-colors ${activeTab === "receipt" ? "border-emerald-500 text-emerald-450" : "border-transparent text-slate-400 hover:text-slate-200"}`}
+          >
+            Receipt Settings
           </button>
         </div>
 
@@ -1143,6 +1266,416 @@ export default function ManagerDashboard() {
                   </table>
                 </div>
               )}
+            </div>
+          </div>
+        )}
+
+        {activeTab === "receipt" && (
+          <div className="space-y-8 animate-in fade-in duration-300">
+            {/* Header */}
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-slate-900 pb-5">
+              <div>
+                <h3 className="font-bold text-lg text-slate-200">Receipt Customization</h3>
+                <p className="text-xs text-slate-500">Configure layouts, logos, headers, footers, and verification QR codes for this branch</p>
+              </div>
+            </div>
+
+            {/* Main Content Layout: Two Columns */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+              {/* Left Column: Form Settings (7 cols) */}
+              <div className="lg:col-span-7 border border-slate-900 bg-slate-900/10 rounded-2xl p-6 space-y-6">
+                <form onSubmit={handleSaveReceiptSettings} className="space-y-6">
+                  {/* Context Info */}
+                  <div className="p-3 bg-indigo-950/20 border border-indigo-900/40 rounded-xl">
+                    <p className="text-xs font-bold text-indigo-400">Branch Specific Settings</p>
+                    <p className="text-[10px] text-slate-400 mt-0.5">
+                      You are editing settings for <strong className="text-slate-300">{branchName}</strong>. These settings override business defaults.
+                    </p>
+                  </div>
+
+                  {/* Layout selector */}
+                  <div className="space-y-2">
+                    <label className="block text-xs font-semibold text-slate-300">Invoice / Receipt Layout</label>
+                    <div className="grid grid-cols-2 gap-3">
+                      {["Thermal", "A4"].map((layout) => (
+                        <button
+                          key={layout}
+                          type="button"
+                          onClick={() => setReceiptLayout(layout)}
+                          className={`py-3 px-4 rounded-xl text-xs font-bold border transition-all flex flex-col items-center justify-center gap-1 ${
+                            receiptLayout === layout
+                              ? "bg-indigo-650/20 text-indigo-400 border-indigo-500/50"
+                              : "bg-slate-950/40 border-slate-800 text-slate-400 hover:border-slate-700"
+                          }`}
+                        >
+                          <span>{layout === "Thermal" ? "Thermal Receipt" : "A4 Invoice"}</span>
+                          <span className="text-[9px] font-normal text-slate-500">
+                            {layout === "Thermal" ? "80mm Roll Width" : "Standard Paper Page"}
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Logo Upload Section */}
+                  <div className="space-y-3">
+                    <label className="block text-xs font-semibold text-slate-300">Custom Logo (JPG/PNG, Max 2MB)</label>
+                    <div className="flex items-center gap-4">
+                      {receiptLogoUrl ? (
+                        <div className="relative group border border-slate-800 rounded-lg p-2 bg-slate-950/40">
+                          <img src={receiptLogoUrl} alt="Logo Preview" className="h-16 w-32 object-contain rounded" />
+                          <button
+                            type="button"
+                            onClick={() => setReceiptLogoUrl(null)}
+                            className="absolute -top-2 -right-2 h-5 w-5 bg-red-650 hover:bg-red-750 text-white rounded-full flex items-center justify-center text-[10px] shadow"
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="h-16 w-32 border border-dashed border-slate-800 rounded-lg flex items-center justify-center text-[10px] text-slate-500 bg-slate-950/20">
+                          No Logo Uploaded
+                        </div>
+                      )}
+                      
+                      <div className="flex-1">
+                        <label className="inline-block px-4 py-2 bg-slate-950 border border-slate-800 hover:bg-slate-900 text-slate-300 hover:text-slate-100 text-xs font-semibold rounded-lg cursor-pointer transition-colors">
+                          {uploadingLogo ? "Uploading..." : "Upload Logo"}
+                          <input
+                            type="file"
+                            accept="image/jpeg,image/png"
+                            onChange={handleLogoUpload}
+                            disabled={uploadingLogo}
+                            className="hidden"
+                          />
+                        </label>
+                        <p className="text-[9px] text-slate-500 mt-1">Recommended aspect ratio: 2:1 or square.</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Toggles */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="flex items-center justify-between p-3 bg-slate-950/40 border border-slate-850 rounded-xl">
+                      <div>
+                        <p className="text-xs font-bold text-slate-300">Show Logo</p>
+                        <p className="text-[9px] text-slate-500">Render business logo</p>
+                      </div>
+                      <input
+                        type="checkbox"
+                        checked={receiptShowLogo}
+                        onChange={(e) => setReceiptShowLogo(e.target.checked)}
+                        className="h-4 w-4 accent-indigo-500 rounded"
+                      />
+                    </div>
+                    <div className="flex items-center justify-between p-3 bg-slate-950/40 border border-slate-850 rounded-xl">
+                      <div>
+                        <p className="text-xs font-bold text-slate-300">Show Branch Details</p>
+                        <p className="text-[9px] text-slate-500">Render address & phone</p>
+                      </div>
+                      <input
+                        type="checkbox"
+                        checked={receiptShowBranchDetails}
+                        onChange={(e) => setReceiptShowBranchDetails(e.target.checked)}
+                        className="h-4 w-4 accent-indigo-500 rounded"
+                      />
+                    </div>
+                    <div className="flex items-center justify-between p-3 bg-slate-950/40 border border-slate-850 rounded-xl">
+                      <div>
+                        <p className="text-xs font-bold text-slate-300">Show Cashier Info</p>
+                        <p className="text-[9px] text-slate-500">Render cashier name</p>
+                      </div>
+                      <input
+                        type="checkbox"
+                        checked={receiptShowCashierInfo}
+                        onChange={(e) => setReceiptShowCashierInfo(e.target.checked)}
+                        className="h-4 w-4 accent-indigo-500 rounded"
+                      />
+                    </div>
+                    <div className="flex items-center justify-between p-3 bg-slate-950/40 border border-slate-850 rounded-xl">
+                      <div>
+                        <p className="text-xs font-bold text-slate-300">Show Verification QR</p>
+                        <p className="text-[9px] text-slate-500">Link to verification page</p>
+                      </div>
+                      <input
+                        type="checkbox"
+                        checked={receiptShowQRCode}
+                        onChange={(e) => setReceiptShowQRCode(e.target.checked)}
+                        className="h-4 w-4 accent-indigo-500 rounded"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Header / Footer Text */}
+                  <div className="space-y-4">
+                    <div className="space-y-1">
+                      <label className="block text-xs font-semibold text-slate-300">Header Text (Greeting)</label>
+                      <input
+                        type="text"
+                        placeholder="e.g. Welcome to our store!"
+                        value={receiptHeaderText}
+                        onChange={(e) => setReceiptHeaderText(e.target.value)}
+                        className="w-full px-3 py-2 bg-slate-950 border border-slate-800 focus:border-indigo-500 rounded-lg text-xs text-slate-200 focus:outline-none"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="block text-xs font-semibold text-slate-300">Footer Text (Terms/Greeting)</label>
+                      <textarea
+                        rows={2}
+                        placeholder="e.g. Thank you for your patronage. Please keep this receipt."
+                        value={receiptFooterText}
+                        onChange={(e) => setReceiptFooterText(e.target.value)}
+                        className="w-full px-3 py-2 bg-slate-950 border border-slate-800 focus:border-indigo-500 rounded-lg text-xs text-slate-200 focus:outline-none resize-none"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Branding Color Picker */}
+                  {receiptLayout === "A4" && (
+                    <div className="space-y-2 animate-in slide-in-from-top-2 duration-200">
+                      <label className="block text-xs font-semibold text-slate-300">Branding Theme Accent Color (for A4)</label>
+                      <div className="flex items-center gap-3">
+                        <input
+                          type="color"
+                          value={receiptCustomBrandingColor}
+                          onChange={(e) => setReceiptCustomBrandingColor(e.target.value)}
+                          className="h-9 w-12 bg-transparent cursor-pointer border-0"
+                        />
+                        <input
+                          type="text"
+                          value={receiptCustomBrandingColor}
+                          onChange={(e) => setReceiptCustomBrandingColor(e.target.value)}
+                          className="px-3 py-1.5 w-28 bg-slate-950 border border-slate-800 focus:border-indigo-500 rounded-lg text-xs text-slate-200 font-mono"
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Success / Error Messages */}
+                  {receiptSaveSuccess && (
+                    <div className="p-3 bg-emerald-950/40 border border-emerald-900 text-emerald-400 rounded-lg text-xs font-medium">
+                      ✓ {receiptSaveSuccess}
+                    </div>
+                  )}
+                  {receiptSaveError && (
+                    <div className="p-3 bg-red-950/40 border border-red-900 text-red-400 rounded-lg text-xs font-medium">
+                      ✕ {receiptSaveError}
+                    </div>
+                  )}
+
+                  <button
+                    type="submit"
+                    className="w-full py-3 bg-gradient-to-r from-indigo-500 to-purple-655 hover:from-indigo-600 hover:to-purple-750 text-white font-bold text-xs rounded-xl transition-all shadow-md shadow-indigo-650/15"
+                  >
+                    Save Configuration
+                  </button>
+                </form>
+              </div>
+
+              {/* Right Column: Live Preview Panel (5 cols) */}
+              <div className="lg:col-span-5 space-y-3">
+                <h4 className="font-bold text-slate-300 text-sm pl-1">Live Receipt Preview</h4>
+                <div className="border border-slate-855 bg-white text-slate-900 p-6 rounded-2xl shadow-xl overflow-y-auto max-h-[75vh]">
+                  {receiptLayout === "A4" ? (
+                    /* A4 Live Invoice Preview */
+                    <div className="font-sans text-[10px] space-y-5" style={{ borderColor: receiptCustomBrandingColor }}>
+                      <div className="flex justify-between items-start border-b pb-3" style={{ borderBottomColor: receiptCustomBrandingColor }}>
+                        <div>
+                          {receiptShowLogo && receiptLogoUrl ? (
+                            <img src={receiptLogoUrl} alt="Logo" className="max-h-10 max-w-[120px] mb-2 object-contain" />
+                          ) : (
+                            <div className="h-8 w-8 bg-slate-200 rounded flex items-center justify-center font-bold text-slate-500 mb-2">Logo</div>
+                          )}
+                          <h2 className="text-xs font-black tracking-tight text-slate-900">{receiptConfigName}</h2>
+                          {receiptShowBranchDetails && (
+                            <div className="text-[8px] text-slate-505 mt-1">
+                              <p className="font-bold">{branchName}</p>
+                              <p>Branch Specific Address</p>
+                              <p>Branch Specific Phone</p>
+                            </div>
+                          )}
+                        </div>
+                        <div className="text-right">
+                          <h1 className="text-sm font-black uppercase tracking-wider" style={{ color: receiptCustomBrandingColor }}>INVOICE</h1>
+                          <p className="text-[8px] font-bold text-slate-505 mt-1">Invoice ID: INV-2026-009</p>
+                          <p className="text-[8px] text-slate-400">Date: 6/9/2026, 12:00 PM</p>
+                          {receiptShowCashierInfo && (
+                            <p className="text-[8px] text-slate-400">
+                              Cashier: <span className="font-semibold">Jane Doe</span>
+                            </p>
+                          )}
+                        </div>
+                      </div>
+
+                      <div>
+                        <h4 className="text-[8px] font-bold text-slate-450 uppercase tracking-widest mb-0.5">Transaction Details</h4>
+                        <p className="font-semibold text-slate-700">Payment: Cash</p>
+                      </div>
+
+                      <table className="w-full text-left border-collapse text-[9px]">
+                        <thead>
+                          <tr className="border-b uppercase text-slate-550 font-bold" style={{ borderBottomColor: receiptCustomBrandingColor }}>
+                            <th className="py-1">SKU</th>
+                            <th className="py-1">Item Description</th>
+                            <th className="py-1 text-right">Qty</th>
+                            <th className="py-1 text-right">Price</th>
+                            <th className="py-1 text-right">Total</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100 text-slate-700">
+                          <tr>
+                            <td className="py-1.5 font-mono text-[8px]">PROD-SKU-990</td>
+                            <td className="py-1.5 font-semibold text-slate-800">Wireless Super Mouse</td>
+                            <td className="py-1.5 text-right">1</td>
+                            <td className="py-1.5 text-right">$45.00</td>
+                            <td className="py-1.5 text-right font-bold text-slate-900">$45.00</td>
+                          </tr>
+                          <tr>
+                            <td className="py-1.5 font-mono text-[8px]">PROD-SKU-102</td>
+                            <td className="py-1.5 font-semibold text-slate-800">Mechanical Keyboard RGB</td>
+                            <td className="py-1.5 text-right">1</td>
+                            <td className="py-1.5 text-right">$95.00</td>
+                            <td className="py-1.5 text-right font-bold text-slate-900">$95.00</td>
+                          </tr>
+                        </tbody>
+                      </table>
+
+                      <div className="flex justify-end pt-2">
+                        <div className="w-40 space-y-1 text-right text-[9px]">
+                          <div className="flex justify-between text-slate-500">
+                            <span>Subtotal</span>
+                            <span>$140.00</span>
+                          </div>
+                          <div className="flex justify-between text-slate-500">
+                            <span>Sales Tax (8%)</span>
+                            <span>$11.20</span>
+                          </div>
+                          <div className="flex justify-between border-t pt-1.5 font-bold" style={{ borderTopColor: receiptCustomBrandingColor, color: receiptCustomBrandingColor }}>
+                            <span>Total Paid</span>
+                            <span>$151.20</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex justify-between items-end border-t pt-3 border-slate-100 mt-4">
+                        <div className="max-w-[70%] space-y-1">
+                          {receiptHeaderText && (
+                            <p className="text-[8px] text-slate-500 italic">
+                              Note: {receiptHeaderText}
+                            </p>
+                          )}
+                          {receiptFooterText && (
+                            <p className="text-[9px] font-bold text-slate-600">
+                              {receiptFooterText}
+                            </p>
+                          )}
+                        </div>
+                        {receiptShowQRCode && (
+                          <div className="text-center space-y-0.5">
+                            <img 
+                              src={`https://api.qrserver.com/v1/create-qr-code/?size=60x60&data=${encodeURIComponent(`${window.location.origin}/verify-receipt/00000000`)}`}
+                              alt="Verification QR"
+                              className="w-12 h-12 object-contain border p-0.5 rounded bg-white"
+                            />
+                            <p className="text-[7px] font-bold text-slate-400 uppercase tracking-widest">Verify</p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ) : (
+                    /* Thermal Live Roll Preview */
+                    <div className="font-mono text-[10px] leading-relaxed text-slate-800 space-y-4">
+                      <div className="text-center space-y-0.5 pb-2.5 border-b border-dashed border-slate-400">
+                        {receiptShowLogo && receiptLogoUrl && (
+                          <div className="flex justify-center mb-1.5">
+                            <img src={receiptLogoUrl} alt="Logo" className="max-h-9 max-w-[100px] object-contain" />
+                          </div>
+                        )}
+                        <h3 className="text-xs font-black tracking-widest">{receiptConfigName}</h3>
+                        {receiptShowBranchDetails && (
+                          <div className="text-[9px] text-slate-500">
+                            <p className="font-bold">{branchName}</p>
+                            <p>Branch Specific Address</p>
+                            <p>Branch Specific Phone</p>
+                          </div>
+                        )}
+                        {receiptHeaderText && (
+                          <p className="text-[9px] text-slate-600 italic pt-0.5">{receiptHeaderText}</p>
+                        )}
+                        <p className="text-[8px] text-slate-400 mt-1">Date: 6/9/2026, 12:00 PM</p>
+                        <p className="text-[8px] text-slate-400 font-bold">ID: SALE-98A2</p>
+                      </div>
+
+                      {receiptShowCashierInfo && (
+                        <div className="py-1 border-b border-dashed border-slate-400 text-[8px] text-slate-500">
+                          <span>Cashier: Jane Doe</span>
+                        </div>
+                      )}
+
+                      <div className="space-y-1.5 py-1.5 border-b border-dashed border-slate-400">
+                        <div className="flex justify-between items-start">
+                          <div className="space-y-0.5">
+                            <p className="font-bold">Wireless Super Mouse</p>
+                            <p className="text-[8px] text-slate-505">PROD-SKU-990</p>
+                            <p className="text-[8px] text-slate-505">1 x $45.00</p>
+                          </div>
+                          <span className="font-bold">$45.00</span>
+                        </div>
+                        <div className="flex justify-between items-start">
+                          <div className="space-y-0.5">
+                            <p className="font-bold">Mechanical Keyboard RGB</p>
+                            <p className="text-[8px] text-slate-555">PROD-SKU-102</p>
+                            <p className="text-[8px] text-slate-555">1 x $95.00</p>
+                          </div>
+                          <span className="font-bold">$95.00</span>
+                        </div>
+                      </div>
+
+                      <div className="space-y-0.5 pt-0.5 text-[9px]">
+                        <div className="flex justify-between">
+                          <span>Subtotal</span>
+                          <span>$140.00</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Sales Tax (8%)</span>
+                          <span>$11.20</span>
+                        </div>
+                        <div className="flex justify-between text-xs font-black border-t border-double pt-1.5 text-slate-900">
+                          <span>TOTAL PAID</span>
+                          <span>$151.20</span>
+                        </div>
+                      </div>
+
+                      <div className="p-1.5 bg-slate-50 border rounded text-[8px] text-slate-600 space-y-0.5">
+                        <div className="flex justify-between font-bold">
+                          <span>Payment Mode:</span>
+                          <span>Cash</span>
+                        </div>
+                      </div>
+
+                      <div className="text-center pt-3 border-t border-dashed border-slate-400 space-y-1 text-[8px] text-slate-505">
+                        {receiptFooterText ? (
+                          <p className="font-bold">{receiptFooterText}</p>
+                        ) : (
+                          <p className="font-bold">Thank you for your patronage!</p>
+                        )}
+                        <p>Please keep this receipt.</p>
+                      </div>
+
+                      {receiptShowQRCode && (
+                        <div className="flex flex-col items-center pt-3 border-t border-dashed border-slate-400 mt-2 space-y-1">
+                          <img 
+                            src={`https://api.qrserver.com/v1/create-qr-code/?size=80x80&data=${encodeURIComponent(`${window.location.origin}/verify-receipt/00000000`)}`}
+                            alt="Verification QR"
+                            className="w-16 h-16 object-contain border p-0.5 bg-white rounded"
+                          />
+                          <p className="text-[7px] font-bold text-slate-450 tracking-widest">Scan to Verify</p>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
           </div>
         )}

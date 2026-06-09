@@ -517,3 +517,264 @@ Cancels a pending stock transfer, returning the reserved stock quantity back to 
       "notes": "Cancelled by initiator"
     }
     ```
+
+---
+
+## POS & Transaction Endpoints
+
+### 1. Checkout (Create Sale)
+Processes and records a new transaction, adjusting product stock levels and recording adjustment logs. Handles cash, card, and mixed payments. Automatically enforces cashier manual discount thresholds (max 15% and $50.00).
+
+*   **Endpoint**: `POST /api/sales`
+*   **Authentication**: Bearer JWT (Owner, Manager, Cashier)
+*   **Request Body**:
+    ```json
+    {
+      "branchId": "bb49ff14-75e1-45a2-b7f9-762d2cfac664",
+      "subtotal": 100.00,
+      "discountAmount": 10.00,
+      "taxAmount": 5.00,
+      "total": 95.00,
+      "paymentMethod": 2, 
+      "paymentDetails": "{\"Cash\": 50.00, \"Card\": 45.00}",
+      "appliedCouponCode": "SAVE10",
+      "items": [
+        {
+          "productId": "6f5b5480-b8f7-4f3e-9d2f-910049272ba6",
+          "quantity": 2,
+          "unitPrice": 50.00,
+          "discountAmount": 10.00,
+          "total": 90.00
+        }
+      ]
+    }
+    ```
+*   **Success Response** (200 OK):
+    ```json
+    {
+      "id": "a8a62bc7-76ca-4824-ac16-ecf816a67e64",
+      "businessId": "3bf1cb2c-7844-4515-8a87-c2d3a97ef7d0",
+      "branchId": "bb49ff14-75e1-45a2-b7f9-762d2cfac664",
+      "userId": "d747a83d-3bf1-4521-ba80-c11f7c10b784",
+      "subtotal": 100.00,
+      "discountAmount": 10.00,
+      "taxAmount": 5.00,
+      "total": 95.00,
+      "paymentMethod": "Mixed",
+      "paymentDetails": "{\"Cash\": 50.00, \"Card\": 45.00}",
+      "appliedCouponId": "59e68a77-b9f6-48fe-9a71-2ad306a4b15e",
+      "appliedCouponCode": "SAVE10",
+      "createdAt": "2026-06-09T11:42:00Z"
+    }
+    ```
+
+### 2. Get Sales History
+Retrieves transaction records. Bounded by the active business tenant and branch context.
+
+*   **Endpoint**: `GET /api/sales`
+*   **Authentication**: Bearer JWT (All authenticated users)
+*   **Query Parameters**:
+    *   `startDate` (string, optional) - Filter sales from UTC timestamp
+    *   `endDate` (string, optional) - Filter sales to UTC timestamp
+*   **Success Response** (200 OK):
+    ```json
+    [
+      {
+        "id": "a8a62bc7-76ca-4824-ac16-ecf816a67e64",
+        "subtotal": 100.00,
+        "discountAmount": 10.00,
+        "taxAmount": 5.00,
+        "total": 95.00,
+        "paymentMethod": "Mixed",
+        "createdAt": "2026-06-09T11:42:00Z"
+      }
+    ]
+    ```
+
+### 3. Get Sale Details
+Retrieves details of a specific sale.
+
+*   **Endpoint**: `GET /api/sales/{id}`
+*   **Authentication**: Bearer JWT (All authenticated users)
+
+### 4. Public Receipt Verification
+An anonymous unauthenticated endpoint to verify receipt authenticity. Bypasses standard logical tenant query filters. Exposes customer-safe transaction info (hides cost prices and profit margins).
+
+*   **Endpoint**: `GET /api/sales/verify/{id}`
+*   **Authentication**: None (Public Access)
+*   **Success Response** (200 OK):
+    ```json
+    {
+      "saleId": "a8a62bc7-76ca-4824-ac16-ecf816a67e64",
+      "businessName": "Vendora POS Pro",
+      "branchName": "Branch Alpha",
+      "branchAddress": "123 Main Street",
+      "branchPhone": "555-0199",
+      "cashierName": "Cathy Cashier",
+      "subtotal": 100.00,
+      "discountAmount": 10.00,
+      "taxAmount": 5.00,
+      "total": 95.00,
+      "paymentMethod": "Mixed",
+      "createdAt": "2026-06-09T11:42:00Z",
+      "items": [
+        {
+          "productName": "Wireless Mouse",
+          "quantity": 2,
+          "unitPrice": 50.00,
+          "total": 90.00
+        }
+      ]
+    }
+    ```
+
+---
+
+## Promotions & Discount Endpoints
+
+### 1. Get Discounts
+Retrieves active or all discounts for the business.
+
+*   **Endpoint**: `GET /api/discounts`
+*   **Authentication**: Bearer JWT (All authenticated users)
+
+### 2. Create Discount
+Creates a new discount campaign.
+
+*   **Endpoint**: `POST /api/discounts`
+*   **Authentication**: Bearer JWT (Owner, Manager)
+*   **Request Body**:
+    ```json
+    {
+      "name": "Summer Special",
+      "description": "10% off laptop sales",
+      "type": 0,
+      "value": 10.00,
+      "target": 0,
+      "productId": "dc1295ca-9743-43b1-8e40-e7af6870490a",
+      "startDate": "2026-06-01T00:00:00Z",
+      "endDate": "2026-08-31T23:59:59Z"
+    }
+    ```
+
+### 3. Update Discount
+Updates an existing discount campaign.
+
+*   **Endpoint**: `PUT /api/discounts/{id}`
+*   **Authentication**: Bearer JWT (Owner, Manager)
+
+### 4. Delete Discount
+Removes or deactivates a discount campaign.
+
+*   **Endpoint**: `DELETE /api/discounts/{id}`
+*   **Authentication**: Bearer JWT (Owner, Manager)
+
+### 5. Get Coupons
+Lists all coupons registered for the business.
+
+*   **Endpoint**: `GET /api/coupons`
+*   **Authentication**: Bearer JWT (Owner, Manager)
+
+### 6. Validate Coupon
+Validates a coupon code against usage limits, minimum order spend, and date constraints. Returns the applied value.
+
+*   **Endpoint**: `GET /api/coupons/validate/{code}`
+*   **Authentication**: Bearer JWT (All authenticated users)
+*   **Query Parameters**:
+    *   `cartTotal` (decimal, required) - Current cart subtotal
+*   **Success Response** (200 OK):
+    ```json
+    {
+      "isValid": true,
+      "couponId": "59e68a77-b9f6-48fe-9a71-2ad306a4b15e",
+      "code": "SAVE10",
+      "type": "Percentage",
+      "value": 10.00,
+      "minCartAmount": 50.00,
+      "message": "Coupon applied successfully."
+    }
+    ```
+
+### 7. Create Coupon
+Creates a new unique coupon code.
+
+*   **Endpoint**: `POST /api/coupons`
+*   **Authentication**: Bearer JWT (Owner, Manager)
+*   **Request Body**:
+    ```json
+    {
+      "code": "SAVE10",
+      "type": 0,
+      "value": 10.00,
+      "minCartAmount": 50.00,
+      "usageLimit": 100,
+      "startDate": "2026-06-09T00:00:00Z",
+      "endDate": "2026-07-09T00:00:00Z"
+    }
+    ```
+
+---
+
+## Receipt Customization Endpoints
+
+### 1. Get Receipt Settings
+Fetches the active receipt settings configuration. Checks for a branch-specific override before falling back to the business default settings context.
+
+*   **Endpoint**: `GET /api/receipts`
+*   **Authentication**: Bearer JWT (Owner, Manager)
+*   **Query Parameters**:
+    *   `branchId` (uuid, optional) - Specific branch override lookup (For Owners; Managers are locked to their own branch context)
+*   **Success Response** (200 OK):
+    ```json
+    {
+      "id": "019ea81b-85fa-76d1-a9f8-12cd2fa5b78d",
+      "businessId": "3bf1cb2c-7844-4515-8a87-c2d3a97ef7d0",
+      "businessName": "Super POS Corp",
+      "branchId": "bb49ff14-75e1-45a2-b7f9-762d2cfac664",
+      "logoUrl": "http://localhost:5149/uploads/logos/logo.png",
+      "headerText": "Welcome to Super POS!",
+      "footerText": "Thank you for shopping with us!",
+      "showLogo": true,
+      "showBranchDetails": true,
+      "showCashierInfo": true,
+      "showQRCode": true,
+      "receiptLayout": "Thermal",
+      "customBrandingColor": "#6366F1"
+    }
+    ```
+
+### 2. Update Receipt Settings
+Updates or initializes a custom receipt layout setting context.
+
+*   **Endpoint**: `PUT /api/receipts`
+*   **Authentication**: Bearer JWT (Owner, Manager)
+*   **Request Body**:
+    ```json
+    {
+      "branchId": "bb49ff14-75e1-45a2-b7f9-762d2cfac664",
+      "logoUrl": "http://localhost:5149/uploads/logos/logo.png",
+      "headerText": "Welcome to Branch Alpha!",
+      "footerText": "Keep your receipt for returns",
+      "showLogo": true,
+      "showBranchDetails": true,
+      "showCashierInfo": true,
+      "showQRCode": true,
+      "receiptLayout": "A4",
+      "customBrandingColor": "#EF4444"
+    }
+    ```
+
+### 3. Upload Logo Image
+Handles multipart file upload for branded receipt logos. Only permits JPG/PNG formats under 2MB. Saves images in the application's local `wwwroot/uploads/logos/` path.
+
+*   **Endpoint**: `POST /api/receipts/upload-logo`
+*   **Authentication**: Bearer JWT (Owner, Manager)
+*   **Content-Type**: `multipart/form-data`
+*   **Request Payload**: File binary under key `file`.
+*   **Success Response** (200 OK):
+    ```json
+    {
+      "logoUrl": "http://localhost:5149/uploads/logos/unique-filename.png"
+    }
+    ```
+

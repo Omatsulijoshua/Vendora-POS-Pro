@@ -159,3 +159,26 @@ stateDiagram-v2
 - **Query Filter Bypass (`IgnoreQueryFilters`)**:
   - Relational joins (e.g., loading `SourceBranch`, `TargetBranch`, `InitiatedByUser`, or `ResolvedByUser` in `StockTransfer` listing) would normally fail or exclude records if the other branch/user is outside the Manager's active branch context.
   - We use `.IgnoreQueryFilters()` on the `StockTransfers` query and manually apply the tenant isolation (`BusinessId == tenantId`) and branch isolation filters in the controller.
+
+---
+
+## 8. Receipt Customization & Public Verification Architecture
+
+The Receipt Customization system provides business owners and managers with tools to customize printed receipts. It also features a zero-dependency public verification page where customers or external auditors can scan a QR code to confirm a transaction's authenticity.
+
+### Settings Customization & Inherited Fallbacks:
+- **ReceiptSettings Entity**: Stores logo paths, header/footer messages, toggle flags (e.g. `ShowLogo`, `ShowQRCode`), layout styles (`Thermal` 80mm vs `A4` Invoice), and custom branding hex colors.
+- **Hierarchical Fallback Resolution**: 
+  - The system checks if there is a branch-level override setting for the current `BranchId`.
+  - If no branch-specific setting is found, it falls back to the business-level default settings (`BranchId == null`).
+  - If no settings exist for the business, default fallback settings are created dynamically.
+- **RBAC Security Boundaries**:
+  - **SuperAdmin**: Full read/write access.
+  - **Owner**: Can create/modify the business default settings and any branch-level settings.
+  - **Manager**: Strictly restricted to managing settings for their assigned branch context.
+  - **Cashier**: Read-only access to render and print receipts.
+
+### Zero-Dependency Public Verification:
+- **Anonymous Endpoint (`GET /api/sales/verify/{id}`)**: Marks the request context as `[AllowAnonymous]` and runs `.IgnoreQueryFilters()` to bypass multi-tenant/branch boundaries. This allows public lookups using only the unique transaction GUID.
+- **Data Security Guardrails**: The verification response uses `VerifiedSaleDto` instead of `SaleDto`. It hides sensitive fields such as `CostPrice` (profit margins) and system IDs, exposing only transaction metadata (e.g., business/branch details, cashier name, products, quantities, prices, and totals).
+- **Public Frontend route (`/verify-receipt/[id]/page.tsx`)**: An unauthenticated Next.js page that displays the digital receipt details, verifying its origin directly from the database.
