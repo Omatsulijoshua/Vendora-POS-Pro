@@ -256,4 +256,34 @@ To provide business owners with a holistic, top-level view of their business emp
 * Visualizes 7-day registration trends using a bar chart where height is dynamically styled using CSS percentages calculated from date groupings.
 * Features real-time search, sorting, and inline status modification modals for subscription tier updates and suspensions.
 
+---
 
+## 12. Subscription Billing & Stripe Integration Architecture
+
+### 1. Database & Domain Additions:
+* **Stripe Identifiers**: Added `StripeCustomerId` and `StripeSubscriptionId` to the `Business` domain model. These link the database tenant record to the corresponding resources in the Stripe platform.
+
+### 2. Multi-Mode Architecture (Mock Billing Mode):
+* To run integration tests and local development workflows without requiring active internet connectivity or valid Stripe keys, the billing pipeline supports a **Mock Billing Mode**:
+  * **Fallback Flag**: In `StripeService`, if the configuration keys `Stripe:SecretKey` are unset, set to empty, or set to `"Mock"`, the service sets `IsMockMode = true`.
+  * **Simulated Redirects**: In Mock Mode, checkout and portal session requests return simulation URLs containing metadata query strings (e.g., `/success?session_id=mock_session_xxx&businessId=yyy&tier=zzz`).
+  * **Webhook Verification Bypass**: The webhook processing pipeline bypasses signature checks in Mock Mode and accepts plain JSON payloads, allowing simulated webhooks to execute state transitions.
+
+### 3. Stripe Webhook Processing Lifecycle:
+* **Public Webhook Route (`POST /api/webhooks/stripe`)**: A public anonymous endpoint parses event payloads.
+* **Webhook Events Handled**:
+  * `checkout.session.completed`: Sets customer and subscription IDs on the business entity, configures the active tier, sets the status to `"Active"`, updates the price, and sets `SubscriptionExpiresAt` (+1 month or +1 year).
+  * `invoice.payment_succeeded`: Automatically extends the expiration date based on the plan cycle price rate.
+  * `invoice.payment_failed`: Transitions the business status to `"Past Due"` indicating payment delinquency.
+  * `customer.subscription.updated`: Synchronizes customer portal upgrades, downgrades, or billing period shifts.
+  * `customer.subscription.deleted`: Sets status to `"Cancelled"` or `"Suspended"` and sets `SubscriptionExpiresAt` to `UtcNow`.
+
+### 4. Subscription Operational Gates:
+* **Login Level blocks (Managers & Cashiers)**:
+  * In `AuthController.Login`, if the user has the role of Manager or Cashier, the system checks the parent business subscription.
+  * If the subscription is expired (`SubscriptionExpiresAt < DateTime.UtcNow`) or delinquent (`SubscriptionStatus` is `"Cancelled"` or `"Past Due"`), the login is blocked immediately, returning a `402 Payment Required` HTTP response code.
+* **Token Claim & Warning Overlay (Owners)**:
+  * Owners are allowed to log in even if their business subscription is delinquent or expired, ensuring they can access billing settings to resolve payments.
+  * During token generation (`JwtTokenGenerator`), the database is queried to determine subscription validity. The `is_subscription_active` claim is appended as a boolean string claim in the JWT.
+  * The frontend `AuthContext.tsx` decodes this claim and exposes it as `isSubscriptionActive` on the authenticated user profile.
+  * In `owner/page.tsx`, if `isSubscriptionActive === false` and the user is not viewing the Billing tab, a glassmorphic **Subscription Expired Lock Overlay** blocks dashboard operation panels, forcing the owner to resolve their subscription.

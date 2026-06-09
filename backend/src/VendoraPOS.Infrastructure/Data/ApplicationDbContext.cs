@@ -57,6 +57,9 @@ public class ApplicationDbContext : IdentityDbContext<User, IdentityRole<Guid>, 
             entity.Property(b => b.SubscriptionStatus).IsRequired().HasMaxLength(50).HasDefaultValue("Active");
             entity.Property(b => b.SubscriptionPrice).HasPrecision(18, 2).HasDefaultValue(299.00m);
 
+            entity.Property(b => b.StripeCustomerId).HasMaxLength(100);
+            entity.Property(b => b.StripeSubscriptionId).HasMaxLength(100);
+
             // Business - Owner relationship (Owner is a User)
             entity.HasOne(b => b.Owner)
                 .WithMany()

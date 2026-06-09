@@ -10,4 +10,5 @@ public class AuthResponseDto
     public string Role { get; set; } = string.Empty;
     public Guid? BusinessId { get; set; }
     public Guid? BranchId { get; set; }
+    public bool IsSubscriptionActive { get; set; } = true;
 }

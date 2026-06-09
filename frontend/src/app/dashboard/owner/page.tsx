@@ -18,8 +18,14 @@ export default function OwnerDashboard() {
   const [loadingCategories, setLoadingCategories] = useState(false);
   const [loadingProducts, setLoadingProducts] = useState(false);
 
-  // Active Tab
-  const [activeTab, setActiveTab] = useState<"overview" | "inventory" | "categories" | "transfers" | "sales" | "promo" | "receipt">("overview");
+  const [activeTab, setActiveTab] = useState<"overview" | "inventory" | "categories" | "transfers" | "sales" | "promo" | "receipt" | "billing">("overview");
+
+  // Phase 14 Billing States
+  const [billingStatus, setBillingStatus] = useState<any>(null);
+  const [loadingBilling, setLoadingBilling] = useState(true);
+  const [billingError, setBillingError] = useState<string | null>(null);
+  const [billingSubmitting, setBillingSubmitting] = useState(false);
+  const [billingCycle, setBillingCycle] = useState<"Monthly" | "Yearly">("Yearly");
 
   // Modals visibility
   const [showAddBusinessModal, setShowAddBusinessModal] = useState(false);
@@ -173,6 +179,93 @@ export default function OwnerDashboard() {
       console.error(err);
     } finally {
       setLoadingBusinesses(false);
+    }
+  };
+
+  // Fetch billing status
+  const fetchBillingStatus = async () => {
+    if (!token) return;
+    try {
+      setLoadingBilling(true);
+      setBillingError(null);
+      const res = await fetch("http://localhost:5149/api/billing/status", {
+        headers: { "Authorization": `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setBillingStatus(data);
+      } else {
+        const err = await res.json();
+        setBillingError(err.message || "Failed to load billing status.");
+      }
+    } catch (err) {
+      console.error(err);
+      setBillingError("Network error. Failed to load billing.");
+    } finally {
+      setLoadingBilling(false);
+    }
+  };
+
+  const handleCheckout = async (tier: string) => {
+    if (!token) return;
+    try {
+      setBillingSubmitting(true);
+      setBillingError(null);
+      const res = await fetch("http://localhost:5149/api/billing/checkout", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          tier,
+          billingCycle,
+          successUrl: window.location.href,
+          cancelUrl: window.location.href
+        })
+      });
+
+      const data = await res.json();
+      if (res.ok && data.checkoutUrl) {
+        window.location.href = data.checkoutUrl;
+      } else {
+        setBillingError(data.message || "Failed to initiate checkout.");
+      }
+    } catch (err) {
+      console.error(err);
+      setBillingError("Network error. Failed to initiate checkout.");
+    } finally {
+      setBillingSubmitting(false);
+    }
+  };
+
+  const handlePortalRedirect = async () => {
+    if (!token) return;
+    try {
+      setBillingSubmitting(true);
+      setBillingError(null);
+      const res = await fetch("http://localhost:5149/api/billing/portal", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          returnUrl: window.location.href
+        })
+      });
+
+      const data = await res.json();
+      if (res.ok && data.portalUrl) {
+        window.location.href = data.portalUrl;
+      } else {
+        setBillingError(data.message || "Failed to open billing portal.");
+      }
+    } catch (err) {
+      console.error(err);
+      setBillingError("Network error. Failed to open billing portal.");
+    } finally {
+      setBillingSubmitting(false);
     }
   };
 
@@ -469,6 +562,7 @@ export default function OwnerDashboard() {
       fetchDiscounts();
       fetchCoupons();
       fetchOwnerStats();
+      fetchBillingStatus();
     }
   }, [token, user?.businessId, user?.branchId]);
 
@@ -476,6 +570,9 @@ export default function OwnerDashboard() {
   useEffect(() => {
     if (token && activeTab === "overview") {
       fetchOwnerStats();
+    }
+    if (token && activeTab === "billing") {
+      fetchBillingStatus();
     }
   }, [token, user?.businessId, activeTab]);
 
@@ -1415,6 +1512,12 @@ export default function OwnerDashboard() {
             className={`pb-3 border-b-2 transition-colors ${activeTab === "receipt" ? "border-indigo-500 text-indigo-400" : "border-transparent text-slate-400 hover:text-slate-200"}`}
           >
             Receipt Settings
+          </button>
+          <button
+            onClick={() => setActiveTab("billing")}
+            className={`pb-3 border-b-2 transition-colors ${activeTab === "billing" ? "border-indigo-500 text-indigo-400" : "border-transparent text-slate-400 hover:text-slate-200"}`}
+          >
+            Billing & Subscriptions
           </button>
         </div>
 
@@ -2700,6 +2803,224 @@ export default function OwnerDashboard() {
             </div>
           </div>
         )}
+
+        {activeTab === "billing" && (
+          <div className="space-y-8 animate-in fade-in duration-300">
+            {/* Header */}
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-slate-900 pb-5">
+              <div>
+                <h3 className="font-bold text-lg text-slate-200">Subscription & Billing</h3>
+                <p className="text-xs text-slate-500">Manage your subscription tier, billing period, and Stripe payment methods</p>
+              </div>
+            </div>
+
+            {/* Error notifications */}
+            {billingError && (
+              <div className="p-4 bg-red-950/40 border border-red-800 text-red-400 text-xs rounded-xl flex items-center justify-between">
+                <span>{billingError}</span>
+                <button onClick={() => setBillingError(null)} className="text-red-400 font-bold hover:text-red-300">✕</button>
+              </div>
+            )}
+
+            {loadingBilling ? (
+              <div className="text-sm text-slate-500 py-12 text-center bg-slate-900/20 border border-slate-900 rounded-xl">
+                Loading subscription context...
+              </div>
+            ) : (
+              <>
+                {/* Current Plan Overview Card */}
+                {billingStatus && (
+                  <div className="border border-slate-900 bg-slate-900/10 rounded-2xl p-6 relative overflow-hidden backdrop-blur-sm">
+                    {/* Glow effect */}
+                    <div className="absolute -right-10 -top-10 w-40 h-40 bg-indigo-500/5 rounded-full blur-3xl pointer-events-none" />
+
+                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-3">
+                          <span className="text-[10px] uppercase font-bold text-indigo-400 tracking-widest">Active Plan</span>
+                          <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider ${
+                            billingStatus.subscriptionStatus === "Active"
+                              ? "bg-green-950/50 text-green-400 border border-green-800/40"
+                              : billingStatus.subscriptionStatus === "Past Due"
+                              ? "bg-amber-950/50 text-amber-400 border border-amber-800/40"
+                              : "bg-red-950/50 text-red-400 border border-red-800/40"
+                          }`}>
+                            {billingStatus.subscriptionStatus}
+                          </span>
+                        </div>
+                        <h4 className="text-2xl font-black text-slate-100">{billingStatus.subscriptionTier} Edition</h4>
+                        <p className="text-xs text-slate-400">
+                          {billingStatus.subscriptionPrice > 0 
+                            ? `$${billingStatus.subscriptionPrice.toLocaleString()}/period`
+                            : "Free / Trial"}
+                          {billingStatus.subscriptionExpiresAt && (
+                            <span className="text-slate-500">
+                              {" • "}Renews/Expires on {new Date(billingStatus.subscriptionExpiresAt).toLocaleDateString()}
+                            </span>
+                          )}
+                        </p>
+                      </div>
+
+                      <div className="flex flex-wrap gap-3">
+                        {billingStatus.stripeCustomerId && (
+                          <button
+                            type="button"
+                            onClick={handlePortalRedirect}
+                            disabled={billingSubmitting}
+                            className="px-5 py-2.5 bg-slate-950 border border-slate-800 hover:bg-slate-900 text-slate-300 hover:text-slate-100 text-xs font-bold rounded-xl transition-all shadow-lg flex items-center gap-2"
+                          >
+                            {billingSubmitting ? "Loading..." : "Manage Invoices & Cards"}
+                          </button>
+                        )}
+                        {billingStatus.isMockMode && (
+                          <span className="px-3 py-2 bg-indigo-950/20 text-indigo-400 border border-indigo-900/50 rounded-xl text-[10px] font-semibold flex items-center">
+                            ⚙️ Mock Stripe Mode Enabled
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Billing Cycle Switcher */}
+                <div className="flex items-center justify-center gap-4 py-2">
+                  <span className={`text-xs font-bold transition-colors ${billingCycle === "Monthly" ? "text-indigo-400" : "text-slate-500"}`}>Monthly</span>
+                  <button
+                    type="button"
+                    onClick={() => setBillingCycle(billingCycle === "Monthly" ? "Yearly" : "Monthly")}
+                    className="relative w-12 h-6 bg-slate-900 border border-slate-800 rounded-full transition-colors focus:outline-none"
+                  >
+                    <span className={`absolute top-0.5 left-0.5 w-4.5 h-4.5 bg-indigo-500 rounded-full transition-transform ${
+                      billingCycle === "Yearly" ? "translate-x-6" : ""
+                    }`} />
+                  </button>
+                  <span className={`text-xs font-bold transition-colors ${billingCycle === "Yearly" ? "text-indigo-400" : "text-slate-500"} flex items-center gap-1.5`}>
+                    Yearly <span className="px-1.5 py-0.5 bg-green-950/50 text-green-400 border border-green-900/50 rounded text-[9px] font-black uppercase tracking-wider">Save ~17%</span>
+                  </span>
+                </div>
+
+                {/* Plan cards */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  {/* Basic Plan */}
+                  <div className="border border-slate-900 bg-slate-950/30 rounded-2xl p-6 flex flex-col justify-between hover:border-slate-800 transition-all group relative">
+                    <div className="space-y-5">
+                      <div className="space-y-1">
+                        <h5 className="text-md font-bold text-slate-300">Basic</h5>
+                        <p className="text-xs text-slate-500">Perfect for single-location shops</p>
+                      </div>
+                      <div className="flex items-baseline gap-1 text-slate-100">
+                        <span className="text-3xl font-black font-mono">
+                          {billingCycle === "Monthly" ? "$99" : "$990"}
+                        </span>
+                        <span className="text-xs text-slate-500">/{billingCycle === "Monthly" ? "mo" : "yr"}</span>
+                      </div>
+                      <ul className="space-y-3.5 text-xs text-slate-400 border-t border-slate-900/60 pt-5">
+                        <li className="flex items-center gap-2">✓ 1 Active Business</li>
+                        <li className="flex items-center gap-2">✓ Up to 3 Branch Locations</li>
+                        <li className="flex items-center gap-2">✓ Max 10 Staff Users</li>
+                        <li className="flex items-center gap-2">✓ POS Register Checkout</li>
+                        <li className="flex items-center gap-2">✓ Standard Inventory Logs</li>
+                      </ul>
+                    </div>
+                    <div className="pt-6 mt-6 border-t border-slate-900/60">
+                      <button
+                        type="button"
+                        onClick={() => handleCheckout("Basic")}
+                        disabled={billingSubmitting || billingStatus?.subscriptionTier === "Basic"}
+                        className={`w-full py-2.5 rounded-xl text-xs font-bold transition-all ${
+                          billingStatus?.subscriptionTier === "Basic"
+                            ? "bg-slate-900 text-slate-550 cursor-not-allowed border border-slate-800"
+                            : "bg-indigo-650 hover:bg-indigo-750 text-white shadow-lg shadow-indigo-600/10"
+                        }`}
+                      >
+                        {billingStatus?.subscriptionTier === "Basic" ? "Current Tier" : "Select Basic"}
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Pro Plan */}
+                  <div className="border border-indigo-900/40 bg-slate-900/10 rounded-2xl p-6 flex flex-col justify-between hover:border-indigo-800/50 transition-all group relative ring-1 ring-indigo-500/20">
+                    <div className="absolute top-0 right-6 -translate-y-1/2 px-2.5 py-0.5 bg-indigo-600 text-white text-[9px] font-black uppercase tracking-wider rounded-full shadow-lg">
+                      Popular
+                    </div>
+                    <div className="space-y-5">
+                      <div className="space-y-1">
+                        <h5 className="text-md font-bold text-slate-200">Pro</h5>
+                        <p className="text-xs text-slate-400">Great for multi-branch brands</p>
+                      </div>
+                      <div className="flex items-baseline gap-1 text-slate-100">
+                        <span className="text-3xl font-black font-mono text-indigo-400">
+                          {billingCycle === "Monthly" ? "$299" : "$2990"}
+                        </span>
+                        <span className="text-xs text-slate-500">/{billingCycle === "Monthly" ? "mo" : "yr"}</span>
+                      </div>
+                      <ul className="space-y-3.5 text-xs text-slate-355 border-t border-slate-900/60 pt-5">
+                        <li className="flex items-center gap-2">✓ 1 Active Business</li>
+                        <li className="flex items-center gap-2">✓ Up to 10 Branch Locations</li>
+                        <li className="flex items-center gap-2">✓ Unlimited Staff Users</li>
+                        <li className="flex items-center gap-2">✓ Inter-branch Stock Transfers</li>
+                        <li className="flex items-center gap-2">✓ Discounts & Coupon Builder</li>
+                        <li className="flex items-center gap-2">✓ Advanced Analytics & SVG Charts</li>
+                      </ul>
+                    </div>
+                    <div className="pt-6 mt-6 border-t border-slate-900/60">
+                      <button
+                        type="button"
+                        onClick={() => handleCheckout("Pro")}
+                        disabled={billingSubmitting || billingStatus?.subscriptionTier === "Pro"}
+                        className={`w-full py-2.5 rounded-xl text-xs font-bold transition-all ${
+                          billingStatus?.subscriptionTier === "Pro"
+                            ? "bg-slate-900 text-slate-555 cursor-not-allowed border border-slate-800"
+                            : "bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg shadow-indigo-500/20"
+                        }`}
+                      >
+                        {billingStatus?.subscriptionTier === "Pro" ? "Current Tier" : "Select Pro"}
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Enterprise Plan */}
+                  <div className="border border-slate-900 bg-slate-950/30 rounded-2xl p-6 flex flex-col justify-between hover:border-slate-800 transition-all group relative">
+                    <div className="space-y-5">
+                      <div className="space-y-1">
+                        <h5 className="text-md font-bold text-slate-300">Enterprise</h5>
+                        <p className="text-xs text-slate-500">For franchise groups & conglomerates</p>
+                      </div>
+                      <div className="flex items-baseline gap-1 text-slate-100">
+                        <span className="text-3xl font-black font-mono">
+                          {billingCycle === "Monthly" ? "$999" : "$9990"}
+                        </span>
+                        <span className="text-xs text-slate-500">/{billingCycle === "Monthly" ? "mo" : "yr"}</span>
+                      </div>
+                      <ul className="space-y-3.5 text-xs text-slate-400 border-t border-slate-900/60 pt-5">
+                        <li className="flex items-center gap-2">✓ Multiple Businesses per Owner</li>
+                        <li className="flex items-center gap-2">✓ Unlimited Branch Locations</li>
+                        <li className="flex items-center gap-2">✓ Unlimited Staff Users</li>
+                        <li className="flex items-center gap-2">✓ Global Stock Consolidation</li>
+                        <li className="flex items-center gap-2">✓ Custom Receipt Styling Overrides</li>
+                        <li className="flex items-center gap-2">✓ 24/7 Dedicated Support</li>
+                      </ul>
+                    </div>
+                    <div className="pt-6 mt-6 border-t border-slate-900/60">
+                      <button
+                        type="button"
+                        onClick={() => handleCheckout("Enterprise")}
+                        disabled={billingSubmitting || billingStatus?.subscriptionTier === "Enterprise"}
+                        className={`w-full py-2.5 rounded-xl text-xs font-bold transition-all ${
+                          billingStatus?.subscriptionTier === "Enterprise"
+                            ? "bg-slate-900 text-slate-555 cursor-not-allowed border border-slate-800"
+                            : "bg-indigo-650 hover:bg-indigo-750 text-white shadow-lg"
+                        }`}
+                      >
+                        {billingStatus?.subscriptionTier === "Enterprise" ? "Current Tier" : "Select Enterprise"}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+        )}
       </main>
 
       {/* MODALS SECTION */}
@@ -3929,6 +4250,32 @@ export default function OwnerDashboard() {
                 <button type="submit" disabled={couponSubmittingForm} className="flex-1 py-2.5 bg-purple-650 text-white text-xs font-bold rounded-lg">{couponSubmittingForm ? "Creating..." : "Create Coupon"}</button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Subscription Expired Lock Overlay */}
+      {user?.isSubscriptionActive === false && activeTab !== "billing" && (
+        <div className="fixed inset-0 bg-slate-950/85 backdrop-blur-lg flex justify-center items-center p-4 z-45 animate-in fade-in duration-300">
+          <div className="w-full max-w-md p-8 bg-slate-900 border border-red-900/30 rounded-2xl shadow-2xl text-center space-y-6">
+            <div className="w-16 h-16 bg-red-950/50 border border-red-800/40 rounded-full flex items-center justify-center mx-auto text-red-400 text-2xl shadow-lg animate-bounce">
+              ⚠️
+            </div>
+            <div className="space-y-2">
+              <h3 className="text-xl font-black text-slate-100">Subscription Expired</h3>
+              <p className="text-xs text-slate-405 leading-relaxed">
+                Access to operational features (inventory, sales, register checkouts, and consolidated reports) is locked because your business subscription is inactive or has expired.
+              </p>
+            </div>
+            <div className="pt-2">
+              <button
+                type="button"
+                onClick={() => setActiveTab("billing")}
+                className="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl transition-all shadow-lg shadow-indigo-650/15"
+              >
+                Go to Billing & Subscriptions
+              </button>
+            </div>
           </div>
         </div>
       )}

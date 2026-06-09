@@ -5,6 +5,9 @@ using System.Security.Claims;
 using System.Text;
 using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
+using System.Linq;
+using Microsoft.EntityFrameworkCore;
+using VendoraPOS.Infrastructure.Data;
 using VendoraPOS.Application.Common.Interfaces;
 using VendoraPOS.Domain.Entities;
 
@@ -13,10 +16,12 @@ namespace VendoraPOS.Infrastructure.Services;
 public class JwtTokenGenerator : IJwtTokenGenerator
 {
     private readonly IConfiguration _configuration;
+    private readonly ApplicationDbContext _context;
 
-    public JwtTokenGenerator(IConfiguration configuration)
+    public JwtTokenGenerator(IConfiguration configuration, ApplicationDbContext context)
     {
         _configuration = configuration;
+        _context = context;
     }
 
     public string GenerateToken(User user, IList<string> roles)
@@ -40,10 +45,26 @@ public class JwtTokenGenerator : IJwtTokenGenerator
         };
 
         // Add tenant and branch ID if present
+        bool isSubscriptionActive = true;
         if (user.BusinessId.HasValue)
         {
             claims.Add(new Claim("business_id", user.BusinessId.Value.ToString()));
+
+            var business = _context.Businesses
+                .IgnoreQueryFilters()
+                .FirstOrDefault(b => b.Id == user.BusinessId.Value);
+
+            if (business != null)
+            {
+                var isExpired = business.SubscriptionExpiresAt.HasValue && business.SubscriptionExpiresAt.Value < DateTime.UtcNow;
+                var isInactive = business.SubscriptionStatus == "Cancelled" || business.SubscriptionStatus == "Past Due";
+                if (isExpired || isInactive)
+                {
+                    isSubscriptionActive = false;
+                }
+            }
         }
+        claims.Add(new Claim("is_subscription_active", isSubscriptionActive.ToString().ToLower()));
         if (user.BranchId.HasValue)
         {
             claims.Add(new Claim("branch_id", user.BranchId.Value.ToString()));

@@ -12,6 +12,7 @@ export interface UserProfile {
   role: string;
   businessId?: string;
   branchId?: string;
+  isSubscriptionActive?: boolean;
 }
 
 interface DecodedToken {
@@ -22,6 +23,7 @@ interface DecodedToken {
   role: string | string[];
   business_id?: string;
   branch_id?: string;
+  is_subscription_active?: string;
   exp: number;
 }
 
@@ -76,6 +78,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             role: typeof decoded.role === "string" ? decoded.role : decoded.role[0] || "",
             businessId: decoded.business_id,
             branchId: decoded.branch_id,
+            isSubscriptionActive: decoded.is_subscription_active === "true",
           });
         } else {
           localStorage.removeItem("vendorapos_token");
@@ -101,6 +104,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       role: typeof decoded.role === "string" ? decoded.role : decoded.role[0] || "",
       businessId: decoded.business_id,
       branchId: decoded.branch_id,
+      isSubscriptionActive: decoded.is_subscription_active === "true",
     });
   };
 

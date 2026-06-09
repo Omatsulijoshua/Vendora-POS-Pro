@@ -1038,4 +1038,98 @@ Retrieves the platform-wide audit log trail, which tracks business activations, 
     ]
     ```
 
+---
+
+# XIV. Billing & Stripe Integration
+
+Endpoints in this section are restricted to users with the `Owner` role. They enable managing plan subscriptions, initiating Stripe checkouts, and opening the Stripe customer billing portal.
+
+### 1. Get Subscription Status
+Retrieves current plan information and Stripe metadata for the owner's active business context.
+
+*   **Endpoint**: `GET /api/billing/status`
+*   **Authentication**: Bearer JWT (Owner role)
+*   **Success Response** (200 OK):
+    ```json
+    {
+      "id": "607ab0ef-9e31-41a7-a32c-9f6340eb4d84",
+      "name": "Oliver Billing Bakery",
+      "subscriptionTier": "Basic",
+      "subscriptionStatus": "Active",
+      "subscriptionPrice": 99.00,
+      "subscriptionExpiresAt": "2026-07-09T23:07:12.003Z",
+      "stripeCustomerId": "cus_mock_1817892119",
+      "stripeSubscriptionId": "sub_mock_1817892119",
+      "isMockMode": true
+    }
+    ```
+
+### 2. Initiate Subscription Checkout
+Generates a Stripe Checkout Session URL redirect link for subscribing or upgrading a plan.
+
+*   **Endpoint**: `POST /api/billing/checkout`
+*   **Authentication**: Bearer JWT (Owner role)
+*   **Request Body**:
+    ```json
+    {
+      "tier": "Basic",
+      "billingCycle": "Monthly",
+      "successUrl": "http://localhost:3000/success",
+      "cancelUrl": "http://localhost:3000/cancel"
+    }
+    ```
+*   **Success Response** (200 OK):
+    ```json
+    {
+      "checkoutUrl": "http://localhost:3000/success?session_id=mock_session_e9ab20ce-9877-4304-879e-8c2fef523a1b&businessId=607ab0ef-9e31-41a7-a32c-9f6340eb4d84&tier=Basic&billingCycle=Monthly"
+    }
+    ```
+
+### 3. Open Stripe Customer Portal
+Generates a self-service customer portal session redirect link where owners can update payment details or manage plans.
+
+*   **Endpoint**: `POST /api/billing/portal`
+*   **Authentication**: Bearer JWT (Owner role)
+*   **Request Body**:
+    ```json
+    {
+      "returnUrl": "http://localhost:3000/dashboard/billing"
+    }
+    ```
+*   **Success Response** (200 OK):
+    ```json
+    {
+      "portalUrl": "/mock-stripe-portal?businessId=607ab0ef-9e31-41a7-a32c-9f6340eb4d84&returnUrl=http%3A%2F%2Flocalhost%3A3000%2Fdashboard%2Fbilling"
+    }
+    ```
+
+---
+
+# XV. Webhooks
+
+Public endpoints to receive events from external service integrations.
+
+### 1. Stripe Webhook Listener
+Receives Stripe webhook notifications. Handled dynamically under simulated/mock mode or verified real modes.
+
+*   **Endpoint**: `POST /api/webhooks/stripe`
+*   **Authentication**: None (Public Access)
+*   **Headers**:
+    *   `Stripe-Signature` (string, required in real mode) - Verification signature header. Bypassed in mock mode.
+*   **Request Body**: Stripe Event Object (JSON).
+*   **Events Processed**:
+    *   `checkout.session.completed`
+    *   `invoice.payment_succeeded`
+    *   `invoice.payment_failed`
+    *   `customer.subscription.updated`
+    *   `customer.subscription.deleted`
+*   **Success Response** (200 OK): Empty response body.
+*   **Error Response** (400 Bad Request):
+    ```json
+    {
+      "message": "Webhook processing failed."
+    }
+    ```
+
+
 

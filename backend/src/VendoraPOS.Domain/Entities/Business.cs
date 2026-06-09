@@ -18,6 +18,8 @@ public class Business
     public string SubscriptionStatus { get; set; } = "Active";
     public decimal SubscriptionPrice { get; set; } = 299.00m;
     public DateTime? SubscriptionExpiresAt { get; set; } = DateTime.UtcNow.AddYears(1);
+    public string? StripeCustomerId { get; set; }
+    public string? StripeSubscriptionId { get; set; }
 
     // Navigation properties
     public virtual User Owner { get; set; } = null!;

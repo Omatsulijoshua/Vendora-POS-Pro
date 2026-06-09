@@ -17,7 +17,7 @@ This document tracks the implementation progress of the **Vendora POS Pro** SaaS
 | **Phase 10** | Receipt System (Customizable) | ✅ Completed | June 2026 |
 | **Phase 11** | Cashier Dashboard (Personal Tracking & Metrics) | ✅ Completed | June 2026 |
 | **Phase 13** | Super Admin Dashboard & Platform Controls | ✅ Completed | June 2026 |
-| **Phase 14** | Subscription Billing & Stripe Integration | ❌ Not Started | - |
+| **Phase 14** | Subscription Billing & Stripe Integration | ✅ Completed | June 2026 |
 
 ---
 
@@ -183,6 +183,28 @@ This document tracks the implementation progress of the **Vendora POS Pro** SaaS
 - [x] Create integration test suite `verify_phase13.ps1` covering suspension lockout, activation recovery, plan edits, and audit logging
 - [x] Verify that all tests pass successfully and compile/typecheck the codebase
 - [x] Update API documentation and project tracking documentation
+
+---
+
+## Phase 14 Detail Checklist (Subscription Billing & Stripe Integration)
+
+- [x] Modify `Business.cs` adding `StripeCustomerId` and `StripeSubscriptionId`
+- [x] Configure EF Core mappings in `ApplicationDbContext.cs`
+- [x] Generate and apply database migration `AddStripeSubscriptionMetadata`
+- [x] Install `Stripe.net` NuGet package in backend projects
+- [x] Create `IStripeService.cs` interface in Application layer
+- [x] Create `StripeService.cs` implementation with Mock Mode support in Infrastructure layer
+- [x] Register StripeService in DI container and configuration in `Program.cs`
+- [x] Implement `BillingController.cs` for status, checkout redirects, and portal redirection
+- [x] Implement `StripeWebhookController.cs` to handle simulated and real Stripe events
+- [x] Integrate subscription status gates in `AuthController.cs` login endpoint and token payload
+- [x] Add "Billing & Subscriptions" tab page and layouts in `owner/page.tsx`
+- [x] Add subscription expired lockout/warning overlay in `owner/page.tsx`
+- [x] Create integration test suite `verify_phase14.ps1`
+- [x] Compile and typecheck system
+- [x] Run integration tests and confirm all pass
+- [x] Update documentation (PROJECT_PROGRESS.md, CHANGELOG.md, ARCHITECTURE.md, API_DOCS.md)
+
 
 
 

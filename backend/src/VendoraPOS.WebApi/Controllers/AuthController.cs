@@ -152,21 +152,38 @@ public class AuthController : ControllerBase
             return BadRequest(new { Message = "Your account has been deactivated. Please contact your administrator." });
         }
 
-        // Check if tenant is suspended (only for non-SuperAdmin users)
+        // Get Roles
+        var roles = await _userManager.GetRolesAsync(user);
+
+        // Check if tenant is suspended or subscription is inactive (only for non-SuperAdmin users)
+        bool isSubscriptionActive = true;
         if (user.BusinessId.HasValue)
         {
             var business = await _context.Businesses
                 .IgnoreQueryFilters()
                 .FirstOrDefaultAsync(b => b.Id == user.BusinessId.Value);
 
-            if (business != null && !business.IsActive)
+            if (business != null)
             {
-                return StatusCode(403, new { Message = "Your business account has been suspended. Please contact the administrator." });
+                if (!business.IsActive)
+                {
+                    return StatusCode(403, new { Message = "Your business account has been suspended. Please contact the administrator." });
+                }
+
+                var isExpired = business.SubscriptionExpiresAt.HasValue && business.SubscriptionExpiresAt.Value < DateTime.UtcNow;
+                var isInactive = business.SubscriptionStatus == "Cancelled" || business.SubscriptionStatus == "Past Due";
+
+                if (isExpired || isInactive)
+                {
+                    var isOwner = roles.Contains(UserRole.Owner.ToString());
+                    if (!isOwner)
+                    {
+                        return StatusCode(402, new { Message = "The business subscription has expired or is inactive. Please contact the business owner." });
+                    }
+                    isSubscriptionActive = false;
+                }
             }
         }
-
-        // Get Roles
-        var roles = await _userManager.GetRolesAsync(user);
 
         // Generate Token
         var token = _jwtTokenGenerator.GenerateToken(user, roles);
@@ -178,7 +195,8 @@ public class AuthController : ControllerBase
             Email = user.Email ?? string.Empty,
             Role = roles.FirstOrDefault() ?? string.Empty,
             BusinessId = user.BusinessId,
-            BranchId = user.BranchId
+            BranchId = user.BranchId,
+            IsSubscriptionActive = isSubscriptionActive
         });
     }
 
@@ -203,13 +221,32 @@ public class AuthController : ControllerBase
 
         var roles = await _userManager.GetRolesAsync(user);
 
+        bool isSubscriptionActive = true;
+        if (user.BusinessId.HasValue)
+        {
+            var business = await _context.Businesses
+                .IgnoreQueryFilters()
+                .FirstOrDefaultAsync(b => b.Id == user.BusinessId.Value);
+
+            if (business != null)
+            {
+                var isExpired = business.SubscriptionExpiresAt.HasValue && business.SubscriptionExpiresAt.Value < DateTime.UtcNow;
+                var isInactive = business.SubscriptionStatus == "Cancelled" || business.SubscriptionStatus == "Past Due";
+                if (isExpired || isInactive)
+                {
+                    isSubscriptionActive = false;
+                }
+            }
+        }
+
         return Ok(new AuthResponseDto
         {
             UserId = user.Id,
             Email = user.Email ?? string.Empty,
             Role = roles.FirstOrDefault() ?? string.Empty,
             BusinessId = user.BusinessId,
-            BranchId = user.BranchId
+            BranchId = user.BranchId,
+            IsSubscriptionActive = isSubscriptionActive
         });
     }
 
@@ -261,6 +298,10 @@ public class AuthController : ControllerBase
         var roles = await _userManager.GetRolesAsync(user);
         var token = _jwtTokenGenerator.GenerateToken(user, roles);
 
+        var isExpired = business.SubscriptionExpiresAt.HasValue && business.SubscriptionExpiresAt.Value < DateTime.UtcNow;
+        var isInactive = business.SubscriptionStatus == "Cancelled" || business.SubscriptionStatus == "Past Due";
+        bool isSubscriptionActive = !(isExpired || isInactive);
+
         return Ok(new AuthResponseDto
         {
             Token = token,
@@ -268,7 +309,8 @@ public class AuthController : ControllerBase
             Email = user.Email ?? string.Empty,
             Role = roles.FirstOrDefault() ?? string.Empty,
             BusinessId = user.BusinessId,
-            BranchId = user.BranchId
+            BranchId = user.BranchId,
+            IsSubscriptionActive = isSubscriptionActive
         });
     }
 
@@ -325,6 +367,24 @@ public class AuthController : ControllerBase
         var roles = await _userManager.GetRolesAsync(user);
         var token = _jwtTokenGenerator.GenerateToken(user, roles);
 
+        bool isSubscriptionActive = true;
+        if (user.BusinessId.HasValue)
+        {
+            var business = await _context.Businesses
+                .IgnoreQueryFilters()
+                .FirstOrDefaultAsync(b => b.Id == user.BusinessId.Value);
+
+            if (business != null)
+            {
+                var isExpired = business.SubscriptionExpiresAt.HasValue && business.SubscriptionExpiresAt.Value < DateTime.UtcNow;
+                var isInactive = business.SubscriptionStatus == "Cancelled" || business.SubscriptionStatus == "Past Due";
+                if (isExpired || isInactive)
+                {
+                    isSubscriptionActive = false;
+                }
+            }
+        }
+
         return Ok(new AuthResponseDto
         {
             Token = token,
@@ -332,7 +392,8 @@ public class AuthController : ControllerBase
             Email = user.Email ?? string.Empty,
             Role = roles.FirstOrDefault() ?? string.Empty,
             BusinessId = user.BusinessId,
-            BranchId = user.BranchId
+            BranchId = user.BranchId,
+            IsSubscriptionActive = isSubscriptionActive
         });
     }
 }

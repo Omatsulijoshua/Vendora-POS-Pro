@@ -5,7 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
----
+## [0.13.0] - 2026-06-09
+
+### Added
+- **Subscription Billing & Stripe Integration (Phase 14):**
+  - Modified the `Business` domain model to include `StripeCustomerId` and `StripeSubscriptionId` properties.
+  - Registered property mappings and column maximum lengths in `ApplicationDbContext` and applied database migration `AddStripeSubscriptionMetadata`.
+  - Installed the `Stripe.net` NuGet package.
+  - Created `IStripeService` and `StripeService` with full Stripe Checkout, Billing Customer Portal, and Webhook processing capabilities.
+  - Implemented a robust **Mock Billing Mode** fallback in `StripeService` when keys are set to `"Mock"` or left empty, generating simulation session URLs and parsing simulated webhook payloads without network calls.
+  - Created `BillingController` with owner-restricted endpoints: `GET /status`, `POST /checkout` (returns Stripe checkout session URL), and `POST /portal` (returns Stripe billing portal URL).
+  - Created `StripeWebhookController` allowing anonymous posts to `/api/webhooks/stripe` to handle events: `checkout.session.completed`, `invoice.payment_succeeded`, `invoice.payment_failed`, `customer.subscription.updated`, and `customer.subscription.deleted`.
+  - Integrated subscription operational gating in `AuthController` and token payload generator:
+    - Blocked Cashiers and Managers from logging in if the subscription is expired or delinquent, returning `402 Payment Required`.
+    - Allowed Owners to log in but set `IsSubscriptionActive` claim/payload flag to false.
+  - Updated frontend context `AuthContext.tsx` to decode and store `isSubscriptionActive` from JWT.
+  - Redesigned Owner Dashboard `owner/page.tsx` adding a **Billing & Subscriptions** tab featuring pricing cards (Basic, Pro, Enterprise), monthly/yearly interval toggle, and redirects to checkout/portal.
+  - Built a glassmorphic **Subscription Expired Lock Overlay** in `owner/page.tsx` that blocks non-billing operations when the subscription is inactive, forcing billing resolution.
+  - Developed and successfully ran PowerShell integration test suite `verify_phase14.ps1` confirming checkout redirects, webhook processing, delinquency status changes, and login blocks.
 
 ## [0.12.0] - 2026-06-09
 
