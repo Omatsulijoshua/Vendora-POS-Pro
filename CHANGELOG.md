@@ -7,6 +7,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.5.0] - 2026-06-09
+
+### Added
+- **Inventory Management System (Phase 6):**
+  - Created domain entities `Category`, `Product`, `ProductStock`, and `StockAdjustmentLog`.
+  - Configured composite uniqueness indexes (SKU & Barcode per business context) and database relationships.
+  - Setup and ran database migrations (`AddInventorySystem`).
+  - Added `SharedStockMode` setting flag to `Business` model.
+  - Implemented `CategoriesController` with complete tenant-isolated CRUD operations.
+  - Implemented `ProductsController` supporting CRUD, text search, barcode lookup, adjustment log histories, and stock level controls.
+  - Added stock consolidation and aggregation mechanics on switching stock modes (Shared vs Branch mode) in `BusinessesController`.
+  - Built out the Owner Dashboard with Categories management, Products catalogs, Low Stock alerts, and Shared Stock setting toggle.
+  - Built out the Manager Dashboard with branch-scoped catalog views, stock adjustment notes, and logs tracking.
+  - Built out the Cashier Dashboard with catalog lookups, keyword searches, and a simulated barcode checkout scanner.
+  - Implemented robust `verify_phase6.ps1` PowerShell integration test suite.
+  - Fixed required user filters causing log audit omissions by implementing query filter bypass (`IgnoreQueryFilters`) with manual tenant/branch context filters.
+  - Renamed branch to `main`, resolved git cache conflicts, and pushed code to `https://github.com/Omatsulijoshua/Vendora-POS-Pro`.
+
+## [0.4.0] - 2026-06-08
+
+### Added
+- **User & Staff Management - RBAC Expansion (Phase 5):**
+  - Added `IsActive` property to `User` entity to support staff deactivation workflows.
+  - Augmented `ITenantProvider` and `HttpContextTenantProvider` to support active branch-scoped contexts.
+  - Configured dynamic EF Core global query filters for `User` and `Branch` entities.
+  - Enforced `IsActive` constraints during login in `AuthController`.
+  - Exposed `toggle-active` endpoint in `StaffController`.
+  - Updated Owner Dashboard Staff management table with active/deactive toggle buttons.
+  - Implemented and successfully ran integration test suite `verify_phase5.ps1`.
+
 ## [0.3.0] - 2026-06-08
 
 ### Added

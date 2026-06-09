@@ -225,3 +225,202 @@ Registers a new Manager or Cashier user and assigns them to the specified branch
       "branchName": "Northside Depot"
     }
     ```
+
+---
+
+## Business Settings Endpoints (Owner Role Only)
+
+### 1. Toggle Shared Stock Mode
+Toggles the shared stock mode setting for the active business, performing stock aggregation (when moving to shared mode) or stock splitting (when moving to branch mode).
+
+*   **Endpoint**: `PUT /api/businesses/toggle-shared-stock`
+*   **Authentication**: Bearer JWT (Owner role only)
+*   **Success Response** (200 OK):
+    ```json
+    {
+      "id": "c620400b-337c-4861-bb27-7756f7ef2542",
+      "sharedStockMode": true
+    }
+    ```
+
+---
+
+## Category Management Endpoints
+
+### 1. Get Categories
+Retrieves all active categories belonging to the active business context.
+
+*   **Endpoint**: `GET /api/categories`
+*   **Authentication**: Bearer JWT (All authenticated users)
+*   **Success Response** (200 OK):
+    ```json
+    [
+      {
+        "id": "96cb65b5-8253-4db3-b98e-9aca8a10d3a1",
+        "name": "Drinks",
+        "description": "Cold sodas, drinks, and juices",
+        "isActive": true,
+        "createdAt": "2026-06-08T18:49:50Z"
+      }
+    ]
+    ```
+
+### 2. Create Category
+Creates a new category for grouping products.
+
+*   **Endpoint**: `POST /api/categories`
+*   **Authentication**: Bearer JWT (Owner role only)
+*   **Request Body**:
+    ```json
+    {
+      "name": "Beverages",
+      "description": "Cold drinks, sodas, and juices"
+    }
+    ```
+
+### 3. Update Category
+Updates an existing category's details.
+
+*   **Endpoint**: `PUT /api/categories/{id}`
+*   **Authentication**: Bearer JWT (Owner role only)
+
+### 4. Delete Category
+Soft deletes a category by setting its `IsActive` state to false.
+
+*   **Endpoint**: `DELETE /api/categories/{id}`
+*   **Authentication**: Bearer JWT (Owner role only)
+
+---
+
+## Product & Stock Management Endpoints
+
+### 1. Get Products
+Retrieves active products, dynamically resolving stock levels based on caller context (Global consolidated view for Owner, or branch-scoped view for branch staff/swapped context).
+
+*   **Endpoint**: `GET /api/products`
+*   **Authentication**: Bearer JWT (All authenticated users)
+*   **Query Parameters**:
+    *   `search` (string, optional) - Text search matching name, SKU, or Barcode
+    *   `categoryId` (uuid, optional) - Filter by category
+    *   `lowStockOnly` (boolean, optional) - Filter to products below minimum stock safety threshold
+*   **Success Response** (200 OK - Global View):
+    ```json
+    [
+      {
+        "id": "b4de8b0b-989b-4bed-9918-063508dcc488",
+        "name": "Coca Cola",
+        "sku": "COKE-01",
+        "barcode": "123456789012",
+        "description": "Refreshing Coca Cola beverage",
+        "price": 1.5,
+        "costPrice": 0.8,
+        "isActive": true,
+        "categoryId": "96cb65b5-8253-4db3-b98e-9aca8a10d3a1",
+        "categoryName": "Drinks",
+        "totalStock": 70,
+        "underStockAlert": false,
+        "createdAt": "2026-06-08T18:49:52Z",
+        "branchStocks": [
+          {
+            "branchId": "bb49ff14-75e1-45a2-b7f9-762d2cfac664",
+            "branchName": "Branch Alpha",
+            "quantity": 50,
+            "minStockLevel": 10,
+            "underStockAlert": false
+          },
+          {
+            "branchId": "f5cc395b-601d-4d6e-bd10-31980bb59a91",
+            "branchName": "Branch Beta",
+            "quantity": 20,
+            "minStockLevel": 5,
+            "underStockAlert": false
+          }
+        ]
+      }
+    ]
+    ```
+
+### 2. Get Product Details
+Retrieves details of a single product.
+
+*   **Endpoint**: `GET /api/products/{id}`
+*   **Authentication**: Bearer JWT (All authenticated users)
+
+### 3. Get Product by Barcode
+Quick barcode scan lookup endpoint for cashier operations.
+
+*   **Endpoint**: `GET /api/products/barcode/{barcode}`
+*   **Authentication**: Bearer JWT (All authenticated users)
+
+### 4. Create Product
+Creates a new product catalog entry and seeds its initial stock levels.
+
+*   **Endpoint**: `POST /api/products`
+*   **Authentication**: Bearer JWT (Owner role only)
+*   **Request Body**:
+    ```json
+    {
+      "name": "Coca Cola",
+      "sku": "COKE-01",
+      "barcode": "123456789012",
+      "description": "Refreshing Coca Cola beverage",
+      "price": 1.50,
+      "costPrice": 0.80,
+      "categoryId": "96cb65b5-8253-4db3-b98e-9aca8a10d3a1",
+      "initialStocks": [
+        { "branchId": "bb49ff14-75e1-45a2-b7f9-762d2cfac664", "quantity": 50, "minStockLevel": 10 },
+        { "branchId": "f5cc395b-601d-4d6e-bd10-31980bb59a91", "quantity": 20, "minStockLevel": 5 }
+      ]
+    }
+    ```
+
+### 5. Update Product
+Updates product properties (excluding stock counts, which must go through the adjustment endpoint).
+
+*   **Endpoint**: `PUT /api/products/{id}`
+*   **Authentication**: Bearer JWT (Owner role only)
+
+### 6. Adjust Stock Level
+Performs a stock adjustment transaction, modifying stock quantity/thresholds and logging an audit trail record.
+
+*   **Endpoint**: `PUT /api/products/{id}/adjust-stock`
+*   **Authentication**: Bearer JWT (Owner or branch-assigned Manager)
+*   **Request Body**:
+    ```json
+    {
+      "branchId": "bb49ff14-75e1-45a2-b7f9-762d2cfac664",
+      "quantity": 15,
+      "minStockLevel": 5,
+      "reason": "Restocked from main distributor"
+    }
+    ```
+
+### 7. Get Stock Adjustment Logs
+Retrieves the audit trail logs for a product, restricted to the caller's active tenant and branch context.
+
+*   **Endpoint**: `GET /api/products/{id}/adjustment-logs`
+*   **Authentication**: Bearer JWT (All authenticated users)
+*   **Success Response** (200 OK):
+    ```json
+    [
+      {
+        "id": "c1a6034e-0347-497f-bc3a-969408b0c8d1",
+        "productId": "6f5b5480-b8f7-4f3e-9d2f-910049272ba6",
+        "productName": "Pepsi Cola",
+        "branchId": "1fab3214-31f8-491c-b4c6-35c0e96825c5",
+        "branchName": "Branch Alpha",
+        "previousQuantity": 3,
+        "newQuantity": 15,
+        "adjustedByUserId": "019ea7a1-9023-748d-9ca3-f9050db997f7",
+        "adjustedByUserName": "Mark Manager",
+        "reason": "Restocked from main distributor",
+        "createdAt": "2026-06-08T18:56:50Z"
+      }
+    ]
+    ```
+
+### 8. Delete Product
+Soft deletes a product from the catalog.
+
+*   **Endpoint**: `DELETE /api/products/{id}`
+*   **Authentication**: Bearer JWT (Owner role only)

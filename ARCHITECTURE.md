@@ -90,3 +90,29 @@ Every tenant (Business) is assigned a unique `BusinessId`, and every branch is a
     *   `Owner`
     *   `Manager` (Assigned to single branch, has branch claims locked)
     *   `Cashier` (Assigned to single branch, has branch claims locked, access restricted to single branch only)
+
+---
+
+## 6. Inventory & Stock Isolation Strategy
+
+The inventory system supports two distinct stock control modes managed at the business/tenant level:
+
+### Stock Modes:
+1. **Shared Stock Mode (`SharedStockMode = true`)**:
+   - Stock quantities are managed globally for the entire business.
+   - Database records in `ProductStocks` are stored with `BranchId = null`.
+   - Any query or adjustment made by branch staff will refer to the same single shared pool.
+   
+2. **Branch Stock Mode (`SharedStockMode = false`)**:
+   - Stock quantities are managed separately for each branch.
+   - Database records in `ProductStocks` are stored with `BranchId = branchId`.
+   - Queries and adjustments made by branch-swapped owners or branch staff resolve only the stock assigned to that specific branch.
+
+### Global Query Filtering & Joins:
+- **ProductStock & StockAdjustmentLog Filters**:
+  - Automatically isolates stock/logs to the current `BusinessId`.
+  - Dynamically filters by `BranchId` if a branch context is active:
+    `ps => ps.Product.BusinessId == tenantId && (ps.BranchId == null || !branchId.HasValue || ps.BranchId == branchId)`
+- **Query Filter Bypass (`IgnoreQueryFilters`)**:
+  - Used in audit-log queries (e.g. `StockAdjustmentLogs`) to load the modifying user/staff entity (`AdjustedByUser`) even if the user resides in a different branch context than the caller (for example, when an Owner without a branch context makes adjustments on a branch product, or a Manager views logs made by the global Owner).
+  - Explicit manual filters are applied to the query after `IgnoreQueryFilters()` to preserve strict tenant boundaries and branch log security.
