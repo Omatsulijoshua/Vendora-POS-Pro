@@ -12,10 +12,44 @@ This document tracks the implementation progress of the **Vendora POS Pro** SaaS
 | **Phase 5** | User & Staff Management (RBAC Expansion) | ✅ Completed | June 2026 |
 | **Phase 6** | Inventory Management System (Products, Stock Control, Alerts) | ✅ Completed | June 2026 |
 | **Phase 7** | Stock Transfer System | ✅ Completed | June 2026 |
-| **Phase 8** | POS System & Receipt Customizer | ❌ Not Started | - |
-| **Phase 9** | Discounts & Coupons System | ❌ Not Started | - |
+| **Phase 8** | POS System & Receipt Customizer | ✅ Completed | June 2026 |
+| **Phase 9** | Discounts & Coupons System | ✅ Completed | June 2026 |
 | **Phase 10** | Advanced Reports & Consolidated Analytics | ❌ Not Started | - |
 | **Phase 11** | Subscription Billing & Stripe Integration | ❌ Not Started | - |
+
+---
+
+## Phase 8 Detail Checklist (POS System Core)
+
+- [x] Create domain models: `PaymentMethod` enum, `Sale`, `SaleItem`
+- [x] Configure EF Core relationships, precision, cascading rules, and global query filters
+- [x] Generate and run EF Core database migration (`AddSalesSystem`)
+- [x] Create API DTOs for checkout commands and transaction detail views
+- [x] Implement `SalesController` with transaction locks, stock deduction, and branch isolation
+- [x] Update Cashier dashboard with payment types, mixed payment split validation, and dynamic receipt printing
+- [x] Update Owner dashboard with all-branch sales history, receipt previews, and database-driven sales stats
+- [x] Update Manager dashboard with branch-isolated sales history and branch metrics
+- [x] Write PowerShell integration test suite (`verify_phase8.ps1`) covering POS requirements
+- [x] Verify tests pass successfully and commit/push changes to remote repository
+
+---
+
+## Phase 9 Detail Checklist (Discount & Coupon System)
+
+- [x] Create domain models: `DiscountType` enum, `DiscountTarget` enum, `Discount`, `Coupon`
+- [x] Add coupon auditing columns (`AppliedCouponId`, `AppliedCouponCode`) to `Sale` model
+- [x] Configure EF Core query filters, unique indexes, decimal precision, and migration (`AddPromoSystem`)
+- [x] Create API DTOs for promo creation, detail views, and coupon validation results
+- [x] Implement `DiscountsController` with full CRUD restricted to Owner/Manager
+- [x] Implement `CouponsController` with full CRUD and real-time validation endpoint
+- [x] Integrate manual discount cashier limit check (max 15% or $50.00) in checkout API
+- [x] Integrate coupon usage checks and incrementing in checkout API
+- [x] Update Cashier dashboard with coupon validation input and real-time cashier limit warnings
+- [x] Update Owner dashboard with Promotions management tab for Coupons and Discounts
+- [x] Update Manager dashboard with Promotions management tab
+- [x] Write PowerShell integration test suite (`verify_phase9.ps1`)
+- [x] Verify tests pass successfully and commit/push changes to remote repository
+
 
 ---
 
