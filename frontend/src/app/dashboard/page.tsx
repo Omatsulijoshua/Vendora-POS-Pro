@@ -1,0 +1,41 @@
+"use client";
+
+import React, { useEffect } from "react";
+import { useAuth } from "@/context/AuthContext";
+import { useRouter } from "next/navigation";
+
+export default function DashboardFallbackPage() {
+  const { user, loading, isAuthenticated } = useAuth();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!loading) {
+      if (!isAuthenticated) {
+        router.push("/login");
+      } else if (user) {
+        const role = user.role;
+        if (role === "SuperAdmin") {
+          router.push("/dashboard/super-admin");
+        } else if (role === "Owner") {
+          router.push("/dashboard/owner");
+        } else if (role === "Manager") {
+          router.push("/dashboard/manager");
+        } else if (role === "Cashier") {
+          router.push("/dashboard/cashier");
+        }
+      }
+    }
+  }, [user, loading, isAuthenticated, router]);
+
+  return (
+    <div className="flex-1 flex flex-col justify-center items-center bg-slate-950 min-h-screen text-slate-200">
+      <div className="absolute top-[-10%] left-[-15%] w-[600px] h-[600px] bg-indigo-900/10 rounded-full blur-[120px]" />
+      <div className="absolute bottom-[-10%] right-[-15%] w-[600px] h-[600px] bg-purple-900/10 rounded-full blur-[120px]" />
+      
+      <div className="flex flex-col items-center z-10 space-y-4">
+        <div className="w-12 h-12 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin" />
+        <p className="text-slate-400 font-medium">Redirecting you to your space...</p>
+      </div>
+    </div>
+  );
+}

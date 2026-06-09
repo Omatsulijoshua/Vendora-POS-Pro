@@ -1,0 +1,8 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/VendoraPOS.Application/VendoraPOS.Application.csproj" />
+    <Project Path="src/VendoraPOS.Domain/VendoraPOS.Domain.csproj" />
+    <Project Path="src/VendoraPOS.Infrastructure/VendoraPOS.Infrastructure.csproj" />
+    <Project Path="src/VendoraPOS.WebApi/VendoraPOS.WebApi.csproj" />
+  </Folder>
+</Solution>
