@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.10.0] - 2026-06-09
+
+### Added
+- **Cashier Dashboard (Personal Tracking & Metrics) (Phase 11):**
+  - Created backend DTOs for cashier statistics calculations: `CashierStatsDto.cs`, `TopProductDto`, and `DailySaleTrendDto`.
+  - Implemented `GET /api/sales/cashier-stats` endpoint in `SalesController.cs` returning isolated daily, weekly, monthly, lifetime statistics, payment breakdowns, top-selling products, and 7-day trend arrays.
+  - Enforced data isolation at the database level: cashier queries on sales listing (`GET /api/sales`) and details lookup (`GET /api/sales/{id}`) are restricted to the cashier's own processed sales, throwing `403 Forbidden` on access violations.
+  - Added navigation tabs switcher on Cashier Dashboard: "New Sale (Register)" vs "History & Performance".
+  - Designed premium glassmorphic KPI cards for Today's Sales, Weekly Sales, Monthly Sales, Lifetime Sales, and Average Transaction Value.
+  - Rendered detailed cashier personal transaction history table with invoice formatting and receipt print triggers.
+  - Built custom Tailwind/CSS components (progress bars and vertical graphs) for product volume ratios and daily sales performance trends without external graphing packages.
+  - Fixed syntax compilation issues on frontend cashier and manager dashboards (unclosed JSX container and try-catch braces).
+  - Created and executed PowerShell verification script `verify_phase11.ps1`.
+
 ## [0.9.0] - 2026-06-09
 
 ### Added

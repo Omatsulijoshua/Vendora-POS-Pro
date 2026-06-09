@@ -37,6 +37,56 @@ export default function CashierDashboard() {
   const [validatingCoupon, setValidatingCoupon] = useState(false);
   const [appliedCoupon, setAppliedCoupon] = useState<{ code: string; type: string; value: number } | null>(null);
 
+  // Tab & Statistics states
+  const [activeTab, setActiveTab] = useState<"register" | "performance">("register");
+  const [stats, setStats] = useState<any>(null);
+  const [loadingStats, setLoadingStats] = useState(false);
+  const [salesHistory, setSalesHistory] = useState<any[]>([]);
+  const [loadingHistory, setLoadingHistory] = useState(false);
+
+  const fetchCashierStats = async () => {
+    if (!token) return;
+    try {
+      setLoadingStats(true);
+      const res = await fetch("http://localhost:5149/api/sales/cashier-stats", {
+        headers: { "Authorization": `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setStats(data);
+      }
+    } catch (err) {
+      console.error("Failed to fetch stats", err);
+    } finally {
+      setLoadingStats(false);
+    }
+  };
+
+  const fetchSalesHistory = async () => {
+    if (!token) return;
+    try {
+      setLoadingHistory(true);
+      const res = await fetch("http://localhost:5149/api/sales", {
+        headers: { "Authorization": `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setSalesHistory(data);
+      }
+    } catch (err) {
+      console.error("Failed to fetch sales history", err);
+    } finally {
+      setLoadingHistory(false);
+    }
+  };
+
+  useEffect(() => {
+    if (token && activeTab === "performance") {
+      fetchCashierStats();
+      fetchSalesHistory();
+    }
+  }, [token, activeTab]);
+
   const subtotal = cart.reduce((acc, item) => acc + item.price * item.quantity, 0);
   const manualDiscount = parseFloat(manualDiscountStr) || 0;
   
@@ -368,244 +418,482 @@ export default function CashierDashboard() {
         </div>
       </header>
 
-      {/* Main Grid: Split Screen */}
-      <div className="flex-1 flex overflow-hidden max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 gap-6">
-        {/* Left Hand Side: Receipt / Register (40% width) */}
-        <div className="w-full md:w-[400px] border border-slate-800 bg-slate-900/20 rounded-2xl flex flex-col overflow-hidden">
-          <div className="p-4 border-b border-slate-900 bg-slate-950/40 flex justify-between items-center shrink-0">
-            <h3 className="font-bold text-slate-200">Current Receipt</h3>
-            <button
-              onClick={clearCart}
-              className="text-xs font-medium text-slate-400 hover:text-red-400 transition-colors"
-            >
-              Clear All
-            </button>
-          </div>
+      {/* Sub-Header Navigation */}
+      <div className="bg-slate-900/40 border-b border-slate-900 shrink-0">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex space-x-6">
+          <button
+            onClick={() => setActiveTab("register")}
+            className={`py-3 text-sm font-bold border-b-2 transition-all ${
+              activeTab === "register"
+                ? "border-indigo-500 text-indigo-400"
+                : "border-transparent text-slate-400 hover:text-slate-200"
+            }`}
+          >
+            New Sale (Register)
+          </button>
+          <button
+            onClick={() => setActiveTab("performance")}
+            className={`py-3 text-sm font-bold border-b-2 transition-all ${
+              activeTab === "performance"
+                ? "border-indigo-500 text-indigo-400"
+                : "border-transparent text-slate-400 hover:text-slate-200"
+            }`}
+          >
+            History & Performance
+          </button>
+        </div>
+      </div>
 
-          {/* Cart List */}
-          <div className="flex-1 overflow-y-auto p-4 space-y-3">
-            {showSuccess && (
-              <div className="p-4 bg-emerald-950/50 border border-emerald-800 text-emerald-450 rounded-lg text-sm text-center">
-                🎉 Sale Complete! Receipt printed successfully.
-              </div>
-            )}
-            
-            {cart.length === 0 && !showSuccess ? (
-              <div className="h-full flex flex-col justify-center items-center text-slate-500 space-y-2">
-                <span className="text-3xl">🛒</span>
-                <p className="text-sm">Receipt is empty.</p>
-                <p className="text-xs text-slate-600">Scan barcode or select products on the right</p>
-              </div>
-            ) : (
-              cart.map((item) => (
-                <div key={item.id} className="flex justify-between items-center p-3 bg-slate-950/55 rounded-lg border border-slate-900">
-                  <div className="space-y-0.5">
-                    <p className="font-semibold text-sm text-slate-200">{item.name}</p>
-                    <p className="text-[10px] text-slate-550 font-mono">{item.sku}</p>
-                    <p className="text-xs text-slate-500">
-                      {item.quantity} x ${item.price.toFixed(2)}
-                    </p>
-                  </div>
-                  <div className="flex items-center space-x-4">
-                    <span className="font-bold text-sm text-slate-350">
-                      ${(item.price * item.quantity).toFixed(2)}
-                    </span>
-                    <button
-                      onClick={() => removeFromCart(item.id)}
-                      className="text-slate-600 hover:text-red-400 text-xs p-1"
-                    >
-                      ✕
-                    </button>
-                  </div>
+      {/* Main Grid: Conditional Render */}
+      {activeTab === "register" ? (
+        <div className="flex-1 flex overflow-hidden max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 gap-6">
+          {/* Left Hand Side: Receipt / Register (40% width) */}
+          <div className="w-full md:w-[400px] border border-slate-800 bg-slate-900/20 rounded-2xl flex flex-col overflow-hidden">
+            <div className="p-4 border-b border-slate-900 bg-slate-950/40 flex justify-between items-center shrink-0">
+              <h3 className="font-bold text-slate-200">Current Receipt</h3>
+              <button
+                onClick={clearCart}
+                className="text-xs font-medium text-slate-400 hover:text-red-400 transition-colors"
+              >
+                Clear All
+              </button>
+            </div>
+
+            {/* Cart List */}
+            <div className="flex-1 overflow-y-auto p-4 space-y-3">
+              {showSuccess && (
+                <div className="p-4 bg-emerald-950/50 border border-emerald-800 text-emerald-450 rounded-lg text-sm text-center">
+                  🎉 Sale Complete! Receipt printed successfully.
                 </div>
-              ))
-            )}
-          </div>
-
-          {/* Checkout Calculations */}
-          <div className="p-4 border-t border-slate-900 bg-slate-950/50 space-y-3 shrink-0">
-            {/* Promotions & Discounts */}
-            <div className="p-3 bg-slate-950/40 border border-slate-900 rounded-xl space-y-2">
-              <div className="flex items-center justify-between text-xs font-semibold text-slate-300">
-                <span>Discounts & Coupons</span>
-              </div>
+              )}
               
-              {/* Manual Discount */}
-              <div className="flex items-center space-x-2">
-                <span className="text-[11px] text-slate-400 w-20">Manual ($):</span>
-                <input
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={manualDiscountStr}
-                  onChange={(e) => setManualDiscountStr(e.target.value)}
-                  className="flex-1 px-2.5 py-1 bg-slate-900 border border-slate-800 rounded text-xs text-slate-200 focus:outline-none focus:border-indigo-505"
-                />
-              </div>
-
-              {/* Coupon Code */}
-              <div className="space-y-1">
-                <div className="flex items-center space-x-2">
-                  <span className="text-[11px] text-slate-400 w-20">Coupon:</span>
-                  <div className="flex flex-1 gap-1">
-                    <input
-                      type="text"
-                      placeholder="CODE"
-                      value={couponCode}
-                      onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
-                      className="flex-1 px-2.5 py-1 bg-slate-900 border border-slate-800 rounded text-xs text-slate-200 focus:outline-none focus:border-indigo-505 uppercase"
-                    />
-                    <button
-                      type="button"
-                      onClick={handleApplyCoupon}
-                      disabled={validatingCoupon || !couponCode.trim()}
-                      className="px-2 py-1 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-[10px] font-bold rounded text-white"
-                    >
-                      {validatingCoupon ? "..." : "Apply"}
-                    </button>
-                  </div>
+              {cart.length === 0 && !showSuccess ? (
+                <div className="h-full flex flex-col justify-center items-center text-slate-500 space-y-2">
+                  <span className="text-3xl">🛒</span>
+                  <p className="text-sm">Receipt is empty.</p>
+                  <p className="text-xs text-slate-600">Scan barcode or select products on the right</p>
                 </div>
-
-                {couponError && (
-                  <p className="text-[10px] text-red-400 font-semibold pl-20">{couponError}</p>
-                )}
-                {couponSuccess && (
-                  <p className="text-[10px] text-emerald-450 font-semibold pl-20">{couponSuccess}</p>
-                )}
-                {appliedCoupon && (
-                  <div className="flex justify-between items-center text-[10px] text-indigo-400 bg-indigo-950/20 px-2 py-1 rounded border border-indigo-900/30">
-                    <span>Active: <strong>{appliedCoupon.code}</strong> ({appliedCoupon.type === "Percentage" ? `${appliedCoupon.value}%` : `$${appliedCoupon.value}`})</span>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setAppliedCoupon(null);
-                        setCouponSuccess("");
-                        setCouponCode("");
-                      }}
-                      className="text-red-400 font-bold hover:text-red-350"
-                    >
-                      Remove
-                    </button>
+              ) : (
+                cart.map((item) => (
+                  <div key={item.id} className="flex justify-between items-center p-3 bg-slate-950/55 rounded-lg border border-slate-900">
+                    <div className="space-y-0.5">
+                      <p className="font-semibold text-sm text-slate-200">{item.name}</p>
+                      <p className="text-[10px] text-slate-550 font-mono">{item.sku}</p>
+                      <p className="text-xs text-slate-500">
+                        {item.quantity} x ${item.price.toFixed(2)}
+                      </p>
+                    </div>
+                    <div className="flex items-center space-x-4">
+                      <span className="font-bold text-sm text-slate-350">
+                        ${(item.price * item.quantity).toFixed(2)}
+                      </span>
+                      <button
+                        onClick={() => removeFromCart(item.id)}
+                        className="text-slate-600 hover:text-red-400 text-xs p-1"
+                      >
+                        ✕
+                      </button>
+                    </div>
                   </div>
-                )}
-              </div>
-
-              {/* Cashier limit warning */}
-              {user?.role === "Cashier" && (discountAmount > 50 || (subtotal > 0 && discountAmount / subtotal > 0.15)) && (
-                <div className="p-2 bg-red-950/40 border border-red-900/50 rounded text-[10px] text-red-400 font-bold">
-                  ⚠️ Limit Exceeded: Cashiers cannot apply discounts &gt; 15% (${(subtotal * 0.15).toFixed(2)}) or $50.00.
-                </div>
+                ))
               )}
             </div>
 
-            <div className="flex justify-between text-sm text-slate-400">
-              <span>Subtotal</span>
-              <span>${subtotal.toFixed(2)}</span>
+            {/* Checkout Calculations */}
+            <div className="p-4 border-t border-slate-900 bg-slate-950/50 space-y-3 shrink-0">
+              {/* Promotions & Discounts */}
+              <div className="p-3 bg-slate-950/40 border border-slate-900 rounded-xl space-y-2">
+                <div className="flex items-center justify-between text-xs font-semibold text-slate-300">
+                  <span>Discounts & Coupons</span>
+                </div>
+                
+                {/* Manual Discount */}
+                <div className="flex items-center space-x-2">
+                  <span className="text-[11px] text-slate-400 w-20">Manual ($):</span>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={manualDiscountStr}
+                    onChange={(e) => setManualDiscountStr(e.target.value)}
+                    className="flex-1 px-2.5 py-1 bg-slate-900 border border-slate-800 rounded text-xs text-slate-200 focus:outline-none focus:border-indigo-505"
+                  />
+                </div>
+
+                {/* Coupon Code */}
+                <div className="space-y-1">
+                  <div className="flex items-center space-x-2">
+                    <span className="text-[11px] text-slate-400 w-20">Coupon:</span>
+                    <div className="flex flex-1 gap-1">
+                      <input
+                        type="text"
+                        placeholder="CODE"
+                        value={couponCode}
+                        onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
+                        className="flex-1 px-2.5 py-1 bg-slate-900 border border-slate-800 rounded text-xs text-slate-200 focus:outline-none focus:border-indigo-505 uppercase"
+                      />
+                      <button
+                        type="button"
+                        onClick={handleApplyCoupon}
+                        disabled={validatingCoupon || !couponCode.trim()}
+                        className="px-2 py-1 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-[10px] font-bold rounded text-white"
+                      >
+                        {validatingCoupon ? "..." : "Apply"}
+                      </button>
+                    </div>
+                  </div>
+
+                  {couponError && (
+                    <p className="text-[10px] text-red-400 font-semibold pl-20">{couponError}</p>
+                  )}
+                  {couponSuccess && (
+                    <p className="text-[10px] text-emerald-450 font-semibold pl-20">{couponSuccess}</p>
+                  )}
+                  {appliedCoupon && (
+                    <div className="flex justify-between items-center text-[10px] text-indigo-400 bg-indigo-950/20 px-2 py-1 rounded border border-indigo-900/30">
+                      <span>Active: <strong>{appliedCoupon.code}</strong> ({appliedCoupon.type === "Percentage" ? `${appliedCoupon.value}%` : `$${appliedCoupon.value}`})</span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setAppliedCoupon(null);
+                          setCouponSuccess("");
+                          setCouponCode("");
+                        }}
+                        className="text-red-400 font-bold hover:text-red-350"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {/* Cashier limit warning */}
+                {user?.role === "Cashier" && (discountAmount > 50 || (subtotal > 0 && discountAmount / subtotal > 0.15)) && (
+                  <div className="p-2 bg-red-950/40 border border-red-900/50 rounded text-[10px] text-red-400 font-bold">
+                    ⚠️ Limit Exceeded: Cashiers cannot apply discounts &gt; 15% (${(subtotal * 0.15).toFixed(2)}) or $50.00.
+                  </div>
+                )}
+              </div>
+
+              <div className="flex justify-between text-sm text-slate-400">
+                <span>Subtotal</span>
+                <span>${subtotal.toFixed(2)}</span>
+              </div>
+              {discountAmount > 0 && (
+                <div className="flex justify-between text-sm text-red-400">
+                  <span>Discount</span>
+                  <span>-${discountAmount.toFixed(2)}</span>
+                </div>
+              )}
+              <div className="flex justify-between text-sm text-slate-400">
+                <span>Tax (8%)</span>
+                <span>${tax.toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between text-lg font-bold text-slate-100 border-t border-slate-900 pt-3">
+                <span>Total</span>
+                <span className="text-indigo-400">${total.toFixed(2)}</span>
+              </div>
+
+              <button
+                onClick={handleCheckoutInit}
+                disabled={cart.length === 0 || (user?.role === "Cashier" && (discountAmount > 50 || (subtotal > 0 && discountAmount / subtotal > 0.15)))}
+                className="w-full mt-2 py-3 bg-gradient-to-r from-indigo-500 to-purple-650 hover:from-indigo-600 hover:to-purple-750 disabled:opacity-50 disabled:pointer-events-none text-white font-bold rounded-xl shadow-lg shadow-indigo-500/10 active:scale-[0.98] transition-all"
+              >
+                Collect Payment
+              </button>
             </div>
-            {discountAmount > 0 && (
-              <div className="flex justify-between text-sm text-red-400">
-                <span>Discount</span>
-                <span>-${discountAmount.toFixed(2)}</span>
+          </div>
+
+          {/* Right Hand Side: Catalog Grid (60% width) */}
+          <div className="flex-1 flex flex-col space-y-4 overflow-hidden">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 shrink-0">
+              <div>
+                <h3 className="font-bold text-lg text-slate-200">Product Directory</h3>
+                <p className="text-xs text-slate-500">Search products or scan barcodes</p>
+              </div>
+              
+              <div className="flex gap-2">
+                {/* Barcode Search Form */}
+                <form onSubmit={handleBarcodeSubmit} className="relative">
+                  <input
+                    ref={barcodeInputRef}
+                    type="text"
+                    placeholder="[Scan Barcode]"
+                    value={barcodeQuery}
+                    onChange={(e) => setBarcodeQuery(e.target.value)}
+                    className="px-3 py-1.5 w-40 bg-slate-900 border border-slate-800 focus:border-indigo-500 rounded-lg text-xs text-slate-100 focus:outline-none"
+                  />
+                  {scanError && (
+                    <span className="absolute bottom-[-18px] left-0 text-[9px] text-red-400 font-bold bg-slate-950 px-1.5 rounded border border-red-950">
+                      {scanError}
+                    </span>
+                  )}
+                </form>
+
+                {/* Text Search Input */}
+                <input
+                  type="text"
+                  placeholder="Search catalog..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="px-3 py-1.5 w-48 bg-slate-900 border border-slate-800 focus:border-indigo-500 rounded-lg text-xs text-slate-100 focus:outline-none"
+                />
+              </div>
+            </div>
+
+            {/* Product Cards Grid */}
+            {loadingProducts ? (
+              <div className="text-sm text-slate-500 py-8">Loading branch catalog...</div>
+            ) : filteredProducts.length === 0 ? (
+              <div className="text-sm text-slate-555 py-8">No products found matching filters.</div>
+            ) : (
+              <div className="flex-1 overflow-y-auto grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 pb-6">
+                {filteredProducts.map((p) => (
+                  <button
+                    key={p.id}
+                    onClick={() => addToCart(p)}
+                    disabled={p.totalStock <= 0}
+                    className="border border-slate-850 hover:border-indigo-500 disabled:opacity-50 bg-slate-900/10 hover:bg-slate-900/30 text-left p-4 rounded-xl flex flex-col justify-between h-36 transition-all group relative overflow-hidden"
+                  >
+                    <div className="absolute top-0 right-0 px-2 py-0.5 bg-slate-900 border-l border-b border-slate-850 text-[9px] text-slate-400 group-hover:bg-indigo-650 group-hover:text-white transition-colors font-bold">
+                      {p.categoryName || "Unassigned"}
+                    </div>
+                    
+                    <div className="mt-2 space-y-1">
+                      <div className="font-semibold text-slate-200 group-hover:text-white transition-colors text-sm truncate pr-4">
+                        {p.name}
+                      </div>
+                      <div className="text-[9px] text-slate-500 font-mono">{p.sku}</div>
+                      <div className="text-[10px] text-slate-450">
+                        Stock: <span className={p.underStockAlert ? "text-red-400 font-bold" : "text-emerald-450 font-bold"}>{p.totalStock}</span>
+                      </div>
+                    </div>
+
+                    <div className="flex justify-between items-end mt-2">
+                      <span className="text-base font-bold text-indigo-400 group-hover:text-indigo-300">
+                        ${p.price.toFixed(2)}
+                      </span>
+                      <span className="text-[10px] font-bold px-2 py-1 rounded bg-slate-950 border border-slate-850 text-slate-350 group-hover:bg-indigo-600 group-hover:text-white group-hover:border-indigo-500 transition-colors">
+                        {p.totalStock <= 0 ? "Out of Stock" : "+ Add"}
+                      </span>
+                    </div>
+                  </button>
+                ))}
               </div>
             )}
-            <div className="flex justify-between text-sm text-slate-400">
-              <span>Tax (8%)</span>
-              <span>${tax.toFixed(2)}</span>
-            </div>
-            <div className="flex justify-between text-lg font-bold text-slate-100 border-t border-slate-900 pt-3">
-              <span>Total</span>
-              <span className="text-indigo-400">${total.toFixed(2)}</span>
-            </div>
-
-            <button
-              onClick={handleCheckoutInit}
-              disabled={cart.length === 0 || (user?.role === "Cashier" && (discountAmount > 50 || (subtotal > 0 && discountAmount / subtotal > 0.15)))}
-              className="w-full mt-2 py-3 bg-gradient-to-r from-indigo-500 to-purple-650 hover:from-indigo-600 hover:to-purple-750 disabled:opacity-50 disabled:pointer-events-none text-white font-bold rounded-xl shadow-lg shadow-indigo-500/10 active:scale-[0.98] transition-all"
-            >
-              Collect Payment
-            </button>
           </div>
         </div>
-
-        {/* Right Hand Side: Catalog Grid (60% width) */}
-        <div className="flex-1 flex flex-col space-y-4 overflow-hidden">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 shrink-0">
-            <div>
-              <h3 className="font-bold text-lg text-slate-200">Product Directory</h3>
-              <p className="text-xs text-slate-500">Search products or scan barcodes</p>
+      ) : (
+        /* History & Performance Tab Content */
+        <div className="flex-1 overflow-y-auto max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+          {loadingStats || !stats ? (
+            <div className="text-sm text-slate-400 py-8 text-center bg-slate-900/20 border border-slate-900 rounded-2xl">
+              Loading performance stats...
             </div>
-            
-            <div className="flex gap-2">
-              {/* Barcode Search Form */}
-              <form onSubmit={handleBarcodeSubmit} className="relative">
-                <input
-                  ref={barcodeInputRef}
-                  type="text"
-                  placeholder="[Scan Barcode]"
-                  value={barcodeQuery}
-                  onChange={(e) => setBarcodeQuery(e.target.value)}
-                  className="px-3 py-1.5 w-40 bg-slate-900 border border-slate-800 focus:border-indigo-500 rounded-lg text-xs text-slate-100 focus:outline-none"
-                />
-                {scanError && (
-                  <span className="absolute bottom-[-18px] left-0 text-[9px] text-red-400 font-bold bg-slate-950 px-1.5 rounded border border-red-950">
-                    {scanError}
-                  </span>
-                )}
-              </form>
-
-              {/* Text Search Input */}
-              <input
-                type="text"
-                placeholder="Search catalog..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="px-3 py-1.5 w-48 bg-slate-900 border border-slate-800 focus:border-indigo-500 rounded-lg text-xs text-slate-100 focus:outline-none"
-              />
-            </div>
-          </div>
-
-          {/* Product Cards Grid */}
-          {loadingProducts ? (
-            <div className="text-sm text-slate-500 py-8">Loading branch catalog...</div>
-          ) : filteredProducts.length === 0 ? (
-            <div className="text-sm text-slate-555 py-8">No products found matching filters.</div>
           ) : (
-            <div className="flex-1 overflow-y-auto grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 pb-6">
-              {filteredProducts.map((p) => (
-                <button
-                  key={p.id}
-                  onClick={() => addToCart(p)}
-                  disabled={p.totalStock <= 0}
-                  className="border border-slate-850 hover:border-indigo-500 disabled:opacity-50 bg-slate-900/10 hover:bg-slate-900/30 text-left p-4 rounded-xl flex flex-col justify-between h-36 transition-all group relative overflow-hidden"
-                >
-                  <div className="absolute top-0 right-0 px-2 py-0.5 bg-slate-900 border-l border-b border-slate-850 text-[9px] text-slate-400 group-hover:bg-indigo-650 group-hover:text-white transition-colors font-bold">
-                    {p.categoryName || "Unassigned"}
+            <>
+              {/* Stats Summary KPIs */}
+              <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+                <div className="bg-slate-900/30 border border-slate-900 p-4 rounded-xl flex flex-col justify-between space-y-2">
+                  <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Today's Sales</span>
+                  <div>
+                    <h2 className="text-xl font-black text-slate-100">${stats.todaySalesAmount.toFixed(2)}</h2>
+                    <p className="text-[10px] text-slate-550 font-bold">{stats.todaySalesCount} sales completed</p>
                   </div>
-                  
-                  <div className="mt-2 space-y-1">
-                    <div className="font-semibold text-slate-200 group-hover:text-white transition-colors text-sm truncate pr-4">
-                      {p.name}
-                    </div>
-                    <div className="text-[9px] text-slate-500 font-mono">{p.sku}</div>
-                    <div className="text-[10px] text-slate-450">
-                      Stock: <span className={p.underStockAlert ? "text-red-400 font-bold" : "text-emerald-450 font-bold"}>{p.totalStock}</span>
-                    </div>
+                </div>
+
+                <div className="bg-slate-900/30 border border-slate-900 p-4 rounded-xl flex flex-col justify-between space-y-2">
+                  <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Weekly Sales</span>
+                  <div>
+                    <h2 className="text-xl font-black text-slate-100">${stats.weeklySalesAmount.toFixed(2)}</h2>
+                    <p className="text-[10px] text-slate-550 font-bold">{stats.weeklySalesCount} sales completed</p>
+                  </div>
+                </div>
+
+                <div className="bg-slate-900/30 border border-slate-900 p-4 rounded-xl flex flex-col justify-between space-y-2">
+                  <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Monthly Sales</span>
+                  <div>
+                    <h2 className="text-xl font-black text-slate-100">${stats.monthlySalesAmount.toFixed(2)}</h2>
+                    <p className="text-[10px] text-slate-550 font-bold">{stats.monthlySalesCount} sales completed</p>
+                  </div>
+                </div>
+
+                <div className="bg-slate-900/30 border border-slate-900 p-4 rounded-xl flex flex-col justify-between space-y-2">
+                  <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Lifetime Sales</span>
+                  <div>
+                    <h2 className="text-xl font-black text-slate-100">${stats.lifetimeSalesAmount.toFixed(2)}</h2>
+                    <p className="text-[10px] text-slate-550 font-bold">{stats.lifetimeSalesCount} sales completed</p>
+                  </div>
+                </div>
+
+                <div className="bg-slate-900/30 border border-slate-900 p-4 rounded-xl flex flex-col justify-between space-y-2 col-span-2 lg:col-span-1">
+                  <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Avg Transaction Value</span>
+                  <div>
+                    <h2 className="text-xl font-black text-indigo-400">${stats.averageTransactionValue.toFixed(2)}</h2>
+                    <p className="text-[10px] text-slate-550 font-bold">Revenue per invoice</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Charts & Top lists */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {/* Trend Chart (2/3 width) */}
+                <div className="md:col-span-2 bg-slate-900/20 border border-slate-900 p-5 rounded-2xl flex flex-col justify-between min-h-[300px]">
+                  <div>
+                    <h3 className="font-bold text-slate-200">Personal Daily Trend</h3>
+                    <p className="text-xs text-slate-500 mb-4">Past 7 days performance metrics</p>
+                  </div>
+                  <div className="flex items-end justify-between h-40 pt-6 px-4 bg-slate-950/20 border border-slate-900/40 rounded-xl">
+                    {stats.dailySalesTrend.map((trend: any, index: number) => {
+                      const maxAmt = Math.max(...stats.dailySalesTrend.map((t: any) => t.amount), 1);
+                      const heightPct = (trend.amount / maxAmt) * 100;
+                      return (
+                        <div key={index} className="flex flex-col items-center flex-1 group relative">
+                          <div className="absolute top-[-32px] bg-slate-900 border border-slate-800 text-slate-100 text-[9px] font-black py-1 px-1.5 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10 shadow-xl whitespace-nowrap">
+                            ${trend.amount.toFixed(2)} ({trend.count} sales)
+                          </div>
+                          <div 
+                            className="w-10 sm:w-14 bg-gradient-to-t from-indigo-600 to-purple-650 rounded-t group-hover:from-indigo-550 group-hover:to-purple-550 transition-all cursor-pointer shadow-lg shadow-indigo-500/10"
+                            style={{ height: `${Math.max(6, heightPct)}%` }}
+                          ></div>
+                          <span className="text-[9px] text-slate-550 mt-2 font-mono font-semibold">
+                            {new Date(trend.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Top selling & Payments (1/3 width) */}
+                <div className="space-y-6">
+                  {/* Top Products */}
+                  <div className="bg-slate-900/20 border border-slate-900 p-5 rounded-2xl">
+                    <h3 className="font-bold text-slate-200 mb-1">Top Products Sold</h3>
+                    <p className="text-xs text-slate-500 mb-4">Your personal highest volume catalog items</p>
+                    
+                    {stats.topProducts.length === 0 ? (
+                      <p className="text-xs text-slate-500 py-4 text-center">No sales registered yet.</p>
+                    ) : (
+                      <div className="space-y-3">
+                        {stats.topProducts.map((tp: any, index: number) => (
+                          <div key={index} className="space-y-1">
+                            <div className="flex justify-between text-xs font-medium">
+                              <span className="text-slate-300 truncate max-w-[150px]">{tp.productName}</span>
+                              <span className="text-slate-455 font-mono text-[11px] font-bold">
+                                {tp.quantitySold} units (${tp.totalRevenue.toFixed(2)})
+                              </span>
+                            </div>
+                            <div className="w-full bg-slate-950 rounded-full h-1.5 border border-slate-850">
+                              <div 
+                                className="bg-gradient-to-r from-indigo-500 to-purple-600 h-full rounded-full" 
+                                style={{ width: `${Math.min(100, (tp.quantitySold / Math.max(1, stats.topProducts[0]?.quantitySold)) * 100)}%` }}
+                              ></div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
 
-                  <div className="flex justify-between items-end mt-2">
-                    <span className="text-base font-bold text-indigo-400 group-hover:text-indigo-300">
-                      ${p.price.toFixed(2)}
-                    </span>
-                    <span className="text-[10px] font-bold px-2 py-1 rounded bg-slate-950 border border-slate-850 text-slate-350 group-hover:bg-indigo-600 group-hover:text-white group-hover:border-indigo-500 transition-colors">
-                      {p.totalStock <= 0 ? "Out of Stock" : "+ Add"}
-                    </span>
+                  {/* Payment Breakdown */}
+                  <div className="bg-slate-900/20 border border-slate-900 p-5 rounded-2xl">
+                    <h3 className="font-bold text-slate-200 mb-1">Payment Breakdowns</h3>
+                    <p className="text-xs text-slate-500 mb-4">Distribution by collected methods</p>
+                    
+                    <div className="grid grid-cols-2 gap-3">
+                      {["Cash", "POS", "Transfer", "Mixed"].map((method) => {
+                        const amt = stats.paymentMethodAmounts[method] || 0;
+                        const count = stats.paymentMethodCounts[method] || 0;
+                        const pct = stats.lifetimeSalesAmount > 0 ? (amt / stats.lifetimeSalesAmount) * 100 : 0;
+                        return (
+                          <div key={method} className="bg-slate-955 p-3 border border-slate-900 rounded-xl flex flex-col justify-between">
+                            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">{method}</span>
+                            <div className="mt-1">
+                              <p className="text-sm font-black text-indigo-400">${amt.toFixed(2)}</p>
+                              <p className="text-[9px] text-slate-550 font-bold">{count} items ({pct.toFixed(0)}%)</p>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
                   </div>
-                </button>
-              ))}
-            </div>
+                </div>
+              </div>
+
+              {/* Personal Sales History Table */}
+              <div className="bg-slate-900/20 border border-slate-900 rounded-2xl overflow-hidden">
+                <div className="p-5 border-b border-slate-900">
+                  <h3 className="font-bold text-slate-200">Personal Sales History</h3>
+                  <p className="text-xs text-slate-500">All checkout transactions processed by you</p>
+                </div>
+                
+                {loadingHistory ? (
+                  <div className="p-8 text-center text-xs text-slate-500">Loading checkout history...</div>
+                ) : salesHistory.length === 0 ? (
+                  <div className="p-8 text-center text-xs text-slate-500">You haven't processed any transactions yet.</div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left border-collapse text-xs">
+                      <thead>
+                        <tr className="bg-slate-950/40 border-b border-slate-900 text-[10px] text-slate-400 uppercase font-bold tracking-wider">
+                          <th className="p-4">Invoice ID</th>
+                          <th className="p-4">Date/Time</th>
+                          <th className="p-4">Items Count</th>
+                          <th className="p-4">Payment Mode</th>
+                          <th className="p-4 text-right">Subtotal</th>
+                          <th className="p-4 text-right">Discounts</th>
+                          <th className="p-4 text-right">Total Paid</th>
+                          <th className="p-4 text-center">Receipt</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-900/60">
+                        {salesHistory.map((sale: any) => {
+                          const itemsCount = sale.items.reduce((sum: number, item: any) => sum + item.quantity, 0);
+                          return (
+                            <tr key={sale.id} className="hover:bg-slate-900/10 transition-colors">
+                              <td className="p-4 font-mono text-[11px] text-slate-400">{sale.id.substring(0, 8).toUpperCase()}...</td>
+                              <td className="p-4 text-slate-300">{new Date(sale.createdAt).toLocaleString()}</td>
+                              <td className="p-4 font-semibold text-slate-400">{itemsCount} units</td>
+                              <td className="p-4">
+                                <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                                  sale.paymentMethod === "Cash" ? "bg-emerald-950/50 text-emerald-400 border border-emerald-900/30" :
+                                  sale.paymentMethod === "POS" ? "bg-blue-950/50 text-blue-400 border border-blue-900/30" :
+                                  sale.paymentMethod === "Transfer" ? "bg-purple-950/50 text-purple-400 border border-purple-900/30" :
+                                  "bg-yellow-950/50 text-yellow-400 border border-yellow-900/30"
+                                }`}>
+                                  {sale.paymentMethod}
+                                </span>
+                              </td>
+                              <td className="p-4 text-right text-slate-400">${sale.subtotal.toFixed(2)}</td>
+                              <td className="p-4 text-right text-red-400">
+                                {sale.discountAmount > 0 ? `-$${sale.discountAmount.toFixed(2)}` : "-"}
+                              </td>
+                              <td className="p-4 text-right font-bold text-slate-200">${sale.total.toFixed(2)}</td>
+                              <td className="p-4 text-center">
+                                <button
+                                  onClick={async () => {
+                                    // Set completed sale directly from history to launch receipt preview modal
+                                    setCompletedSale(sale);
+                                    setShowReceiptModal(true);
+                                  }}
+                                  className="px-2.5 py-1 rounded bg-slate-900 hover:bg-slate-800 border border-slate-800 text-[10px] font-bold text-slate-350 hover:text-slate-100 transition-all active:scale-[0.97]"
+                                >
+                                  View / Print
+                                </button>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            </>
           )}
         </div>
-      </div>
+      )}
 
       {/* Payment Checkout Modal */}
       {showCheckoutModal && (
@@ -1026,6 +1314,7 @@ export default function CashierDashboard() {
           </div>
         </div>
       )}
+      </div>
 
       {/* Print-only container */}
       {completedSale && (

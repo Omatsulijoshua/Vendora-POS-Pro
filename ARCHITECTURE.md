@@ -182,3 +182,22 @@ The Receipt Customization system provides business owners and managers with tool
 - **Anonymous Endpoint (`GET /api/sales/verify/{id}`)**: Marks the request context as `[AllowAnonymous]` and runs `.IgnoreQueryFilters()` to bypass multi-tenant/branch boundaries. This allows public lookups using only the unique transaction GUID.
 - **Data Security Guardrails**: The verification response uses `VerifiedSaleDto` instead of `SaleDto`. It hides sensitive fields such as `CostPrice` (profit margins) and system IDs, exposing only transaction metadata (e.g., business/branch details, cashier name, products, quantities, prices, and totals).
 - **Public Frontend route (`/verify-receipt/[id]/page.tsx`)**: An unauthenticated Next.js page that displays the digital receipt details, verifying its origin directly from the database.
+
+---
+
+## 9. Cashier Dashboard & Sales Isolation Strategy
+
+To protect transaction history and prevent unauthorized access to sensitive financial metrics across different staff members, the system enforces a strict data isolation boundary for the `Cashier` role:
+
+### 1. Database-Level Sales Isolation:
+* **Listing Sales (`GET /api/sales`)**: If the requesting user holds the `Cashier` role, the API filters the sales query by their user ID: `query = query.Where(s => s.UserId == currentUserId);`. This prevents cashiers from seeing sales processed by other team members at the same or other branches.
+* **Detail Lookups (`GET /api/sales/{id}`)**: When retrieving details of a single transaction, the API asserts that `sale.UserId == currentUserId` for Cashiers. Attempting to access another cashier's sale returns a `403 Forbidden` response.
+
+### 2. Cashier Statistics & Performance Metrics (`GET /api/sales/cashier-stats`):
+* A cashier-scoped stats endpoint compiles daily, weekly, monthly, and lifetime sales metrics isolated strictly to the calling cashier's context.
+* It aggregates transaction averages (Average Transaction Value), payment channel volumes, and computes a 7-day daily trend array.
+* **Top Products sold**: Aggregates and groups items checked out by the specific cashier, returning the top 5 highest volume products.
+
+### 3. Frontend Separation (Register vs Performance):
+* The Cashier dashboard separates action workflows (barcode scanning register catalog) from analytics/history dashboards.
+* Custom lightweight visualization graphs (built strictly with Tailwind CSS and HTML elements) display the cashier's daily trends and top product volumes, avoiding heavy external graphing library bundles.

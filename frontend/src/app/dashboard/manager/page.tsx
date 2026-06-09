@@ -551,6 +551,11 @@ export default function ManagerDashboard() {
       if (res.ok) {
         fetchCoupons();
       }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   // Phase 10 Receipt settings states
   const [receiptHeaderText, setReceiptHeaderText] = useState("");
   const [receiptFooterText, setReceiptFooterText] = useState("");

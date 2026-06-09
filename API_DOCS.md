@@ -570,6 +570,7 @@ Processes and records a new transaction, adjusting product stock levels and reco
 
 ### 2. Get Sales History
 Retrieves transaction records. Bounded by the active business tenant and branch context.
+*Note: Users with the `Cashier` role will only receive sales transactions that they personally processed (isolated by User ID).*
 
 *   **Endpoint**: `GET /api/sales`
 *   **Authentication**: Bearer JWT (All authenticated users)
@@ -593,11 +594,58 @@ Retrieves transaction records. Bounded by the active business tenant and branch 
 
 ### 3. Get Sale Details
 Retrieves details of a specific sale.
+*Note: Users with the `Cashier` role are restricted to checking only their own sales. Attempting to query details for a sale processed by someone else will return `403 Forbidden`.*
 
 *   **Endpoint**: `GET /api/sales/{id}`
 *   **Authentication**: Bearer JWT (All authenticated users)
 
-### 4. Public Receipt Verification
+### 4. Get Cashier Statistics
+Compiles daily, weekly, monthly, and lifetime sales metrics isolated strictly to the calling cashier's context.
+
+*   **Endpoint**: `GET /api/sales/cashier-stats`
+*   **Authentication**: Bearer JWT (Cashier only)
+*   **Success Response** (200 OK):
+    ```json
+    {
+      "todaySalesAmount": 150.00,
+      "todaySalesCount": 5,
+      "weeklySalesAmount": 950.00,
+      "weeklySalesCount": 32,
+      "monthlySalesAmount": 4200.00,
+      "monthlySalesCount": 140,
+      "lifetimeSalesAmount": 12500.00,
+      "lifetimeSalesCount": 420,
+      "averageTransactionValue": 29.76,
+      "paymentMethodAmounts": {
+        "Cash": 5500.00,
+        "POS": 4500.00,
+        "Transfer": 2000.00,
+        "Mixed": 500.00
+      },
+      "paymentMethodCounts": {
+        "Cash": 210,
+        "POS": 140,
+        "Transfer": 55,
+        "Mixed": 15
+      },
+      "topProducts": [
+        {
+          "productName": "Wireless Mouse",
+          "quantitySold": 52,
+          "totalRevenue": 2600.00
+        }
+      ],
+      "dailySalesTrend": [
+        {
+          "date": "2026-06-09",
+          "amount": 150.00,
+          "count": 5
+        }
+      ]
+    }
+    ```
+
+### 5. Public Receipt Verification
 An anonymous unauthenticated endpoint to verify receipt authenticity. Bypasses standard logical tenant query filters. Exposes customer-safe transaction info (hides cost prices and profit margins).
 
 *   **Endpoint**: `GET /api/sales/verify/{id}`

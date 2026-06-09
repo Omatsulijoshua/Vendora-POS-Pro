@@ -267,6 +267,7 @@ public class SalesController : ControllerBase
 
         var userRole = User.FindFirst(ClaimTypes.Role)?.Value;
         var activeBranchId = _tenantProvider.BranchId;
+        var currentUserId = Guid.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? Guid.Empty.ToString());
 
         // Managers and Cashiers are restricted to their branch sales
         if (userRole == "Manager" || userRole == "Cashier")
@@ -287,7 +288,11 @@ public class SalesController : ControllerBase
                 .ThenInclude(si => si.Product)
             .Where(s => s.BusinessId == tenantId.Value);
 
-        if (activeBranchId.HasValue)
+        if (userRole == "Cashier")
+        {
+            query = query.Where(s => s.UserId == currentUserId);
+        }
+        else if (activeBranchId.HasValue)
         {
             query = query.Where(s => s.BranchId == activeBranchId.Value);
         }
@@ -328,6 +333,105 @@ public class SalesController : ControllerBase
         return Ok(sales);
     }
 
+    [HttpGet("cashier-stats")]
+    public async Task<IActionResult> GetCashierStats()
+    {
+        var tenantId = _tenantProvider.TenantId;
+        if (!tenantId.HasValue) return BadRequest(new { Message = "Tenant context not found." });
+
+        var currentUserId = Guid.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? Guid.Empty.ToString());
+
+        var now = DateTime.UtcNow;
+        var todayLocal = now.Date;
+        var startOfWeek = todayLocal.AddDays(-(int)todayLocal.DayOfWeek);
+        var startOfMonth = new DateTime(todayLocal.Year, todayLocal.Month, 1);
+
+        var cashierSales = await _context.Sales
+            .IgnoreQueryFilters()
+            .Include(s => s.SaleItems)
+                .ThenInclude(si => si.Product)
+            .Where(s => s.BusinessId == tenantId.Value && s.UserId == currentUserId)
+            .ToListAsync();
+
+        var todaySales = cashierSales.Where(s => s.CreatedAt.Date == todayLocal).ToList();
+        var weeklySales = cashierSales.Where(s => s.CreatedAt.Date >= startOfWeek).ToList();
+        var monthlySales = cashierSales.Where(s => s.CreatedAt.Date >= startOfMonth).ToList();
+
+        var todayAmount = todaySales.Sum(s => s.Total);
+        var todayCount = todaySales.Count;
+
+        var weeklyAmount = weeklySales.Sum(s => s.Total);
+        var weeklyCount = weeklySales.Count;
+
+        var monthlyAmount = monthlySales.Sum(s => s.Total);
+        var monthlyCount = monthlySales.Count;
+
+        var lifetimeAmount = cashierSales.Sum(s => s.Total);
+        var lifetimeCount = cashierSales.Count;
+
+        var atv = lifetimeCount > 0 ? lifetimeAmount / lifetimeCount : 0m;
+
+        // Payment Method breakdown
+        var methodAmounts = new Dictionary<string, decimal>();
+        var methodCounts = new Dictionary<string, int>();
+
+        foreach (var m in Enum.GetValues<PaymentMethod>())
+        {
+            var mStr = m.ToString();
+            var matches = cashierSales.Where(s => s.PaymentMethod == m).ToList();
+            methodAmounts[mStr] = matches.Sum(s => s.Total);
+            methodCounts[mStr] = matches.Count;
+        }
+
+        // Top Selling Products
+        var productSales = cashierSales
+            .SelectMany(s => s.SaleItems)
+            .GroupBy(si => si.Product.Name)
+            .Select(g => new TopProductDto
+            {
+                ProductName = g.Key,
+                QuantitySold = g.Sum(si => si.Quantity),
+                TotalRevenue = g.Sum(si => si.Total)
+            })
+            .OrderByDescending(tp => tp.QuantitySold)
+            .Take(5)
+            .ToList();
+
+        // Daily Trend for the past 7 days
+        var dailyTrendList = new List<DailySaleTrendDto>();
+        for (int i = 6; i >= 0; i--)
+        {
+            var dateTarget = todayLocal.AddDays(-i);
+            var dateStr = dateTarget.ToString("yyyy-MM-dd");
+            var matches = cashierSales.Where(s => s.CreatedAt.Date == dateTarget).ToList();
+            dailyTrendList.Add(new DailySaleTrendDto
+            {
+                Date = dateStr,
+                Amount = matches.Sum(s => s.Total),
+                Count = matches.Count
+            });
+        }
+
+        var stats = new CashierStatsDto
+        {
+            TodaySalesAmount = todayAmount,
+            TodaySalesCount = todayCount,
+            WeeklySalesAmount = weeklyAmount,
+            WeeklySalesCount = weeklyCount,
+            MonthlySalesAmount = monthlyAmount,
+            MonthlySalesCount = monthlyCount,
+            LifetimeSalesAmount = lifetimeAmount,
+            LifetimeSalesCount = lifetimeCount,
+            AverageTransactionValue = atv,
+            PaymentMethodAmounts = methodAmounts,
+            PaymentMethodCounts = methodCounts,
+            TopProducts = productSales,
+            DailySalesTrend = dailyTrendList
+        };
+
+        return Ok(stats);
+    }
+
     [HttpGet("{id}")]
     public async Task<IActionResult> GetSale(Guid id)
     {
@@ -336,6 +440,7 @@ public class SalesController : ControllerBase
 
         var userRole = User.FindFirst(ClaimTypes.Role)?.Value;
         var activeBranchId = _tenantProvider.BranchId;
+        var currentUserId = Guid.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? Guid.Empty.ToString());
 
         if (userRole == "Manager" || userRole == "Cashier")
         {
@@ -358,7 +463,14 @@ public class SalesController : ControllerBase
         if (sale == null) return NotFound();
 
         // Access scope check
-        if (activeBranchId.HasValue && sale.BranchId != activeBranchId.Value)
+        if (userRole == "Cashier")
+        {
+            if (sale.UserId != currentUserId)
+            {
+                return Forbid();
+            }
+        }
+        else if (activeBranchId.HasValue && sale.BranchId != activeBranchId.Value)
         {
             return Forbid();
         }
