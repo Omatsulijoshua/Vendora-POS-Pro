@@ -8,7 +8,7 @@ export default function ManagerDashboard() {
   const [branchName, setBranchName] = useState("Loading branch...");
   const [products, setProducts] = useState<any[]>([]);
   const [loadingProducts, setLoadingProducts] = useState(false);
-  const [activeTab, setActiveTab] = useState<"overview" | "stock" | "transfers" | "sales">("overview");
+  const [activeTab, setActiveTab] = useState<"overview" | "stock" | "transfers" | "sales" | "promo">("overview");
 
   // Phase 7 Stock Transfers
   const [transfers, setTransfers] = useState<any[]>([]);
@@ -28,6 +28,38 @@ export default function ManagerDashboard() {
   const [loadingSales, setLoadingSales] = useState(false);
   const [selectedSale, setSelectedSale] = useState<any>(null);
   const [showReceiptDetailModal, setShowReceiptDetailModal] = useState(false);
+
+  // Phase 9 Promotion States
+  const [discounts, setDiscounts] = useState<any[]>([]);
+  const [coupons, setCoupons] = useState<any[]>([]);
+  const [loadingDiscounts, setLoadingDiscounts] = useState(false);
+  const [loadingCoupons, setLoadingCoupons] = useState(false);
+
+  // Form states for creating Discount
+  const [promoName, setPromoName] = useState("");
+  const [promoDesc, setPromoDesc] = useState("");
+  const [promoType, setPromoType] = useState("Percentage");
+  const [promoValue, setPromoValue] = useState("");
+  const [promoTarget, setPromoTarget] = useState("Cart");
+  const [promoProductId, setPromoProductId] = useState("");
+  const [promoMinCart, setPromoMinCart] = useState("");
+  const [promoStart, setPromoStart] = useState("");
+  const [promoEnd, setPromoEnd] = useState("");
+  const [promoError, setPromoError] = useState("");
+  const [promoSubmitting, setPromoSubmitting] = useState(false);
+  const [showAddPromoModal, setShowAddPromoModal] = useState(false);
+
+  // Form states for creating Coupon
+  const [couponCodeForm, setCouponCodeForm] = useState("");
+  const [couponTypeForm, setCouponTypeForm] = useState("Percentage");
+  const [couponValueForm, setCouponValueForm] = useState("");
+  const [couponMinCartForm, setCouponMinCartForm] = useState("");
+  const [couponLimitForm, setCouponLimitForm] = useState("");
+  const [couponStartForm, setCouponStartForm] = useState("");
+  const [couponEndForm, setCouponEndForm] = useState("");
+  const [couponErrorForm, setCouponErrorForm] = useState("");
+  const [couponSubmittingForm, setCouponSubmittingForm] = useState(false);
+  const [showAddCouponModal, setShowAddCouponModal] = useState(false);
 
   // Modals visibility
   const [showAdjustStockModal, setShowAdjustStockModal] = useState(false);
@@ -141,6 +173,8 @@ export default function ManagerDashboard() {
       fetchBranches();
       fetchTransfers();
       fetchSales();
+      fetchDiscounts();
+      fetchCoupons();
     }
   }, [token, user?.branchId]);
 
@@ -301,6 +335,227 @@ export default function ManagerDashboard() {
     }
   };
 
+  const fetchDiscounts = async () => {
+    try {
+      setLoadingDiscounts(true);
+      const res = await fetch("http://localhost:5149/api/discounts", {
+        headers: { "Authorization": `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setDiscounts(data);
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoadingDiscounts(false);
+    }
+  };
+
+  const fetchCoupons = async () => {
+    try {
+      setLoadingCoupons(true);
+      const res = await fetch("http://localhost:5149/api/coupons", {
+        headers: { "Authorization": `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setCoupons(data);
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoadingCoupons(false);
+    }
+  };
+
+  // Submit Discount
+  const handleAddDiscount = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setPromoError("");
+    setPromoSubmitting(true);
+    try {
+      const payload = {
+        name: promoName.trim(),
+        description: promoDesc.trim() || null,
+        type: promoType,
+        value: parseFloat(promoValue),
+        target: promoTarget,
+        productId: promoTarget === "Product" ? (promoProductId || null) : null,
+        minCartAmount: promoTarget === "Cart" ? (parseFloat(promoMinCart) || null) : null,
+        startDate: new Date(promoStart).toISOString(),
+        endDate: new Date(promoEnd).toISOString(),
+        isActive: true
+      };
+
+      const res = await fetch("http://localhost:5149/api/discounts", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify(payload)
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.message || "Failed to create discount.");
+      }
+
+      setPromoName("");
+      setPromoDesc("");
+      setPromoValue("");
+      setPromoProductId("");
+      setPromoMinCart("");
+      setPromoStart("");
+      setPromoEnd("");
+      setShowAddPromoModal(false);
+      fetchDiscounts();
+    } catch (err: any) {
+      setPromoError(err.message);
+    } finally {
+      setPromoSubmitting(false);
+    }
+  };
+
+  // Submit Coupon
+  const handleAddCoupon = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setCouponErrorForm("");
+    setCouponSubmittingForm(true);
+    try {
+      const payload = {
+        code: couponCodeForm.trim().toUpperCase(),
+        type: couponTypeForm,
+        value: parseFloat(couponValueForm),
+        minCartAmount: couponMinCartForm ? parseFloat(couponMinCartForm) : null,
+        usageLimit: couponLimitForm ? parseInt(couponLimitForm) : null,
+        startDate: new Date(couponStartForm).toISOString(),
+        endDate: new Date(couponEndForm).toISOString(),
+        isActive: true
+      };
+
+      const res = await fetch("http://localhost:5149/api/coupons", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify(payload)
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.message || "Failed to create coupon.");
+      }
+
+      setCouponCodeForm("");
+      setCouponValueForm("");
+      setCouponMinCartForm("");
+      setCouponLimitForm("");
+      setCouponStartForm("");
+      setCouponEndForm("");
+      setShowAddCouponModal(false);
+      fetchCoupons();
+    } catch (err: any) {
+      setCouponErrorForm(err.message);
+    } finally {
+      setCouponSubmittingForm(false);
+    }
+  };
+
+  // Delete Discount
+  const handleDeleteDiscount = async (id: string) => {
+    if (!confirm("Are you sure you want to delete this discount?")) return;
+    try {
+      const res = await fetch(`http://localhost:5149/api/discounts/${id}`, {
+        method: "DELETE",
+        headers: { "Authorization": `Bearer ${token}` }
+      });
+      if (res.ok) {
+        fetchDiscounts();
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  // Delete Coupon
+  const handleDeleteCoupon = async (id: string) => {
+    if (!confirm("Are you sure you want to delete this coupon?")) return;
+    try {
+      const res = await fetch(`http://localhost:5149/api/coupons/${id}`, {
+        method: "DELETE",
+        headers: { "Authorization": `Bearer ${token}` }
+      });
+      if (res.ok) {
+        fetchCoupons();
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  // Toggle Discount Active
+  const handleToggleDiscountActive = async (discount: any) => {
+    try {
+      const payload = {
+        name: discount.name,
+        description: discount.description,
+        type: discount.type,
+        value: discount.value,
+        target: discount.target,
+        productId: discount.productId,
+        minCartAmount: discount.minCartAmount,
+        startDate: discount.startDate,
+        endDate: discount.endDate,
+        isActive: !discount.isActive
+      };
+      const res = await fetch(`http://localhost:5149/api/discounts/${discount.id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify(payload)
+      });
+      if (res.ok) {
+        fetchDiscounts();
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  // Toggle Coupon Active
+  const handleToggleCouponActive = async (coupon: any) => {
+    try {
+      const payload = {
+        code: coupon.code,
+        type: coupon.type,
+        value: coupon.value,
+        minCartAmount: coupon.minCartAmount,
+        usageLimit: coupon.usageLimit,
+        startDate: coupon.startDate,
+        endDate: coupon.endDate,
+        isActive: !coupon.isActive
+      };
+      const res = await fetch(`http://localhost:5149/api/coupons/${coupon.id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify(payload)
+      });
+      if (res.ok) {
+        fetchCoupons();
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   // Derived stats
   const lowStockItems = products.filter(p => p.underStockAlert);
   const totalStockCount = products.reduce((acc, p) => acc + p.totalStock, 0);
@@ -387,6 +642,12 @@ export default function ManagerDashboard() {
             className={`pb-3 border-b-2 transition-colors ${activeTab === "sales" ? "border-emerald-500 text-emerald-455" : "border-transparent text-slate-400 hover:text-slate-200"}`}
           >
             Sales History
+          </button>
+          <button
+            onClick={() => setActiveTab("promo")}
+            className={`pb-3 border-b-2 transition-colors ${activeTab === "promo" ? "border-emerald-500 text-emerald-450" : "border-transparent text-slate-400 hover:text-slate-200"}`}
+          >
+            Discounts & Coupons
           </button>
         </div>
 
@@ -695,6 +956,196 @@ export default function ManagerDashboard() {
             )}
           </div>
         )}
+
+        {activeTab === "promo" && (
+          <div className="space-y-8 animate-in fade-in duration-300">
+            {/* Header controls */}
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-slate-900 pb-5">
+              <div>
+                <h3 className="font-bold text-lg text-slate-200">Promotions & Coupons</h3>
+                <p className="text-xs text-slate-500">Manage business discount rules and promo coupons</p>
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => {
+                    const now = new Date();
+                    const startStr = now.toISOString().slice(0, 16);
+                    const endStr = new Date(now.setDate(now.getDate() + 30)).toISOString().slice(0, 16);
+                    setPromoStart(startStr);
+                    setPromoEnd(endStr);
+                    setPromoName("");
+                    setPromoDesc("");
+                    setPromoValue("");
+                    setPromoMinCart("");
+                    setPromoProductId(products[0]?.id || "");
+                    setPromoError("");
+                    setShowAddPromoModal(true);
+                  }}
+                  className="px-4 py-2 rounded-lg bg-emerald-650 hover:bg-emerald-700 text-white font-semibold text-xs transition-colors shadow-md shadow-emerald-650/20"
+                >
+                  + Add Discount Rule
+                </button>
+                <button
+                  onClick={() => {
+                    const now = new Date();
+                    const startStr = now.toISOString().slice(0, 16);
+                    const endStr = new Date(now.setDate(now.getDate() + 30)).toISOString().slice(0, 16);
+                    setCouponStartForm(startStr);
+                    setCouponEndForm(endStr);
+                    setCouponCodeForm("");
+                    setCouponValueForm("");
+                    setCouponMinCartForm("");
+                    setCouponLimitForm("");
+                    setCouponErrorForm("");
+                    setShowAddCouponModal(true);
+                  }}
+                  className="px-4 py-2 rounded-lg bg-purple-650 hover:bg-purple-750 text-white font-semibold text-xs transition-colors shadow-md shadow-purple-600/20"
+                >
+                  + Create Coupon Code
+                </button>
+              </div>
+            </div>
+
+            {/* Coupons Section */}
+            <div className="border border-slate-900 bg-slate-900/10 rounded-2xl p-6 space-y-4">
+              <h4 className="font-bold text-slate-200 text-sm">Coupon Codes</h4>
+              {loadingCoupons ? (
+                <div className="text-xs text-slate-555">Loading coupons...</div>
+              ) : coupons.length === 0 ? (
+                <div className="text-xs text-slate-555">No coupons created yet.</div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left border-collapse text-xs">
+                    <thead>
+                      <tr className="border-b border-slate-850 text-slate-400 font-semibold">
+                        <th className="pb-3 pr-4">Code</th>
+                        <th className="pb-3 px-4">Discount</th>
+                        <th className="pb-3 px-4">Min Spend</th>
+                        <th className="pb-3 px-4">Usage Limit</th>
+                        <th className="pb-3 px-4">Validity</th>
+                        <th className="pb-3 px-4 text-center">Status</th>
+                        <th className="pb-3 pl-4 text-right">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-900 text-slate-350">
+                      {coupons.map((c) => (
+                        <tr key={c.id} className="hover:bg-slate-900/5">
+                          <td className="py-3 pr-4 font-mono font-bold text-indigo-400">{c.code}</td>
+                          <td className="py-3 px-4 font-medium text-slate-200">
+                            {c.type === "Percentage" ? `${c.value}%` : `$${c.value.toFixed(2)}`}
+                          </td>
+                          <td className="py-3 px-4">
+                            {c.minCartAmount ? `$${c.minCartAmount.toFixed(2)}` : "None"}
+                          </td>
+                          <td className="py-3 px-4">
+                            {c.usageCount} / {c.usageLimit !== null ? c.usageLimit : "∞"}
+                          </td>
+                          <td className="py-3 px-4 text-[11px]">
+                            {new Date(c.startDate).toLocaleDateString()} - {new Date(c.endDate).toLocaleDateString()}
+                          </td>
+                          <td className="py-3 px-4 text-center">
+                            <button
+                              onClick={() => handleToggleCouponActive(c)}
+                              className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                                c.isActive
+                                  ? "bg-emerald-500/10 text-emerald-455 border border-emerald-500/25"
+                                  : "bg-red-500/10 text-red-450 border border-red-500/25"
+                              }`}
+                            >
+                              {c.isActive ? "Active" : "Inactive"}
+                            </button>
+                          </td>
+                          <td className="py-3 pl-4 text-right space-x-2">
+                            <button
+                              onClick={() => handleDeleteCoupon(c.id)}
+                              className="text-red-400 hover:text-red-300 font-semibold text-[11px]"
+                            >
+                              Delete
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+
+            {/* Discount Rules Section */}
+            <div className="border border-slate-900 bg-slate-900/10 rounded-2xl p-6 space-y-4">
+              <h4 className="font-bold text-slate-200 text-sm">Discount Rules</h4>
+              {loadingDiscounts ? (
+                <div className="text-xs text-slate-555">Loading discounts...</div>
+              ) : discounts.length === 0 ? (
+                <div className="text-xs text-slate-555">No discount rules configured.</div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left border-collapse text-xs">
+                    <thead>
+                      <tr className="border-b border-slate-850 text-slate-400 font-semibold">
+                        <th className="pb-3 pr-4">Name</th>
+                        <th className="pb-3 px-4">Target</th>
+                        <th className="pb-3 px-4">Discount</th>
+                        <th className="pb-3 px-4">Min spend / Product</th>
+                        <th className="pb-3 px-4">Validity</th>
+                        <th className="pb-3 px-4 text-center">Status</th>
+                        <th className="pb-3 pl-4 text-right">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-900 text-slate-350">
+                      {discounts.map((d) => (
+                        <tr key={d.id} className="hover:bg-slate-900/5">
+                          <td className="py-3 pr-4">
+                            <p className="font-semibold text-slate-200">{d.name}</p>
+                            {d.description && <p className="text-[10px] text-slate-500">{d.description}</p>}
+                          </td>
+                          <td className="py-3 px-4">
+                            <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-900 border border-slate-800 text-slate-300">
+                              {d.target}
+                            </span>
+                          </td>
+                          <td className="py-3 px-4 font-medium text-slate-200">
+                            {d.type === "Percentage" ? `${d.value}%` : `$${d.value.toFixed(2)}`}
+                          </td>
+                          <td className="py-3 px-4">
+                            {d.target === "Cart" ? (
+                              d.minCartAmount ? `Min Spend: $${d.minCartAmount.toFixed(2)}` : "No Min Spend"
+                            ) : (
+                              products.find(p => p.id === d.productId)?.name || d.productId || "Product"
+                            )}
+                          </td>
+                          <td className="py-3 px-4 text-[11px]">
+                            {new Date(d.startDate).toLocaleDateString()} - {new Date(d.endDate).toLocaleDateString()}
+                          </td>
+                          <td className="py-3 px-4 text-center">
+                            <button
+                              onClick={() => handleToggleDiscountActive(d)}
+                              className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                                d.isActive
+                                  ? "bg-emerald-500/10 text-emerald-455 border border-emerald-500/25"
+                                  : "bg-red-500/10 text-red-450 border border-red-500/25"
+                              }`}
+                            >
+                              {d.isActive ? "Active" : "Inactive"}
+                            </button>
+                          </td>
+                          <td className="py-3 pl-4 text-right space-x-2">
+                            <button
+                              onClick={() => handleDeleteDiscount(d.id)}
+                              className="text-red-400 hover:text-red-300 font-semibold text-[11px]"
+                            >
+                              Delete
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </main>
 
       {/* Adjust Stock Modal */}
@@ -956,6 +1407,238 @@ export default function ManagerDashboard() {
             >
               Close Receipt
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Create Discount Modal */}
+      {showAddPromoModal && (
+        <div className="fixed inset-0 bg-slate-950/70 backdrop-blur-md flex justify-center items-center p-4 z-50">
+          <div className="w-full max-w-md p-6 bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl">
+            <h3 className="text-xl font-bold text-slate-100 mb-2">Create Discount Rule</h3>
+            {promoError && <div className="mb-4 p-3 bg-red-950/50 border border-red-800 text-red-400 rounded-lg text-xs">{promoError}</div>}
+            <form onSubmit={handleAddDiscount} className="space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-slate-305 mb-1.5">Rule Name</label>
+                <input
+                  type="text"
+                  value={promoName}
+                  onChange={(e) => setPromoName(e.target.value)}
+                  placeholder="Summer Promo"
+                  required
+                  className="w-full px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-lg text-slate-100 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-305 mb-1.5">Description (Optional)</label>
+                <input
+                  type="text"
+                  value={promoDesc}
+                  onChange={(e) => setPromoDesc(e.target.value)}
+                  placeholder="Apply discount during checkout"
+                  className="w-full px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-lg text-slate-100 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-305 mb-1.5">Discount Target</label>
+                  <select
+                    value={promoTarget}
+                    onChange={(e) => setPromoTarget(e.target.value)}
+                    className="w-full px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-lg text-slate-100 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+                  >
+                    <option value="Cart">Cart (Entire Order)</option>
+                    <option value="Product">Product Specific</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-305 mb-1.5">Discount Type</label>
+                  <select
+                    value={promoType}
+                    onChange={(e) => setPromoType(e.target.value)}
+                    className="w-full px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-lg text-slate-100 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+                  >
+                    <option value="Percentage">Percentage (%)</option>
+                    <option value="FixedAmount">Fixed Amount ($)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-305 mb-1.5">Value</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={promoValue}
+                    onChange={(e) => setPromoValue(e.target.value)}
+                    placeholder="10"
+                    required
+                    className="w-full px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-lg text-slate-100 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+                  />
+                </div>
+                {promoTarget === "Cart" ? (
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-305 mb-1.5">Min Cart Spend ($)</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={promoMinCart}
+                      onChange={(e) => setPromoMinCart(e.target.value)}
+                      placeholder="0.00"
+                      className="w-full px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-lg text-slate-100 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+                    />
+                  </div>
+                ) : (
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-305 mb-1.5">Apply to Product</label>
+                    <select
+                      value={promoProductId}
+                      onChange={(e) => setPromoProductId(e.target.value)}
+                      required
+                      className="w-full px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-lg text-slate-100 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+                    >
+                      {products.map(p => (
+                        <option key={p.id} value={p.id}>{p.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-355 mb-1.5">Start Date</label>
+                  <input
+                    type="datetime-local"
+                    value={promoStart}
+                    onChange={(e) => setPromoStart(e.target.value)}
+                    required
+                    className="w-full px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-lg text-slate-100 text-sm focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-355 mb-1.5">End Date</label>
+                  <input
+                    type="datetime-local"
+                    value={promoEnd}
+                    onChange={(e) => setPromoEnd(e.target.value)}
+                    required
+                    className="w-full px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-lg text-slate-100 text-sm focus:outline-none"
+                  />
+                </div>
+              </div>
+
+              <div className="flex space-x-3 pt-4 border-t border-slate-850">
+                <button type="button" onClick={() => setShowAddPromoModal(false)} className="flex-1 py-2.5 bg-slate-800 text-slate-350 text-xs font-bold rounded-lg">Cancel</button>
+                <button type="submit" disabled={promoSubmitting} className="flex-1 py-2.5 bg-emerald-650 text-white text-xs font-bold rounded-lg">{promoSubmitting ? "Creating..." : "Create Discount"}</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Create Coupon Modal */}
+      {showAddCouponModal && (
+        <div className="fixed inset-0 bg-slate-950/70 backdrop-blur-md flex justify-center items-center p-4 z-50">
+          <div className="w-full max-w-md p-6 bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl">
+            <h3 className="text-xl font-bold text-slate-100 mb-2">Create Coupon Code</h3>
+            {couponErrorForm && <div className="mb-4 p-3 bg-red-950/50 border border-red-800 text-red-400 rounded-lg text-xs">{couponErrorForm}</div>}
+            <form onSubmit={handleAddCoupon} className="space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-slate-305 mb-1.5">Coupon Code (Unique)</label>
+                <input
+                  type="text"
+                  value={couponCodeForm}
+                  onChange={(e) => setCouponCodeForm(e.target.value.toUpperCase())}
+                  placeholder="SAVE30"
+                  required
+                  className="w-full px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-lg text-slate-100 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/50 uppercase"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-305 mb-1.5">Coupon Discount Type</label>
+                  <select
+                    value={couponTypeForm}
+                    onChange={(e) => setCouponTypeForm(e.target.value)}
+                    className="w-full px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-lg text-slate-100 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+                  >
+                    <option value="Percentage">Percentage (%)</option>
+                    <option value="FixedAmount">Fixed Amount ($)</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-355 mb-1.5">Discount Value</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={couponValueForm}
+                    onChange={(e) => setCouponValueForm(e.target.value)}
+                    placeholder="15"
+                    required
+                    className="w-full px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-lg text-slate-100 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-355 mb-1.5">Min Order Spend ($)</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={couponMinCartForm}
+                    onChange={(e) => setCouponMinCartForm(e.target.value)}
+                    placeholder="0.00"
+                    className="w-full px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-lg text-slate-100 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-355 mb-1.5">Usage Limit (Optional)</label>
+                  <input
+                    type="number"
+                    min="1"
+                    value={couponLimitForm}
+                    onChange={(e) => setCouponLimitForm(e.target.value)}
+                    placeholder="Unlimited"
+                    className="w-full px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-lg text-slate-100 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-355 mb-1.5">Start Date</label>
+                  <input
+                    type="datetime-local"
+                    value={couponStartForm}
+                    onChange={(e) => setCouponStartForm(e.target.value)}
+                    required
+                    className="w-full px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-lg text-slate-100 text-sm focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-355 mb-1.5">End Date</label>
+                  <input
+                    type="datetime-local"
+                    value={couponEndForm}
+                    onChange={(e) => setCouponEndForm(e.target.value)}
+                    required
+                    className="w-full px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-lg text-slate-100 text-sm focus:outline-none"
+                  />
+                </div>
+              </div>
+
+              <div className="flex space-x-3 pt-4 border-t border-slate-850">
+                <button type="button" onClick={() => setShowAddCouponModal(false)} className="flex-1 py-2.5 bg-slate-800 text-slate-350 text-xs font-bold rounded-lg">Cancel</button>
+                <button type="submit" disabled={couponSubmittingForm} className="flex-1 py-2.5 bg-purple-650 text-white text-xs font-bold rounded-lg">{couponSubmittingForm ? "Creating..." : "Create Coupon"}</button>
+              </div>
+            </form>
           </div>
         </div>
       )}

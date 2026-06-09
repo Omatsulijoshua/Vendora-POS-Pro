@@ -25,6 +25,63 @@ export default function CashierDashboard() {
   const [scanError, setScanError] = useState("");
   const barcodeInputRef = useRef<HTMLInputElement>(null);
 
+  // Promotion & Coupon states
+  const [manualDiscountStr, setManualDiscountStr] = useState("0");
+  const [couponCode, setCouponCode] = useState("");
+  const [couponError, setCouponError] = useState("");
+  const [couponSuccess, setCouponSuccess] = useState("");
+  const [validatingCoupon, setValidatingCoupon] = useState(false);
+  const [appliedCoupon, setAppliedCoupon] = useState<{ code: string; type: string; value: number } | null>(null);
+
+  const subtotal = cart.reduce((acc, item) => acc + item.price * item.quantity, 0);
+  const manualDiscount = parseFloat(manualDiscountStr) || 0;
+  
+  let couponDiscount = 0;
+  if (appliedCoupon) {
+    if (appliedCoupon.type === "Percentage") {
+      couponDiscount = subtotal * (appliedCoupon.value / 100);
+    } else {
+      couponDiscount = appliedCoupon.value;
+    }
+  }
+
+  const discountAmount = Math.min(manualDiscount + couponDiscount, subtotal);
+  const tax = Math.max(0, subtotal - discountAmount) * 0.08;
+  const total = subtotal - discountAmount + tax;
+
+  const handleApplyCoupon = async () => {
+    if (!couponCode.trim()) return;
+    setValidatingCoupon(true);
+    setCouponError("");
+    setCouponSuccess("");
+    try {
+      const res = await fetch(`http://localhost:5149/api/coupons/validate/${couponCode.trim()}?cartTotal=${subtotal}`, {
+        headers: { "Authorization": `Bearer ${token}` }
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.message || "Failed to validate coupon.");
+      }
+      const result = await res.json();
+      if (result.isValid) {
+        setAppliedCoupon({
+          code: couponCode.trim().toUpperCase(),
+          type: result.type,
+          value: Number(result.value)
+        });
+        setCouponSuccess(result.message || "Coupon applied!");
+      } else {
+        setAppliedCoupon(null);
+        setCouponError(result.message || "Invalid coupon.");
+      }
+    } catch (err: any) {
+      setAppliedCoupon(null);
+      setCouponError(err.message || "Error validating coupon.");
+    } finally {
+      setValidatingCoupon(false);
+    }
+  };
+
   const fetchBranchInfo = async () => {
     if (!token || !user?.branchId) {
       setBranchName("Unassigned Branch");
@@ -70,6 +127,29 @@ export default function CashierDashboard() {
     }
   }, [token, user?.branchId]);
 
+  useEffect(() => {
+    if (appliedCoupon) {
+      const checkMinCart = async () => {
+        try {
+          const res = await fetch(`http://localhost:5149/api/coupons/validate/${appliedCoupon.code}?cartTotal=${subtotal}`, {
+            headers: { "Authorization": `Bearer ${token}` }
+          });
+          if (res.ok) {
+            const result = await res.json();
+            if (!result.isValid) {
+              setAppliedCoupon(null);
+              setCouponError(`Coupon removed: ${result.message}`);
+              setCouponSuccess("");
+            }
+          }
+        } catch (err) {
+          console.error("Error revalidating coupon", err);
+        }
+      };
+      checkMinCart();
+    }
+  }, [subtotal, token]);
+
   const addToCart = (product: any) => {
     if (product.totalStock <= 0) {
       alert("This item is currently out of stock!");
@@ -109,10 +189,22 @@ export default function CashierDashboard() {
     setCart([]);
     setShowSuccess(false);
     setCompletedSale(null);
+    setManualDiscountStr("0");
+    setCouponCode("");
+    setCouponError("");
+    setCouponSuccess("");
+    setAppliedCoupon(null);
   };
 
   const handleCheckoutInit = () => {
     if (cart.length === 0) return;
+    
+    // Check cashier limits on checkout initiation
+    if (user?.role === "Cashier" && (discountAmount > 50 || (subtotal > 0 && discountAmount / subtotal > 0.15))) {
+      alert("Checkout blocked: Discount exceeds cashier limit (max 15% of subtotal or $50.00).");
+      return;
+    }
+
     setPaymentMethod("Cash");
     setCashAmount(total);
     setTransferAmount(0);
@@ -138,8 +230,9 @@ export default function CashierDashboard() {
     const payload = {
       paymentMethod,
       paymentDetails: paymentMethod === "Mixed" ? JSON.stringify({ cash: Number(cashAmount), transfer: Number(transferAmount), pos: Number(posAmount) }) : null,
-      discountAmount: 0,
+      discountAmount,
       taxAmount: tax,
+      couponCode: appliedCoupon?.code || null,
       items: cart.map(item => ({
         productId: item.id,
         quantity: item.quantity,
@@ -166,6 +259,11 @@ export default function CashierDashboard() {
       const sale = await res.json();
       setCompletedSale(sale);
       setCart([]);
+      setManualDiscountStr("0");
+      setCouponCode("");
+      setCouponError("");
+      setCouponSuccess("");
+      setAppliedCoupon(null);
       setShowCheckoutModal(false);
       setShowReceiptModal(true);
       fetchProducts();
@@ -209,9 +307,7 @@ export default function CashierDashboard() {
     (p.barcode && p.barcode.toLowerCase().includes(searchQuery.toLowerCase()))
   );
 
-  const subtotal = cart.reduce((acc, item) => acc + item.price * item.quantity, 0);
-  const tax = subtotal * 0.08; // 8% sales tax
-  const total = subtotal + tax;
+  // Calculations moved to top of component
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col h-screen overflow-hidden font-sans">
@@ -302,10 +398,90 @@ export default function CashierDashboard() {
 
           {/* Checkout Calculations */}
           <div className="p-4 border-t border-slate-900 bg-slate-950/50 space-y-3 shrink-0">
+            {/* Promotions & Discounts */}
+            <div className="p-3 bg-slate-950/40 border border-slate-900 rounded-xl space-y-2">
+              <div className="flex items-center justify-between text-xs font-semibold text-slate-300">
+                <span>Discounts & Coupons</span>
+              </div>
+              
+              {/* Manual Discount */}
+              <div className="flex items-center space-x-2">
+                <span className="text-[11px] text-slate-400 w-20">Manual ($):</span>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={manualDiscountStr}
+                  onChange={(e) => setManualDiscountStr(e.target.value)}
+                  className="flex-1 px-2.5 py-1 bg-slate-900 border border-slate-800 rounded text-xs text-slate-200 focus:outline-none focus:border-indigo-505"
+                />
+              </div>
+
+              {/* Coupon Code */}
+              <div className="space-y-1">
+                <div className="flex items-center space-x-2">
+                  <span className="text-[11px] text-slate-400 w-20">Coupon:</span>
+                  <div className="flex flex-1 gap-1">
+                    <input
+                      type="text"
+                      placeholder="CODE"
+                      value={couponCode}
+                      onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
+                      className="flex-1 px-2.5 py-1 bg-slate-900 border border-slate-800 rounded text-xs text-slate-200 focus:outline-none focus:border-indigo-505 uppercase"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleApplyCoupon}
+                      disabled={validatingCoupon || !couponCode.trim()}
+                      className="px-2 py-1 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-[10px] font-bold rounded text-white"
+                    >
+                      {validatingCoupon ? "..." : "Apply"}
+                    </button>
+                  </div>
+                </div>
+
+                {couponError && (
+                  <p className="text-[10px] text-red-400 font-semibold pl-20">{couponError}</p>
+                )}
+                {couponSuccess && (
+                  <p className="text-[10px] text-emerald-450 font-semibold pl-20">{couponSuccess}</p>
+                )}
+                {appliedCoupon && (
+                  <div className="flex justify-between items-center text-[10px] text-indigo-400 bg-indigo-950/20 px-2 py-1 rounded border border-indigo-900/30">
+                    <span>Active: <strong>{appliedCoupon.code}</strong> ({appliedCoupon.type === "Percentage" ? `${appliedCoupon.value}%` : `$${appliedCoupon.value}`})</span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setAppliedCoupon(null);
+                        setCouponSuccess("");
+                        setCouponCode("");
+                      }}
+                      className="text-red-400 font-bold hover:text-red-350"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* Cashier limit warning */}
+              {user?.role === "Cashier" && (discountAmount > 50 || (subtotal > 0 && discountAmount / subtotal > 0.15)) && (
+                <div className="p-2 bg-red-950/40 border border-red-900/50 rounded text-[10px] text-red-400 font-bold">
+                  ⚠️ Limit Exceeded: Cashiers cannot apply discounts &gt; 15% (${(subtotal * 0.15).toFixed(2)}) or $50.00.
+                </div>
+              )}
+            </div>
+
             <div className="flex justify-between text-sm text-slate-400">
               <span>Subtotal</span>
               <span>${subtotal.toFixed(2)}</span>
             </div>
+            {discountAmount > 0 && (
+              <div className="flex justify-between text-sm text-red-400">
+                <span>Discount</span>
+                <span>-${discountAmount.toFixed(2)}</span>
+              </div>
+            )}
             <div className="flex justify-between text-sm text-slate-400">
               <span>Tax (8%)</span>
               <span>${tax.toFixed(2)}</span>
@@ -317,7 +493,7 @@ export default function CashierDashboard() {
 
             <button
               onClick={handleCheckoutInit}
-              disabled={cart.length === 0}
+              disabled={cart.length === 0 || (user?.role === "Cashier" && (discountAmount > 50 || (subtotal > 0 && discountAmount / subtotal > 0.15)))}
               className="w-full mt-2 py-3 bg-gradient-to-r from-indigo-500 to-purple-650 hover:from-indigo-600 hover:to-purple-750 disabled:opacity-50 disabled:pointer-events-none text-white font-bold rounded-xl shadow-lg shadow-indigo-500/10 active:scale-[0.98] transition-all"
             >
               Collect Payment

@@ -71,6 +71,61 @@ public class SalesController : ControllerBase
             return BadRequest(new { Message = "Invalid payment method." });
         }
 
+        // Validate Coupon if provided
+        Coupon coupon = null;
+        if (!string.IsNullOrWhiteSpace(dto.CouponCode))
+        {
+            var codeUpper = dto.CouponCode.Trim().ToUpper();
+            coupon = await _context.Coupons
+                .IgnoreQueryFilters()
+                .FirstOrDefaultAsync(c => c.BusinessId == tenantId.Value && c.Code == codeUpper);
+
+            if (coupon == null)
+            {
+                return BadRequest(new { Message = $"Coupon code '{codeUpper}' not found." });
+            }
+
+            if (!coupon.IsActive)
+            {
+                return BadRequest(new { Message = "This coupon code is inactive." });
+            }
+
+            var now = DateTime.UtcNow;
+            if (coupon.StartDate > now || coupon.EndDate < now)
+            {
+                return BadRequest(new { Message = "This coupon code has expired or is not active yet." });
+            }
+
+            if (coupon.UsageLimit.HasValue && coupon.UsageCount >= coupon.UsageLimit.Value)
+            {
+                return BadRequest(new { Message = "This coupon usage limit has been exceeded." });
+            }
+        }
+
+        // Calculate subtotal to validate cashier discount limits
+        decimal tempSubtotal = 0;
+        foreach (var itemDto in dto.Items)
+        {
+            tempSubtotal += itemDto.Quantity * itemDto.UnitPrice;
+        }
+
+        if (userRole == "Cashier")
+        {
+            if (dto.DiscountAmount > 50.00m)
+            {
+                return BadRequest(new { Message = "Cashiers cannot apply a discount exceeding $50.00." });
+            }
+            if (tempSubtotal > 0 && (dto.DiscountAmount / tempSubtotal) > 0.15m)
+            {
+                return BadRequest(new { Message = "Cashiers cannot apply a discount exceeding 15%." });
+            }
+        }
+
+        if (coupon != null && coupon.MinCartAmount.HasValue && tempSubtotal < coupon.MinCartAmount.Value)
+        {
+            return BadRequest(new { Message = $"Minimum cart spend of ${coupon.MinCartAmount.Value:F2} is required to apply this coupon." });
+        }
+
         using var transaction = await _context.Database.BeginTransactionAsync();
         try
         {
@@ -84,7 +139,9 @@ public class SalesController : ControllerBase
                 TaxAmount = dto.TaxAmount,
                 Total = 0,
                 PaymentMethod = paymentMethod,
-                PaymentDetails = dto.PaymentDetails
+                PaymentDetails = dto.PaymentDetails,
+                AppliedCouponId = coupon?.Id,
+                AppliedCouponCode = coupon?.Code
             };
 
             decimal calculatedSubtotal = 0;
@@ -147,6 +204,12 @@ public class SalesController : ControllerBase
             sale.Subtotal = calculatedSubtotal;
             sale.Total = calculatedSubtotal - dto.DiscountAmount + dto.TaxAmount;
 
+            if (coupon != null)
+            {
+                coupon.UsageCount++;
+                _context.Coupons.Update(coupon);
+            }
+
             _context.Sales.Add(sale);
             await _context.SaveChangesAsync();
             await transaction.CommitAsync();
@@ -170,6 +233,8 @@ public class SalesController : ControllerBase
                 Total = sale.Total,
                 PaymentMethod = sale.PaymentMethod.ToString(),
                 PaymentDetails = sale.PaymentDetails,
+                AppliedCouponId = sale.AppliedCouponId,
+                AppliedCouponCode = sale.AppliedCouponCode,
                 CreatedAt = sale.CreatedAt,
                 Items = sale.SaleItems.Select(si => new SaleItemDto
                 {
@@ -242,6 +307,8 @@ public class SalesController : ControllerBase
                 Total = s.Total,
                 PaymentMethod = s.PaymentMethod.ToString(),
                 PaymentDetails = s.PaymentDetails,
+                AppliedCouponId = s.AppliedCouponId,
+                AppliedCouponCode = s.AppliedCouponCode,
                 CreatedAt = s.CreatedAt,
                 Items = s.SaleItems.Select(si => new SaleItemDto
                 {
@@ -309,6 +376,8 @@ public class SalesController : ControllerBase
             Total = sale.Total,
             PaymentMethod = sale.PaymentMethod.ToString(),
             PaymentDetails = sale.PaymentDetails,
+            AppliedCouponId = sale.AppliedCouponId,
+            AppliedCouponCode = sale.AppliedCouponCode,
             CreatedAt = sale.CreatedAt,
             Items = sale.SaleItems.Select(si => new SaleItemDto
             {

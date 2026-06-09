@@ -27,6 +27,8 @@ public class ApplicationDbContext : IdentityDbContext<User, IdentityRole<Guid>, 
     public DbSet<StockTransfer> StockTransfers => Set<StockTransfer>();
     public DbSet<Sale> Sales => Set<Sale>();
     public DbSet<SaleItem> SaleItems => Set<SaleItem>();
+    public DbSet<Discount> Discounts => Set<Discount>();
+    public DbSet<Coupon> Coupons => Set<Coupon>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -318,6 +320,52 @@ public class ApplicationDbContext : IdentityDbContext<User, IdentityRole<Guid>, 
                 .WithMany()
                 .HasForeignKey(si => si.ProductId)
                 .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        // Configure Discount entity
+        builder.Entity<Discount>(entity =>
+        {
+            entity.HasKey(d => d.Id);
+            entity.Property(d => d.Name).IsRequired().HasMaxLength(200);
+            entity.Property(d => d.Description).HasMaxLength(500);
+            entity.Property(d => d.Value).HasPrecision(18, 2);
+            entity.Property(d => d.MinCartAmount).HasPrecision(18, 2);
+
+            // Business relationship
+            entity.HasOne(d => d.Business)
+                .WithMany()
+                .HasForeignKey(d => d.BusinessId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // Product relationship (nullable)
+            entity.HasOne(d => d.Product)
+                .WithMany()
+                .HasForeignKey(d => d.ProductId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // Tenant Filter
+            entity.HasQueryFilter(d => !_tenantProvider.TenantId.HasValue || d.BusinessId == _tenantProvider.TenantId);
+        });
+
+        // Configure Coupon entity
+        builder.Entity<Coupon>(entity =>
+        {
+            entity.HasKey(c => c.Id);
+            entity.Property(c => c.Code).IsRequired().HasMaxLength(50);
+            entity.Property(c => c.Value).HasPrecision(18, 2);
+            entity.Property(c => c.MinCartAmount).HasPrecision(18, 2);
+
+            // Unique index per business tenant
+            entity.HasIndex(c => new { c.BusinessId, c.Code }).IsUnique();
+
+            // Business relationship
+            entity.HasOne(c => c.Business)
+                .WithMany()
+                .HasForeignKey(c => c.BusinessId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // Tenant Filter
+            entity.HasQueryFilter(c => !_tenantProvider.TenantId.HasValue || c.BusinessId == _tenantProvider.TenantId);
         });
     }
 }

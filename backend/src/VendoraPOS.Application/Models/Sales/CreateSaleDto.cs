@@ -8,5 +8,6 @@ public class CreateSaleDto
     public string? PaymentDetails { get; set; }
     public decimal DiscountAmount { get; set; }
     public decimal TaxAmount { get; set; }
+    public string? CouponCode { get; set; }
     public List<CreateSaleItemDto> Items { get; set; } = new();
 }
