@@ -13,6 +13,12 @@ public class Business
     public bool SharedStockMode { get; set; } = false;
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
+    // Subscription details
+    public string SubscriptionTier { get; set; } = "Pro";
+    public string SubscriptionStatus { get; set; } = "Active";
+    public decimal SubscriptionPrice { get; set; } = 299.00m;
+    public DateTime? SubscriptionExpiresAt { get; set; } = DateTime.UtcNow.AddYears(1);
+
     // Navigation properties
     public virtual User Owner { get; set; } = null!;
     public virtual ICollection<Branch> Branches { get; set; } = new List<Branch>();

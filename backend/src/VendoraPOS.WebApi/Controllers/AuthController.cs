@@ -161,7 +161,7 @@ public class AuthController : ControllerBase
 
             if (business != null && !business.IsActive)
             {
-                return Forbid("Your business account has been suspended. Please contact the administrator.");
+                return StatusCode(403, new { Message = "Your business account has been suspended. Please contact the administrator." });
             }
         }
 

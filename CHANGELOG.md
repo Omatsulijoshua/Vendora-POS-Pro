@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.12.0] - 2026-06-09
+
+### Added
+- **Super Admin Dashboard & Platform Controls (Phase 13):**
+  - Modified the `Business` domain model adding subscription metadata columns: `SubscriptionTier`, `SubscriptionStatus`, `SubscriptionPrice`, and `SubscriptionExpiresAt`.
+  - Created the `AuditLog` domain model to track actions on the platform (suspensions, activations, subscription changes).
+  - Registered `AuditLogs` DbSet in `ApplicationDbContext` and configured dynamic query filters.
+  - Generated and executed EF Core migration `AddSuperAdminAndSubscriptions` to apply schema changes to PostgreSQL.
+  - Created `IAuditLogService` and `AuditLogService` to handle asynchronous audit logging across controllers.
+  - Implemented `SuperAdminController` restricting access to the `SuperAdmin` role context (`admin@vendorapos.com`).
+  - Added endpoints:
+    - `GET /api/superadmin/stats` (Global statistics: business counts, active subscription count, total and monthly SaaS revenue, 7-day registration trend).
+    - `GET /api/superadmin/businesses` (Aggregated cross-tenant details, branch counts, user counts, and total sales revenue).
+    - `POST /api/superadmin/businesses/{id}/suspend` (Locks a tenant, sets `IsActive = false`, and logs action to audit log).
+    - `POST /api/superadmin/businesses/{id}/activate` (Unlocks a tenant, sets `IsActive = true`, and logs action to audit log).
+    - `PUT /api/superadmin/businesses/{id}/subscription` (Modifies subscription status, tier, pricing, and expiration date).
+    - `GET /api/superadmin/audit-logs` (Retrieves complete audit trail listing with business names).
+  - Integrated a business suspension check during login in `AuthController`, returning a `403 Forbidden` status with a descriptive message to block users of suspended businesses from accessing the platform.
+  - Rewrote the frontend `super-admin/page.tsx` dashboard with stats widget cards, a search/filter business directory table, subscription tier editing dialogs, suspension/activation buttons, SVG business growth trends, and audit trail timeline widgets.
+  - Developed and successfully ran PowerShell integration test suite `verify_phase13.ps1` confirming stats calculations, suspension lockouts, subscription updates, and audit logging.
+
 ## [0.11.0] - 2026-06-09
 
 ### Added

@@ -100,6 +100,7 @@ builder.Services.AddAuthentication(options =>
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ITenantProvider, HttpContextTenantProvider>();
 builder.Services.AddScoped<IJwtTokenGenerator, JwtTokenGenerator>();
+builder.Services.AddScoped<IAuditLogService, AuditLogService>();
 
 // Configure CORS
 builder.Services.AddCors(options =>

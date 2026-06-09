@@ -228,3 +228,32 @@ To provide business owners with a holistic, top-level view of their business emp
 * All charts, trends, and leaderboard metrics in the Owner dashboard overview are rendered using native HTML/SVG and Tailwind CSS without installing external graphing libraries. This ensures minimal bundle sizes and fast loading times.
 * The 7-day revenue vs profit trend uses native flex-column height ratio charts with SVG grids and tooltip hover overlays.
 
+## 11. Super Admin Dashboard & Platform Controls Architecture
+
+### 1. Subscription Metadata Expansion:
+* The `Business` entity has been extended with metadata to support licensing and tier controls:
+  * `SubscriptionTier`: Indicates the tier/plan level (e.g., "Basic", "Pro", "Enterprise").
+  * `SubscriptionStatus`: Indicates the status of the subscription billing cycle (e.g., "Active", "Past Due", "Cancelled").
+  * `SubscriptionPrice`: The recurring price of the plan, used for global revenue metrics.
+  * `SubscriptionExpiresAt`: DateTime offset of expiration. Written as UTC via `DateTime.SpecifyKind(..., DateTimeKind.Utc)` to prevent PostgreSQL timezone conversion mismatch errors.
+
+### 2. Business Suspension Logic:
+* When a business tenant violates terms or defaults on payments, Super Admins can toggle `IsActive = false` (suspended) or `IsActive = true` (activated) on the business level.
+* During user authentication (`AuthController.Login`):
+  * If the user belongs to a business, a query fetch retrieves the parent `Business` record using `.IgnoreQueryFilters()` to bypass tenancy restrictions (since the user is not logged in yet).
+  * If `business.IsActive` is `false`, the login pipeline is terminated immediately.
+  * The server returns a `403 Forbidden` response: `new { Message = "This business account is suspended. Please contact support." }`.
+  * This blocks all users (Owners, Managers, Cashiers) belonging to that tenant from obtaining a session token.
+
+### 3. Platform Audit Trail:
+* Global actions must be tracked for platform accountability. The `AuditLog` system registers platform events:
+  * Domain Entity: `AuditLog.cs` with properties `Id`, `Action`, `Details`, `UserEmail`, `IpAddress`, `CreatedAt`, and `BusinessId`.
+  * Service: `IAuditLogService` defines `LogAsync(...)` which writes a log record. The service is registered in the Web API dependency container (`Program.cs`) and injected into the controllers.
+  * Mappings: Configured in `ApplicationDbContext.cs` to allow database storage. Audit logs bypass standard tenancy filters via `.IgnoreQueryFilters()` so Super Admins can review logs globally across all tenants.
+
+### 4. Zero-Dependency Platform Analytics:
+* Like other dashboards, the Super Admin dashboard does not use external charting libraries.
+* Visualizes 7-day registration trends using a bar chart where height is dynamically styled using CSS percentages calculated from date groupings.
+* Features real-time search, sorting, and inline status modification modals for subscription tier updates and suspensions.
+
+

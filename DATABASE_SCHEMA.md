@@ -24,6 +24,10 @@ erDiagram
         Guid OwnerId FK "references owning AspNetUsers.Id"
         bool IsActive
         bool SharedStockMode
+        string SubscriptionTier
+        string SubscriptionStatus
+        decimal SubscriptionPrice
+        DateTime SubscriptionExpiresAt
         DateTime CreatedAt
     }
     Branches {
@@ -187,6 +191,7 @@ erDiagram
     Businesses ||--o{ Coupons : "creates"
     Businesses ||--o{ ReceiptSettings : "configures"
     Branches ||--o{ ReceiptSettings : "overrides"
+    Businesses ||--o{ AuditLogs : "logs"
 ```
 
 ---
@@ -204,6 +209,10 @@ Contains the details of registered businesses (tenants). An owner user (`AspNetU
 | `OwnerId` | `uuid` | `NOT NULL` | References `AspNetUsers.Id` (Owner of the business) |
 | `IsActive` | `boolean` | `NOT NULL, DEFAULT true` | Suspension / activation flag |
 | `SharedStockMode` | `boolean` | `NOT NULL, DEFAULT false` | Toggle for business stock sharing mode |
+| `SubscriptionTier` | `varchar(50)` | `NOT NULL, DEFAULT 'Pro'` | Subscription tier ("Standard", "Pro", "Enterprise") |
+| `SubscriptionStatus` | `varchar(50)` | `NOT NULL, DEFAULT 'Active'` | Billing status ("Active", "Trialing", "PastDue", "Suspended") |
+| `SubscriptionPrice` | `numeric(18,2)` | `NOT NULL, DEFAULT 299.00` | Yearly plan cost rate |
+| `SubscriptionExpiresAt`| `timestamp` | `NULL` | Billing cycle expiration timestamp |
 | `CreatedAt` | `timestamp` | `NOT NULL` | Creation timestamp |
 
 ### `Branches`
@@ -229,6 +238,20 @@ Extended ASP.NET Core Identity user table.
 | `BusinessId` | `uuid` | `NULL, FOREIGN KEY` | Active Business context (`Businesses.Id`) |
 | `BranchId` | `uuid` | `NULL, FOREIGN KEY` | Active Branch context (`Branches.Id`) |
 | `IsActive` | `boolean` | `NOT NULL, DEFAULT true` | User activation/deactivation status |
+
+### `AuditLogs`
+Stores administrative and tenant transaction trail logs. Bounded by global tenant query filter.
+
+| Column | Type | Constraints | Description |
+| :--- | :--- | :--- | :--- |
+| `Id` | `uuid` | `PRIMARY KEY` | Unique identifier |
+| `Action` | `varchar(100)` | `NOT NULL` | Type of action (e.g. `BusinessSuspended`) |
+| `Details` | `varchar(1000)` | `NOT NULL` | Description of the action |
+| `UserEmail` | `varchar(256)` | `NOT NULL` | Email of user performing the action |
+| `IpAddress` | `varchar(45)` | `NULL` | Requester IP address |
+| `BusinessId` | `uuid` | `NULL, FOREIGN KEY` | References optional business (`Businesses.Id`) |
+| `CreatedAt` | `timestamp` | `NOT NULL` | Log creation timestamp |
+
 
 ---
 

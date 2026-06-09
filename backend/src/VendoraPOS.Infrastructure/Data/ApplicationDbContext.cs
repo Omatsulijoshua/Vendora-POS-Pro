@@ -30,6 +30,7 @@ public class ApplicationDbContext : IdentityDbContext<User, IdentityRole<Guid>, 
     public DbSet<Discount> Discounts => Set<Discount>();
     public DbSet<Coupon> Coupons => Set<Coupon>();
     public DbSet<ReceiptSetting> ReceiptSettings => Set<ReceiptSetting>();
+    public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -51,6 +52,10 @@ public class ApplicationDbContext : IdentityDbContext<User, IdentityRole<Guid>, 
             entity.Property(b => b.Name).IsRequired().HasMaxLength(200);
             entity.Property(b => b.Subdomain).IsRequired().HasMaxLength(100);
             entity.HasIndex(b => b.Subdomain).IsUnique();
+
+            entity.Property(b => b.SubscriptionTier).IsRequired().HasMaxLength(50).HasDefaultValue("Pro");
+            entity.Property(b => b.SubscriptionStatus).IsRequired().HasMaxLength(50).HasDefaultValue("Active");
+            entity.Property(b => b.SubscriptionPrice).HasPrecision(18, 2).HasDefaultValue(299.00m);
 
             // Business - Owner relationship (Owner is a User)
             entity.HasOne(b => b.Owner)
@@ -401,6 +406,19 @@ public class ApplicationDbContext : IdentityDbContext<User, IdentityRole<Guid>, 
 
             // Tenant Filter
             entity.HasQueryFilter(rs => !_tenantProvider.TenantId.HasValue || rs.BusinessId == _tenantProvider.TenantId);
+        });
+
+        // Configure AuditLog entity
+        builder.Entity<AuditLog>(entity =>
+        {
+            entity.HasKey(al => al.Id);
+            entity.Property(al => al.Action).IsRequired().HasMaxLength(100);
+            entity.Property(al => al.Details).IsRequired().HasMaxLength(1000);
+            entity.Property(al => al.UserEmail).IsRequired().HasMaxLength(256);
+            entity.Property(al => al.IpAddress).HasMaxLength(45);
+
+            // Global Query Filter: isolate logs by tenant (SuperAdmin sees all, Owners see their own)
+            entity.HasQueryFilter(al => !_tenantProvider.TenantId.HasValue || al.BusinessId == _tenantProvider.TenantId);
         });
     }
 }

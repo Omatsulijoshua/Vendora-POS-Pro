@@ -898,3 +898,144 @@ Handles multipart file upload for branded receipt logos. Only permits JPG/PNG fo
     }
     ```
 
+---
+
+## Super Admin Control Endpoints (SuperAdmin Role Only)
+
+These endpoints are strictly restricted to users with the `SuperAdmin` role.
+
+### 1. Get Platform Statistics
+Retrieves global KPIs across the platform including counts, revenue, and registration trends.
+
+*   **Endpoint**: `GET /api/superadmin/stats`
+*   **Authentication**: Bearer JWT (SuperAdmin role)
+*   **Success Response** (200 OK):
+    ```json
+    {
+      "totalBusinesses": 10,
+      "activeBusinesses": 8,
+      "suspendedBusinesses": 2,
+      "activeSubscriptions": 8,
+      "totalSaaSRevenue": 2392.00,
+      "monthlySaaSRevenue": 199.33,
+      "totalBranches": 12,
+      "totalUsers": 25,
+      "businessGrowthTrend": [
+        {
+          "date": "2026-06-03",
+          "businessesCreated": 0
+        },
+        {
+          "date": "2026-06-09",
+          "businessesCreated": 1
+        }
+      ]
+    }
+    ```
+
+### 2. Get All Businesses
+Retrieves all businesses on the platform including deactivated ones, displaying cross-tenant stats and subscription details.
+
+*   **Endpoint**: `GET /api/superadmin/businesses`
+*   **Authentication**: Bearer JWT (SuperAdmin role)
+*   **Success Response** (200 OK):
+    ```json
+    [
+      {
+        "id": "3bf1cb2c-7844-4515-8a87-c2d3a97ef7d0",
+        "name": "Super POS Corp",
+        "subdomain": "superpos",
+        "ownerName": "John Doe",
+        "ownerEmail": "john@example.com",
+        "createdAt": "2026-06-01T12:00:00Z",
+        "isActive": true,
+        "branchesCount": 2,
+        "usersCount": 5,
+        "subscriptionTier": "Pro",
+        "subscriptionStatus": "Active",
+        "subscriptionPrice": 299.00,
+        "subscriptionExpiresAt": "2027-06-01T12:00:00Z",
+        "totalSalesRevenue": 15420.50
+      }
+    ]
+    ```
+
+### 3. Suspend Business
+Suspends a business tenant. When a tenant is suspended, any attempts to log into the business or perform operations will return a 403 Forbidden status with a suspension message.
+
+*   **Endpoint**: `POST /api/superadmin/businesses/{id}/suspend`
+*   **Authentication**: Bearer JWT (SuperAdmin role)
+*   **Success Response** (200 OK):
+    ```json
+    {
+      "message": "Business suspended successfully."
+    }
+    ```
+*   **Error Response** (400 Bad Request):
+    ```json
+    {
+      "message": "Business is already suspended."
+    }
+    ```
+
+### 4. Activate Business
+Re-activates a suspended business tenant, restoring full platform and API access.
+
+*   **Endpoint**: `POST /api/superadmin/businesses/{id}/activate`
+*   **Authentication**: Bearer JWT (SuperAdmin role)
+*   **Success Response** (200 OK):
+    ```json
+    {
+      "message": "Business activated successfully."
+    }
+    ```
+*   **Error Response** (400 Bad Request):
+    ```json
+    {
+      "message": "Business is already active."
+    }
+    ```
+
+### 5. Update Subscription Details
+Updates a business's subscription plan, price, status, and expiration date.
+
+*   **Endpoint**: `PUT /api/superadmin/businesses/{id}/subscription`
+*   **Authentication**: Bearer JWT (SuperAdmin role)
+*   **Request Body**:
+    ```json
+    {
+      "subscriptionTier": "Enterprise",
+      "subscriptionStatus": "Active",
+      "subscriptionPrice": 499.00,
+      "subscriptionExpiresAt": "2027-12-31T23:59:59Z"
+    }
+    ```
+*   **Success Response** (200 OK):
+    ```json
+    {
+      "message": "Subscription updated successfully."
+    }
+    ```
+
+### 6. Get Audit Logs
+Retrieves the platform-wide audit log trail, which tracks business activations, suspensions, and subscription changes.
+
+*   **Endpoint**: `GET /api/superadmin/audit-logs`
+*   **Authentication**: Bearer JWT (SuperAdmin role)
+*   **Success Response** (200 OK):
+    ```json
+    [
+      {
+        "id": "5fa23bc8-12cd-48ef-a123-9c87d4fa12ef",
+        "action": "BusinessSuspended",
+        "details": "Suspended business: Super POS Corp (subdomain: superpos)",
+        "userEmail": "admin@vendorapos.com",
+        "ipAddress": "127.0.0.1",
+        "createdAt": "2026-06-09T15:30:00Z",
+        "businessId": "3bf1cb2c-7844-4515-8a87-c2d3a97ef7d0",
+        "businessName": "Super POS Corp"
+      }
+    ]
+    ```
+
+
