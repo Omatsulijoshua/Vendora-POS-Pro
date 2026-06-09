@@ -19,7 +19,7 @@ export default function OwnerDashboard() {
   const [loadingProducts, setLoadingProducts] = useState(false);
 
   // Active Tab
-  const [activeTab, setActiveTab] = useState<"overview" | "inventory" | "categories" | "transfers">("overview");
+  const [activeTab, setActiveTab] = useState<"overview" | "inventory" | "categories" | "transfers" | "sales">("overview");
 
   // Modals visibility
   const [showAddBusinessModal, setShowAddBusinessModal] = useState(false);
@@ -95,6 +95,12 @@ export default function OwnerDashboard() {
   const [transferNotes, setTransferNotes] = useState("");
   const [transferError, setTransferError] = useState("");
   const [transferSubmitting, setTransferSubmitting] = useState(false);
+
+  // Phase 8 Sales
+  const [sales, setSales] = useState<any[]>([]);
+  const [loadingSales, setLoadingSales] = useState(false);
+  const [selectedSale, setSelectedSale] = useState<any>(null);
+  const [showReceiptDetailModal, setShowReceiptDetailModal] = useState(false);
 
   // Dropdown states
   const [bizDropdownOpen, setBizDropdownOpen] = useState(false);
@@ -208,6 +214,24 @@ export default function OwnerDashboard() {
     }
   };
 
+  // Fetch sales history
+  const fetchSales = async () => {
+    try {
+      setLoadingSales(true);
+      const res = await fetch("http://localhost:5149/api/sales", {
+        headers: { "Authorization": `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setSales(data);
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoadingSales(false);
+    }
+  };
+
   // Initial load
   useEffect(() => {
     if (token) {
@@ -223,6 +247,7 @@ export default function OwnerDashboard() {
       fetchCategories();
       fetchProducts();
       fetchTransfers();
+      fetchSales();
     }
   }, [token, user?.businessId, user?.branchId]);
 
@@ -748,13 +773,10 @@ export default function OwnerDashboard() {
     }
   };
 
-  // Mock consolidated dashboard sales values
+  // Real consolidated dashboard sales values
   const getBranchSales = () => {
-    if (activeBranch) {
-      const seed = activeBranch.name.charCodeAt(0) + activeBranch.name.charCodeAt(activeBranch.name.length - 1);
-      return `$${(seed * 7.5).toFixed(2)}`;
-    }
-    return "$3,240.00";
+    const totalSales = sales.reduce((acc, sale) => acc + sale.total, 0);
+    return `$${totalSales.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   };
 
   return (
@@ -910,25 +932,27 @@ export default function OwnerDashboard() {
                 </button>
               </div>
 
-              <button
-                onClick={() => {
-                  if (activeTab === "categories") setShowAddCategoryModal(true);
-                  else if (activeTab === "inventory") setShowAddProductModal(true);
-                  else if (activeTab === "transfers") {
-                    if (products.length > 0) setTransferProductId(products[0].id);
-                    if (branches.length > 0) setTransferSourceBranchId(branches[0].id);
-                    if (branches.length > 1) setTransferTargetBranchId(branches[1].id);
-                    setTransferQuantity(1);
-                    setTransferNotes("");
-                    setTransferError("");
-                    setShowAddTransferModal(true);
-                  }
-                  else setShowAddBranchModal(true);
-                }}
-                className="px-4 py-2.5 rounded-lg bg-indigo-650 hover:bg-indigo-750 text-white font-bold text-xs transition-all shadow-md shadow-indigo-600/20"
-              >
-                {activeTab === "categories" ? "+ Create Category" : activeTab === "inventory" ? "+ Add Product" : activeTab === "transfers" ? "+ Initiate Transfer" : "+ Add Branch"}
-              </button>
+              {activeTab !== "sales" && (
+                <button
+                  onClick={() => {
+                    if (activeTab === "categories") setShowAddCategoryModal(true);
+                    else if (activeTab === "inventory") setShowAddProductModal(true);
+                    else if (activeTab === "transfers") {
+                      if (products.length > 0) setTransferProductId(products[0].id);
+                      if (branches.length > 0) setTransferSourceBranchId(branches[0].id);
+                      if (branches.length > 1) setTransferTargetBranchId(branches[1].id);
+                      setTransferQuantity(1);
+                      setTransferNotes("");
+                      setTransferError("");
+                      setShowAddTransferModal(true);
+                    }
+                    else setShowAddBranchModal(true);
+                  }}
+                  className="px-4 py-2.5 rounded-lg bg-indigo-650 hover:bg-indigo-750 text-white font-bold text-xs transition-all shadow-md shadow-indigo-600/20"
+                >
+                  {activeTab === "categories" ? "+ Create Category" : activeTab === "inventory" ? "+ Add Product" : activeTab === "transfers" ? "+ Initiate Transfer" : "+ Add Branch"}
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -958,6 +982,12 @@ export default function OwnerDashboard() {
             className={`pb-3 border-b-2 transition-colors ${activeTab === "transfers" ? "border-indigo-500 text-indigo-400" : "border-transparent text-slate-400 hover:text-slate-200"}`}
           >
             Stock Transfers
+          </button>
+          <button
+            onClick={() => setActiveTab("sales")}
+            className={`pb-3 border-b-2 transition-colors ${activeTab === "sales" ? "border-indigo-500 text-indigo-400" : "border-transparent text-slate-400 hover:text-slate-200"}`}
+          >
+            Sales History
           </button>
         </div>
 
@@ -1349,6 +1379,76 @@ export default function OwnerDashboard() {
                               </button>
                             </>
                           )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        )}
+
+        {activeTab === "sales" && (
+          <div className="border border-slate-900 bg-slate-900/20 rounded-xl p-6 space-y-6 animate-in fade-in duration-300">
+            <div className="flex justify-between items-center">
+              <h3 className="font-bold text-lg text-slate-100">Sales History Logs</h3>
+              <button
+                onClick={fetchSales}
+                className="px-3 py-1.5 bg-slate-850 hover:bg-slate-800 text-xs font-bold text-slate-200 rounded-lg transition-colors border border-slate-800"
+              >
+                Refresh Logs
+              </button>
+            </div>
+
+            {loadingSales ? (
+              <div className="text-sm text-slate-500 py-6 animate-pulse">Loading sales history...</div>
+            ) : sales.length === 0 ? (
+              <div className="text-sm text-slate-500 py-6">No sales transactions found.</div>
+            ) : (
+              <div className="overflow-x-auto animate-in fade-in duration-200">
+                <table className="w-full text-left border-collapse text-xs">
+                  <thead>
+                    <tr className="border-b border-slate-850 text-slate-400 font-semibold">
+                      <th className="pb-3 pr-4">Receipt ID</th>
+                      <th className="pb-3 px-4">Branch</th>
+                      <th className="pb-3 px-4">Cashier</th>
+                      <th className="pb-3 px-4">Payment Method</th>
+                      <th className="pb-3 px-4">Items Count</th>
+                      <th className="pb-3 px-4">Date & Time</th>
+                      <th className="pb-3 px-4 text-right">Total Amount</th>
+                      <th className="pb-3 pl-4 text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-900 text-slate-350">
+                    {sales.map((sale) => (
+                      <tr key={sale.id} className="hover:bg-slate-900/5 transition-colors">
+                        <td className="py-3 pr-4 font-mono font-semibold text-slate-200">{sale.id.substring(0, 8).toUpperCase()}</td>
+                        <td className="py-3 px-4 text-slate-400">{sale.branchName || "Global/Shared"}</td>
+                        <td className="py-3 px-4 text-slate-400">{sale.cashierName}</td>
+                        <td className="py-3 px-4">
+                          <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${
+                            sale.paymentMethod === "Mixed" ? "bg-purple-500/10 text-purple-400 border-purple-500/20" :
+                            sale.paymentMethod === "Cash" ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" :
+                            sale.paymentMethod === "Transfer" ? "bg-blue-500/10 text-blue-400 border-blue-500/20" :
+                            "bg-yellow-500/10 text-yellow-400 border-yellow-500/20"
+                          }`}>
+                            {sale.paymentMethod}
+                          </span>
+                        </td>
+                        <td className="py-3 px-4 text-slate-400">{sale.items.length} items</td>
+                        <td className="py-3 px-4 text-slate-500">{new Date(sale.createdAt).toLocaleString()}</td>
+                        <td className="py-3 px-4 text-right font-bold text-slate-200">${sale.total.toFixed(2)}</td>
+                        <td className="py-3 pl-4 text-right">
+                          <button
+                            onClick={() => {
+                              setSelectedSale(sale);
+                              setShowReceiptDetailModal(true);
+                            }}
+                            className="px-2.5 py-1 bg-indigo-650 hover:bg-indigo-700 text-white text-[10px] font-bold rounded transition-colors active:scale-95"
+                          >
+                            View Receipt
+                          </button>
                         </td>
                       </tr>
                     ))}
@@ -2061,9 +2161,300 @@ export default function OwnerDashboard() {
               </div>
               <div className="flex space-x-3 pt-4 border-t border-slate-850">
                 <button type="button" onClick={() => setShowAddTransferModal(false)} className="flex-1 py-2.5 bg-slate-800 text-slate-350 text-xs font-bold rounded-lg">Cancel</button>
+              </div>
+
+              <div className="flex space-x-3 pt-4 border-t border-slate-850">
+                <button type="button" onClick={() => { setShowEditProductModal(false); setSelectedProduct(null); }} className="flex-1 py-2.5 bg-slate-800 text-slate-355 text-xs font-bold rounded-lg">Cancel</button>
+                <button type="submit" disabled={prodSubmitting} className="flex-1 py-2.5 bg-indigo-650 text-white text-xs font-bold rounded-lg">Save Changes</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Adjust Stock Modal */}
+      {showAdjustStockModal && (
+        <div className="fixed inset-0 bg-slate-950/70 backdrop-blur-md flex justify-center items-center p-4 z-50">
+          <div className="w-full max-w-md p-6 bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl">
+            <h3 className="text-xl font-bold text-slate-100 mb-1">Adjust Inventory Level</h3>
+            <p className="text-xs text-slate-455 mb-4">Product: <span className="text-indigo-400 font-bold">{selectedProduct?.name}</span></p>
+            {adjError && <div className="mb-4 p-3 bg-red-950/50 border border-red-800 text-red-400 rounded-lg text-xs">{adjError}</div>}
+            
+            <form onSubmit={handleAdjustStock} className="space-y-4">
+              {!activeBusiness.sharedStockMode && (
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1.5">Branch Location Context</label>
+                  <select
+                    value={adjBranchId}
+                    onChange={(e) => {
+                      setAdjBranchId(e.target.value);
+                      const currentStock = selectedProduct.branchStocks?.find((bs: any) => bs.branchId === e.target.value) || { quantity: 0, minStockLevel: 0 };
+                      setAdjQuantity(currentStock.quantity);
+                      setAdjMinLevel(currentStock.minStockLevel);
+                    }}
+                    className="w-full px-3 py-2.5 bg-slate-950 border border-slate-800 rounded-lg text-slate-100 text-sm focus:outline-none"
+                  >
+                    {branches.map((br) => (
+                      <option key={br.id} value={br.id}>{br.name}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1.5">New Stock Quantity</label>
+                  <input
+                    type="number"
+                    value={adjQuantity}
+                    onChange={(e) => setAdjQuantity(parseInt(e.target.value) || 0)}
+                    required
+                    className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-slate-100 text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1.5">Low Stock Alert Limit</label>
+                  <input
+                    type="number"
+                    value={adjMinLevel}
+                    onChange={(e) => setAdjMinLevel(parseInt(e.target.value) || 0)}
+                    required
+                    className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-slate-100 text-sm"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1.5">Adjustment Reason / Notes</label>
+                <input
+                  type="text"
+                  value={adjReason}
+                  onChange={(e) => setAdjReason(e.target.value)}
+                  placeholder="Intake delivery, damaged items, stock take, etc."
+                  required
+                  className="w-full px-3 py-2.5 bg-slate-950 border border-slate-800 rounded-lg text-slate-100 text-sm"
+                />
+              </div>
+
+              <div className="flex space-x-3 pt-4 border-t border-slate-850">
+                <button type="button" onClick={() => { setShowAdjustStockModal(false); setSelectedProduct(null); }} className="flex-1 py-2.5 bg-slate-800 text-slate-355 text-xs font-bold rounded-lg">Cancel</button>
+                <button type="submit" disabled={adjSubmitting} className="flex-1 py-2.5 bg-indigo-650 text-white text-xs font-bold rounded-lg">Confirm Changes</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Adjustment Logs Modal */}
+      {showLogModal && (
+        <div className="fixed inset-0 bg-slate-950/70 backdrop-blur-md flex justify-center items-center p-4 z-50">
+          <div className="w-full max-w-2xl p-6 bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl">
+            <div className="flex justify-between items-center mb-4">
+              <div>
+                <h3 className="text-xl font-bold text-slate-100">Stock Adjustment Audit Trail</h3>
+                <p className="text-xs text-slate-455">Product: <span className="text-indigo-400 font-bold">{selectedProduct?.name}</span></p>
+              </div>
+              <button
+                onClick={() => { setShowLogModal(false); setSelectedProduct(null); setAdjustmentLogs([]); }}
+                className="text-xs font-bold text-slate-400 hover:text-slate-100"
+              >
+                Close
+              </button>
+            </div>
+            
+            <div className="max-h-96 overflow-y-auto space-y-3 p-1">
+              {adjustmentLogs.length === 0 ? (
+                <p className="text-xs text-slate-500 text-center py-8">No stock adjustments logged for this product.</p>
+              ) : (
+                adjustmentLogs.map((log) => (
+                  <div key={log.id} className="p-3 bg-slate-950/30 border border-slate-850 rounded-lg text-xs space-y-1.5">
+                    <div className="flex justify-between font-semibold">
+                      <span className="text-slate-300">Changed by: {log.adjustedByUserName}</span>
+                      <span className="text-slate-500">{new Date(log.createdAt).toLocaleString()}</span>
+                    </div>
+                    <div className="grid grid-cols-3 gap-2 text-[11px] text-slate-400">
+                      <div>Branch: <span className="text-purple-400 font-medium">{log.branchName}</span></div>
+                      <div>Prev Qty: <span className="text-slate-300">{log.previousQuantity}</span></div>
+                      <div>New Qty: <span className="text-indigo-400 font-bold">{log.newQuantity}</span></div>
+                    </div>
+                    <div className="text-[11px] text-slate-450 border-t border-slate-850/50 pt-1">
+                      Reason: <span className="text-slate-300 italic">{log.reason}</span>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Initiate Transfer Modal */}
+      {showAddTransferModal && (
+        <div className="fixed inset-0 bg-slate-950/70 backdrop-blur-md flex justify-center items-center p-4 z-50">
+          <div className="w-full max-w-md p-6 bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl">
+            <h3 className="text-xl font-bold text-slate-100 mb-2">Initiate Stock Transfer</h3>
+            {transferError && <div className="mb-4 p-3 bg-red-950/50 border border-red-800 text-red-400 rounded-lg text-xs">{transferError}</div>}
+            <form onSubmit={handleInitiateTransfer} className="space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1.5">Select Product</label>
+                <select
+                  value={transferProductId}
+                  onChange={(e) => setTransferProductId(e.target.value)}
+                  className="w-full px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-lg text-slate-100 text-sm focus:outline-none"
+                >
+                  {products.map((p) => (
+                    <option key={p.id} value={p.id}>{p.name} (Available: {p.totalStock})</option>
+                  ))}
+                </select>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1.5">Source Branch</label>
+                  <select
+                    value={transferSourceBranchId}
+                    onChange={(e) => setTransferSourceBranchId(e.target.value)}
+                    className="w-full px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-lg text-slate-100 text-sm focus:outline-none"
+                  >
+                    {branches.map((br) => (
+                      <option key={br.id} value={br.id}>{br.name}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1.5">Target Branch</label>
+                  <select
+                    value={transferTargetBranchId}
+                    onChange={(e) => setTransferTargetBranchId(e.target.value)}
+                    className="w-full px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-lg text-slate-100 text-sm focus:outline-none"
+                  >
+                    {branches.map((br) => (
+                      <option key={br.id} value={br.id}>{br.name}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1.5">Quantity to Transfer</label>
+                <input
+                  type="number"
+                  min="1"
+                  value={transferQuantity}
+                  onChange={(e) => setTransferQuantity(parseInt(e.target.value) || 1)}
+                  required
+                  className="w-full px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-lg text-slate-100 text-sm focus:outline-none"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1.5">Transfer Notes</label>
+                <input
+                  type="text"
+                  value={transferNotes}
+                  onChange={(e) => setTransferNotes(e.target.value)}
+                  placeholder="Coca-cola branch restock"
+                  className="w-full px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-lg text-slate-100 text-sm focus:outline-none"
+                />
+              </div>
+              <div className="flex space-x-3 pt-4 border-t border-slate-850">
+                <button type="button" onClick={() => setShowAddTransferModal(false)} className="flex-1 py-2.5 bg-slate-800 text-slate-350 text-xs font-bold rounded-lg">Cancel</button>
                 <button type="submit" disabled={transferSubmitting} className="flex-1 py-2.5 bg-indigo-650 text-white text-xs font-bold rounded-lg">{transferSubmitting ? "Initiating..." : "Confirm Transfer"}</button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Thermal Receipt Detail Modal */}
+      {showReceiptDetailModal && selectedSale && (
+        <div className="fixed inset-0 bg-slate-950/70 backdrop-blur-md flex justify-center items-center p-4 z-50 animate-in fade-in duration-200">
+          <div className="w-full max-w-sm p-6 bg-white text-slate-900 border border-slate-200 rounded-2xl shadow-2xl flex flex-col font-mono text-xs">
+            {/* Store details */}
+            <div className="text-center space-y-1 pb-4 border-b border-dashed border-slate-300">
+              <h3 className="text-sm font-bold tracking-wider">VENDORA POS PRO</h3>
+              <p className="text-[10px] text-slate-500">{selectedSale.branchName}</p>
+              <p className="text-[9px] text-slate-450">Date: {new Date(selectedSale.createdAt).toLocaleString()}</p>
+              <p className="text-[9px] text-slate-450">Receipt ID: {selectedSale.id.substring(0, 8).toUpperCase()}</p>
+            </div>
+
+            {/* Cashier information */}
+            <div className="py-2 border-b border-dashed border-slate-300 text-[9px] text-slate-500">
+              <span>Cashier: {selectedSale.cashierName}</span>
+            </div>
+
+            {/* Sales Items */}
+            <div className="flex-1 py-4 space-y-3 max-h-60 overflow-y-auto">
+              {selectedSale.items.map((item: any) => (
+                <div key={item.id} className="flex justify-between items-start text-[10px]">
+                  <div className="space-y-0.5">
+                    <p className="font-bold">{item.productName}</p>
+                    <p className="text-[9px] text-slate-500">{item.sku}</p>
+                    <p className="text-[9px] text-slate-500">
+                      {item.quantity} x ${item.unitPrice.toFixed(2)}
+                    </p>
+                  </div>
+                  <span className="font-bold">${item.total.toFixed(2)}</span>
+                </div>
+              ))}
+            </div>
+
+            {/* Calculations summaries */}
+            <div className="border-t border-dashed border-slate-300 pt-3 space-y-1.5 text-[10px]">
+              <div className="flex justify-between">
+                <span>Subtotal</span>
+                <span>${selectedSale.subtotal.toFixed(2)}</span>
+              </div>
+              {selectedSale.discountAmount > 0 && (
+                <div className="flex justify-between text-red-650 font-bold">
+                  <span>Discount</span>
+                  <span>-${selectedSale.discountAmount.toFixed(2)}</span>
+                </div>
+              )}
+              <div className="flex justify-between">
+                <span>Sales Tax</span>
+                <span>${selectedSale.taxAmount.toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between text-sm font-bold border-t border-double border-slate-400 pt-2 text-slate-900">
+                <span>TOTAL</span>
+                <span>${selectedSale.total.toFixed(2)}</span>
+              </div>
+            </div>
+
+            {/* Payment Details */}
+            <div className="mt-4 p-2.5 bg-slate-50 border border-slate-100 rounded-lg space-y-1 text-[9px] text-slate-600">
+              <div className="flex justify-between">
+                <span>Payment Mode:</span>
+                <span className="font-bold tracking-wide">{selectedSale.paymentMethod}</span>
+              </div>
+              {selectedSale.paymentMethod === "Mixed" && selectedSale.paymentDetails && (
+                (() => {
+                  try {
+                    const parsed = JSON.parse(selectedSale.paymentDetails);
+                    return (
+                      <div className="pl-2 border-l border-slate-200 space-y-0.5 mt-1 font-bold">
+                        {parsed.cash > 0 && <div className="flex justify-between"><span>• Cash:</span><span>${parsed.cash.toFixed(2)}</span></div>}
+                        {parsed.transfer > 0 && <div className="flex justify-between"><span>• Transfer:</span><span>${parsed.transfer.toFixed(2)}</span></div>}
+                        {parsed.pos > 0 && <div className="flex justify-between"><span>• Card POS:</span><span>${parsed.pos.toFixed(2)}</span></div>}
+                      </div>
+                    );
+                  } catch (e) { return null; }
+                })()
+              )}
+            </div>
+
+            {/* Footer message */}
+            <div className="text-center pt-6 mt-4 border-t border-dashed border-slate-300 text-[9px] text-slate-400 space-y-0.5">
+              <p className="font-bold text-slate-600">Thank you for your patronage!</p>
+              <p>Please keep this receipt as proof of purchase.</p>
+            </div>
+
+            <button
+              onClick={() => {
+                setShowReceiptDetailModal(false);
+                setSelectedSale(null);
+              }}
+              className="mt-6 py-2.5 w-full bg-slate-900 text-white font-bold rounded-xl text-xs hover:bg-slate-800 transition-colors"
+            >
+              Close Receipt
+            </button>
           </div>
         </div>
       )}

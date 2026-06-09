@@ -25,6 +25,8 @@ public class ApplicationDbContext : IdentityDbContext<User, IdentityRole<Guid>, 
     public DbSet<ProductStock> ProductStocks => Set<ProductStock>();
     public DbSet<StockAdjustmentLog> StockAdjustmentLogs => Set<StockAdjustmentLog>();
     public DbSet<StockTransfer> StockTransfers => Set<StockTransfer>();
+    public DbSet<Sale> Sales => Set<Sale>();
+    public DbSet<SaleItem> SaleItems => Set<SaleItem>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -259,6 +261,63 @@ public class ApplicationDbContext : IdentityDbContext<User, IdentityRole<Guid>, 
                 (!_tenantProvider.TenantId.HasValue || st.BusinessId == _tenantProvider.TenantId) &&
                 (!_tenantProvider.BranchId.HasValue || st.SourceBranchId == _tenantProvider.BranchId || st.TargetBranchId == _tenantProvider.BranchId)
             );
+        });
+
+        // Configure Sale entity
+        builder.Entity<Sale>(entity =>
+        {
+            entity.HasKey(s => s.Id);
+            entity.Property(s => s.Subtotal).HasPrecision(18, 2);
+            entity.Property(s => s.DiscountAmount).HasPrecision(18, 2);
+            entity.Property(s => s.TaxAmount).HasPrecision(18, 2);
+            entity.Property(s => s.Total).HasPrecision(18, 2);
+            entity.Property(s => s.PaymentDetails).HasMaxLength(1000);
+
+            // Business relationship
+            entity.HasOne(s => s.Business)
+                .WithMany()
+                .HasForeignKey(s => s.BusinessId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // Branch relationship (nullable)
+            entity.HasOne(s => s.Branch)
+                .WithMany()
+                .HasForeignKey(s => s.BranchId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            // User relationship
+            entity.HasOne(s => s.User)
+                .WithMany()
+                .HasForeignKey(s => s.UserId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // Tenant & Branch Query Filter
+            entity.HasQueryFilter(s => 
+                (!_tenantProvider.TenantId.HasValue || s.BusinessId == _tenantProvider.TenantId) &&
+                (s.BranchId == null || !_tenantProvider.BranchId.HasValue || s.BranchId == _tenantProvider.BranchId)
+            );
+        });
+
+        // Configure SaleItem entity
+        builder.Entity<SaleItem>(entity =>
+        {
+            entity.HasKey(si => si.Id);
+            entity.Property(si => si.UnitPrice).HasPrecision(18, 2);
+            entity.Property(si => si.CostPrice).HasPrecision(18, 2);
+            entity.Property(si => si.DiscountAmount).HasPrecision(18, 2);
+            entity.Property(si => si.Total).HasPrecision(18, 2);
+
+            // Sale relationship
+            entity.HasOne(si => si.Sale)
+                .WithMany(s => s.SaleItems)
+                .HasForeignKey(si => si.SaleId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // Product relationship
+            entity.HasOne(si => si.Product)
+                .WithMany()
+                .HasForeignKey(si => si.ProductId)
+                .OnDelete(DeleteBehavior.Restrict);
         });
     }
 }

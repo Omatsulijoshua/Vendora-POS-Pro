@@ -8,7 +8,7 @@ export default function ManagerDashboard() {
   const [branchName, setBranchName] = useState("Loading branch...");
   const [products, setProducts] = useState<any[]>([]);
   const [loadingProducts, setLoadingProducts] = useState(false);
-  const [activeTab, setActiveTab] = useState<"overview" | "stock" | "transfers">("overview");
+  const [activeTab, setActiveTab] = useState<"overview" | "stock" | "transfers" | "sales">("overview");
 
   // Phase 7 Stock Transfers
   const [transfers, setTransfers] = useState<any[]>([]);
@@ -22,6 +22,12 @@ export default function ManagerDashboard() {
   const [transferSubmitting, setTransferSubmitting] = useState(false);
   const [branches, setBranches] = useState<any[]>([]);
   const [loadingBranches, setLoadingBranches] = useState(false);
+
+  // Phase 8 Sales
+  const [sales, setSales] = useState<any[]>([]);
+  const [loadingSales, setLoadingSales] = useState(false);
+  const [selectedSale, setSelectedSale] = useState<any>(null);
+  const [showReceiptDetailModal, setShowReceiptDetailModal] = useState(false);
 
   // Modals visibility
   const [showAdjustStockModal, setShowAdjustStockModal] = useState(false);
@@ -110,12 +116,31 @@ export default function ManagerDashboard() {
     }
   };
 
+  // Fetch sales history
+  const fetchSales = async () => {
+    try {
+      setLoadingSales(true);
+      const res = await fetch("http://localhost:5149/api/sales", {
+        headers: { "Authorization": `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setSales(data);
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoadingSales(false);
+    }
+  };
+
   useEffect(() => {
     if (token) {
       fetchBranchInfo();
       fetchProducts();
       fetchBranches();
       fetchTransfers();
+      fetchSales();
     }
   }, [token, user?.branchId]);
 
@@ -357,6 +382,12 @@ export default function ManagerDashboard() {
           >
             Stock Transfers
           </button>
+          <button
+            onClick={() => setActiveTab("sales")}
+            className={`pb-3 border-b-2 transition-colors ${activeTab === "sales" ? "border-emerald-500 text-emerald-455" : "border-transparent text-slate-400 hover:text-slate-200"}`}
+          >
+            Sales History
+          </button>
         </div>
 
         {activeTab === "overview" && (
@@ -364,15 +395,15 @@ export default function ManagerDashboard() {
             {/* Stats */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               {[
-                { label: "Branch Daily Sales", value: "$1,840.00", desc: "Mock value" },
-                { label: "Total Transactions", value: "42", desc: "Mock count" },
+                { label: "Branch Daily Sales", value: `$${sales.reduce((acc, s) => acc + s.total, 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, desc: "Total branch checkout value" },
+                { label: "Total Transactions", value: sales.length.toString(), desc: "Completed receipts" },
                 { label: "Low Stock Alerts", value: `${lowStockItems.length} Items`, desc: "Requires reorder" },
                 { label: "Branch Total Inventory", value: `${totalStockCount} units`, desc: "Total stock pieces" },
               ].map((stat, i) => (
                 <div key={i} className="border border-slate-900 bg-slate-900/20 rounded-xl p-5">
                   <span className="text-xs font-semibold text-slate-400">{stat.label}</span>
                   <p className="text-3xl font-bold mt-3 text-slate-100">{stat.value}</p>
-                  <p className="text-xs text-slate-500 mt-1">{stat.desc}</p>
+                  <p className="text-xs text-slate-505 mt-1">{stat.desc}</p>
                 </div>
               ))}
             </div>
@@ -596,6 +627,74 @@ export default function ManagerDashboard() {
             )}
           </div>
         )}
+
+        {activeTab === "sales" && (
+          <div className="border border-slate-900 bg-slate-900/20 rounded-xl p-6 space-y-6 animate-in fade-in duration-300">
+            <div className="flex justify-between items-center">
+              <h3 className="font-bold text-lg text-slate-100">Branch Sales History</h3>
+              <button
+                onClick={fetchSales}
+                className="px-3 py-1.5 bg-slate-850 hover:bg-slate-800 text-xs font-bold text-slate-200 rounded-lg transition-colors border border-slate-800"
+              >
+                Refresh Logs
+              </button>
+            </div>
+
+            {loadingSales ? (
+              <div className="text-sm text-slate-500 py-6 animate-pulse">Loading sales history...</div>
+            ) : sales.length === 0 ? (
+              <div className="text-sm text-slate-500 py-6 text-center">No sales transactions logged at this branch.</div>
+            ) : (
+              <div className="overflow-x-auto animate-in fade-in duration-200">
+                <table className="w-full text-left border-collapse text-xs">
+                  <thead>
+                    <tr className="border-b border-slate-850 text-slate-400 font-semibold">
+                      <th className="pb-3 pr-4">Receipt ID</th>
+                      <th className="pb-3 px-4">Cashier</th>
+                      <th className="pb-3 px-4">Payment Method</th>
+                      <th className="pb-3 px-4">Items Count</th>
+                      <th className="pb-3 px-4">Date & Time</th>
+                      <th className="pb-3 px-4 text-right">Total Amount</th>
+                      <th className="pb-3 pl-4 text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-900 text-slate-350">
+                    {sales.map((sale) => (
+                      <tr key={sale.id} className="hover:bg-slate-900/5 transition-colors">
+                        <td className="py-3 pr-4 font-mono font-semibold text-slate-200">{sale.id.substring(0, 8).toUpperCase()}</td>
+                        <td className="py-3 px-4 text-slate-400">{sale.cashierName}</td>
+                        <td className="py-3 px-4">
+                          <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${
+                            sale.paymentMethod === "Mixed" ? "bg-purple-500/10 text-purple-400 border-purple-500/20" :
+                            sale.paymentMethod === "Cash" ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" :
+                            sale.paymentMethod === "Transfer" ? "bg-blue-500/10 text-blue-400 border-blue-500/20" :
+                            "bg-yellow-500/10 text-yellow-400 border-yellow-500/20"
+                          }`}>
+                            {sale.paymentMethod}
+                          </span>
+                        </td>
+                        <td className="py-3 px-4 text-slate-400">{sale.items.length} items</td>
+                        <td className="py-3 px-4 text-slate-500">{new Date(sale.createdAt).toLocaleString()}</td>
+                        <td className="py-3 px-4 text-right font-bold text-slate-200">${sale.total.toFixed(2)}</td>
+                        <td className="py-3 pl-4 text-right">
+                          <button
+                            onClick={() => {
+                              setSelectedSale(sale);
+                              setShowReceiptDetailModal(true);
+                            }}
+                            className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-bold rounded transition-colors active:scale-95 shadow-sm shadow-emerald-600/10"
+                          >
+                            View Receipt
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        )}
       </main>
 
       {/* Adjust Stock Modal */}
@@ -761,6 +860,102 @@ export default function ManagerDashboard() {
                 <button type="submit" disabled={transferSubmitting} className="flex-1 py-2.5 bg-emerald-650 text-white text-xs font-bold rounded-lg">{transferSubmitting ? "Initiating..." : "Confirm Transfer"}</button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Thermal Receipt Detail Modal */}
+      {showReceiptDetailModal && selectedSale && (
+        <div className="fixed inset-0 bg-slate-950/70 backdrop-blur-md flex justify-center items-center p-4 z-50 animate-in fade-in duration-200">
+          <div className="w-full max-w-sm p-6 bg-white text-slate-900 border border-slate-200 rounded-2xl shadow-2xl flex flex-col font-mono text-xs">
+            {/* Store details */}
+            <div className="text-center space-y-1 pb-4 border-b border-dashed border-slate-300">
+              <h3 className="text-sm font-bold tracking-wider">VENDORA POS PRO</h3>
+              <p className="text-[10px] text-slate-500">{selectedSale.branchName}</p>
+              <p className="text-[9px] text-slate-455">Date: {new Date(selectedSale.createdAt).toLocaleString()}</p>
+              <p className="text-[9px] text-slate-455">Receipt ID: {selectedSale.id.substring(0, 8).toUpperCase()}</p>
+            </div>
+
+            {/* Cashier information */}
+            <div className="py-2 border-b border-dashed border-slate-300 text-[9px] text-slate-500">
+              <span>Cashier: {selectedSale.cashierName}</span>
+            </div>
+
+            {/* Sales Items */}
+            <div className="flex-1 py-4 space-y-3 max-h-60 overflow-y-auto">
+              {selectedSale.items.map((item: any) => (
+                <div key={item.id} className="flex justify-between items-start text-[10px]">
+                  <div className="space-y-0.5">
+                    <p className="font-bold">{item.productName}</p>
+                    <p className="text-[9px] text-slate-500">{item.sku}</p>
+                    <p className="text-[9px] text-slate-500">
+                      {item.quantity} x ${item.unitPrice.toFixed(2)}
+                    </p>
+                  </div>
+                  <span className="font-bold">${item.total.toFixed(2)}</span>
+                </div>
+              ))}
+            </div>
+
+            {/* Calculations summaries */}
+            <div className="border-t border-dashed border-slate-300 pt-3 space-y-1.5 text-[10px]">
+              <div className="flex justify-between">
+                <span>Subtotal</span>
+                <span>${selectedSale.subtotal.toFixed(2)}</span>
+              </div>
+              {selectedSale.discountAmount > 0 && (
+                <div className="flex justify-between text-red-655 font-bold">
+                  <span>Discount</span>
+                  <span>-${selectedSale.discountAmount.toFixed(2)}</span>
+                </div>
+              )}
+              <div className="flex justify-between">
+                <span>Sales Tax</span>
+                <span>${selectedSale.taxAmount.toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between text-sm font-bold border-t border-double border-slate-400 pt-2 text-slate-900">
+                <span>TOTAL</span>
+                <span>${selectedSale.total.toFixed(2)}</span>
+              </div>
+            </div>
+
+            {/* Payment Details */}
+            <div className="mt-4 p-2.5 bg-slate-50 border border-slate-100 rounded-lg space-y-1 text-[9px] text-slate-650">
+              <div className="flex justify-between">
+                <span>Payment Mode:</span>
+                <span className="font-bold tracking-wide">{selectedSale.paymentMethod}</span>
+              </div>
+              {selectedSale.paymentMethod === "Mixed" && selectedSale.paymentDetails && (
+                (() => {
+                  try {
+                    const parsed = JSON.parse(selectedSale.paymentDetails);
+                    return (
+                      <div className="pl-2 border-l border-slate-200 space-y-0.5 mt-1 font-bold">
+                        {parsed.cash > 0 && <div className="flex justify-between"><span>• Cash:</span><span>${parsed.cash.toFixed(2)}</span></div>}
+                        {parsed.transfer > 0 && <div className="flex justify-between"><span>• Transfer:</span><span>${parsed.transfer.toFixed(2)}</span></div>}
+                        {parsed.pos > 0 && <div className="flex justify-between"><span>• Card POS:</span><span>${parsed.pos.toFixed(2)}</span></div>}
+                      </div>
+                    );
+                  } catch (e) { return null; }
+                })()
+              )}
+            </div>
+
+            {/* Footer message */}
+            <div className="text-center pt-6 mt-4 border-t border-dashed border-slate-300 text-[9px] text-slate-400 space-y-0.5">
+              <p className="font-bold text-slate-650">Thank you for your patronage!</p>
+              <p>Please keep this receipt as proof of purchase.</p>
+            </div>
+
+            <button
+              onClick={() => {
+                setShowReceiptDetailModal(false);
+                setSelectedSale(null);
+              }}
+              className="mt-6 py-2.5 w-full bg-slate-905 text-white font-bold rounded-xl text-xs hover:bg-slate-800 transition-colors"
+            >
+              Close Receipt
+            </button>
           </div>
         </div>
       )}
