@@ -72,6 +72,21 @@ erDiagram
         string Reason
         DateTime CreatedAt
     }
+    StockTransfers {
+        Guid Id PK
+        Guid BusinessId FK
+        Guid ProductId FK
+        Guid SourceBranchId FK
+        Guid TargetBranchId FK
+        int Quantity
+        int Status
+        Guid InitiatedByUserId FK
+        Guid ResolvedByUserId FK
+        string Notes
+        string RejectionReason
+        DateTime CreatedAt
+        DateTime UpdatedAt
+    }
 
     AspNetUsers }o--o| Businesses : "operates in active business"
     AspNetUsers }o--o| Branches : "works in active branch"
@@ -79,12 +94,18 @@ erDiagram
     Businesses ||--|{ Branches : "owns"
     Businesses ||--|{ Categories : "owns"
     Businesses ||--|{ Products : "owns"
+    Businesses ||--o{ StockTransfers : "owns"
     Categories ||--o{ Products : "classifies"
     Products ||--|{ ProductStocks : "has stocks"
     Products ||--|{ StockAdjustmentLogs : "has adjustments"
+    Products ||--o{ StockTransfers : "transferred"
     ProductStocks }o--o| Branches : "stored at"
     StockAdjustmentLogs }o--o| Branches : "logged at"
     StockAdjustmentLogs }o--|| AspNetUsers : "adjusted by"
+    StockTransfers }o--|| Branches : "sourced from"
+    StockTransfers }o--|| Branches : "destination to"
+    StockTransfers }o--|| AspNetUsers : "initiated by"
+    StockTransfers }o--o| AspNetUsers : "resolved by"
 ```
 
 ---
@@ -187,3 +208,22 @@ Audit trail of all manual intakes, adjustments, or sales that affect inventory l
 | `AdjustedByUserId` | `uuid` | `NOT NULL, FOREIGN KEY` | References `AspNetUsers.Id` |
 | `Reason` | `varchar(250)` | `NOT NULL` | Explanation (e.g. "Loss/Damage", "Restock") |
 | `CreatedAt` | `timestamp` | `NOT NULL` | Transaction timestamp |
+
+### `StockTransfers`
+Tracks stock transfers between branches within the business, maintaining full status history.
+
+| Column | Type | Constraints | Description |
+| :--- | :--- | :--- | :--- |
+| `Id` | `uuid` | `PRIMARY KEY` | Unique identifier |
+| `BusinessId` | `uuid` | `NOT NULL, FOREIGN KEY` | References `Businesses.Id` |
+| `ProductId` | `uuid` | `NOT NULL, FOREIGN KEY` | References `Products.Id` |
+| `SourceBranchId` | `uuid` | `NOT NULL, FOREIGN KEY` | References `Branches.Id` (Source) |
+| `TargetBranchId` | `uuid` | `NOT NULL, FOREIGN KEY` | References `Branches.Id` (Destination) |
+| `Quantity` | `integer` | `NOT NULL` | Number of items to transfer |
+| `Status` | `integer` | `NOT NULL` | Status code (0=Pending, 1=Approved, 2=Rejected, 3=Cancelled) |
+| `InitiatedByUserId` | `uuid` | `NOT NULL, FOREIGN KEY` | References `AspNetUsers.Id` (Sender) |
+| `ResolvedByUserId` | `uuid` | `NULL, FOREIGN KEY` | References `AspNetUsers.Id` (Approver/Rejecter) |
+| `Notes` | `varchar(500)` | `NULL` | Transaction description notes |
+| `RejectionReason` | `varchar(500)` | `NULL` | Explanation for transfer rejection |
+| `CreatedAt` | `timestamp` | `NOT NULL` | Initiation timestamp |
+| `UpdatedAt` | `timestamp` | `NOT NULL` | Resolution timestamp |

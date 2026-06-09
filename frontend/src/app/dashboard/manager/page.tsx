@@ -8,7 +8,20 @@ export default function ManagerDashboard() {
   const [branchName, setBranchName] = useState("Loading branch...");
   const [products, setProducts] = useState<any[]>([]);
   const [loadingProducts, setLoadingProducts] = useState(false);
-  const [activeTab, setActiveTab] = useState<"overview" | "stock">("overview");
+  const [activeTab, setActiveTab] = useState<"overview" | "stock" | "transfers">("overview");
+
+  // Phase 7 Stock Transfers
+  const [transfers, setTransfers] = useState<any[]>([]);
+  const [loadingTransfers, setLoadingTransfers] = useState(false);
+  const [showAddTransferModal, setShowAddTransferModal] = useState(false);
+  const [transferProductId, setTransferProductId] = useState("");
+  const [transferTargetBranchId, setTransferTargetBranchId] = useState("");
+  const [transferQuantity, setTransferQuantity] = useState(1);
+  const [transferNotes, setTransferNotes] = useState("");
+  const [transferError, setTransferError] = useState("");
+  const [transferSubmitting, setTransferSubmitting] = useState(false);
+  const [branches, setBranches] = useState<any[]>([]);
+  const [loadingBranches, setLoadingBranches] = useState(false);
 
   // Modals visibility
   const [showAdjustStockModal, setShowAdjustStockModal] = useState(false);
@@ -63,10 +76,46 @@ export default function ManagerDashboard() {
     }
   };
 
+  const fetchBranches = async () => {
+    try {
+      setLoadingBranches(true);
+      const res = await fetch("http://localhost:5149/api/branches", {
+        headers: { "Authorization": `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setBranches(data);
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoadingBranches(false);
+    }
+  };
+
+  const fetchTransfers = async () => {
+    try {
+      setLoadingTransfers(true);
+      const res = await fetch("http://localhost:5149/api/stocktransfers", {
+        headers: { "Authorization": `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setTransfers(data);
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoadingTransfers(false);
+    }
+  };
+
   useEffect(() => {
     if (token) {
       fetchBranchInfo();
       fetchProducts();
+      fetchBranches();
+      fetchTransfers();
     }
   }, [token, user?.branchId]);
 
@@ -114,6 +163,113 @@ export default function ManagerDashboard() {
       if (res.ok) {
         const data = await res.json();
         setAdjustmentLogs(data);
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  // Submit Stock Transfer
+  const handleInitiateTransfer = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setTransferError("");
+    setTransferSubmitting(true);
+    try {
+      const res = await fetch("http://localhost:5149/api/stocktransfers", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          productId: transferProductId,
+          sourceBranchId: user?.branchId,
+          targetBranchId: transferTargetBranchId,
+          quantity: transferQuantity,
+          notes: transferNotes.trim() || null
+        })
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.message || "Failed to initiate transfer.");
+      }
+      setShowAddTransferModal(false);
+      setTransferProductId("");
+      setTransferTargetBranchId("");
+      setTransferQuantity(1);
+      setTransferNotes("");
+      fetchTransfers();
+      fetchProducts();
+    } catch (err: any) {
+      setTransferError(err.message);
+    } finally {
+      setTransferSubmitting(false);
+    }
+  };
+
+  const handleApproveTransfer = async (id: string) => {
+    try {
+      const res = await fetch(`http://localhost:5149/api/stocktransfers/${id}/approve`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify({ notes: "Approved by Manager" })
+      });
+      if (res.ok) {
+        fetchTransfers();
+        fetchProducts();
+      } else {
+        const err = await res.json();
+        alert(err.message || "Failed to approve transfer.");
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleRejectTransfer = async (id: string) => {
+    const reason = prompt("Enter rejection reason:");
+    if (reason === null) return;
+    try {
+      const res = await fetch(`http://localhost:5149/api/stocktransfers/${id}/reject`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify({ rejectionReason: reason || "Rejected by Manager" })
+      });
+      if (res.ok) {
+        fetchTransfers();
+        fetchProducts();
+      } else {
+        const err = await res.json();
+        alert(err.message || "Failed to reject transfer.");
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleCancelTransfer = async (id: string) => {
+    if (!confirm("Are you sure you want to cancel this transfer?")) return;
+    try {
+      const res = await fetch(`http://localhost:5149/api/stocktransfers/${id}/cancel`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify({ notes: "Cancelled by Manager" })
+      });
+      if (res.ok) {
+        fetchTransfers();
+        fetchProducts();
+      } else {
+        const err = await res.json();
+        alert(err.message || "Failed to cancel transfer.");
       }
     } catch (err) {
       console.error(err);
@@ -194,6 +350,12 @@ export default function ManagerDashboard() {
             className={`pb-3 border-b-2 transition-colors ${activeTab === "stock" ? "border-emerald-500 text-emerald-450" : "border-transparent text-slate-400 hover:text-slate-200"}`}
           >
             Branch Stock Control
+          </button>
+          <button
+            onClick={() => setActiveTab("transfers")}
+            className={`pb-3 border-b-2 transition-colors ${activeTab === "transfers" ? "border-emerald-500 text-emerald-450" : "border-transparent text-slate-400 hover:text-slate-200"}`}
+          >
+            Stock Transfers
           </button>
         </div>
 
@@ -337,6 +499,103 @@ export default function ManagerDashboard() {
             )}
           </div>
         )}
+
+        {activeTab === "transfers" && (
+          <div className="border border-slate-900 bg-slate-900/20 rounded-xl p-6 space-y-6 animate-in fade-in duration-300">
+            <div className="flex justify-between items-center">
+              <h3 className="font-bold text-lg text-slate-100">Branch Stock Transfers</h3>
+              <button
+                onClick={() => {
+                  if (products.length > 0) setTransferProductId(products[0].id);
+                  const otherBranches = branches.filter(br => br.id !== user?.branchId);
+                  if (otherBranches.length > 0) setTransferTargetBranchId(otherBranches[0].id);
+                  setTransferQuantity(1);
+                  setTransferNotes("");
+                  setTransferError("");
+                  setShowAddTransferModal(true);
+                }}
+                className="px-3 py-1.5 bg-emerald-650 hover:bg-emerald-700 text-xs font-bold text-white rounded-lg transition-colors animate-all active:scale-[0.98]"
+              >
+                + Initiate Transfer
+              </button>
+            </div>
+
+            {loadingTransfers ? (
+              <div className="text-sm text-slate-505 animate-pulse">Loading transfer history...</div>
+            ) : transfers.length === 0 ? (
+              <div className="text-sm text-slate-500 py-6">No stock transfers logged for this branch. Click "+ Initiate Transfer" to begin moving stock.</div>
+            ) : (
+              <div className="overflow-x-auto animate-in fade-in duration-200">
+                <table className="w-full text-left border-collapse text-xs">
+                  <thead>
+                    <tr className="border-b border-slate-850 text-slate-400 font-semibold">
+                      <th className="pb-3 pr-4">Product</th>
+                      <th className="pb-3 px-4">From Branch</th>
+                      <th className="pb-3 px-4">To Branch</th>
+                      <th className="pb-3 px-4 text-center">Quantity</th>
+                      <th className="pb-3 px-4 text-center">Status</th>
+                      <th className="pb-3 px-4">Initiated By</th>
+                      <th className="pb-3 px-4">Date</th>
+                      <th className="pb-3 pl-4 text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-900 text-slate-350">
+                    {transfers.map((t) => (
+                      <tr key={t.id} className="hover:bg-slate-900/5 transition-colors">
+                        <td className="py-3 pr-4 font-semibold text-slate-200">{t.productName}</td>
+                        <td className="py-3 px-4 text-slate-450">{t.sourceBranchName}</td>
+                        <td className="py-3 px-4 text-slate-450">{t.targetBranchName}</td>
+                        <td className="py-3 px-4 text-center font-bold text-slate-200">{t.quantity}</td>
+                        <td className="py-3 px-4 text-center">
+                          <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${
+                            t.status === "Approved" ? "bg-emerald-500/10 text-emerald-455 border-emerald-500/20" :
+                            t.status === "Rejected" ? "bg-red-500/10 text-red-400 border-red-500/20" :
+                            t.status === "Cancelled" ? "bg-slate-800 text-slate-400 border-slate-700" :
+                            "bg-yellow-500/10 text-yellow-450 border-yellow-500/20 animate-pulse"
+                          }`}>
+                            {t.status}
+                          </span>
+                        </td>
+                        <td className="py-3 px-4 text-slate-400">{t.initiatedByUserName}</td>
+                        <td className="py-3 px-4 text-slate-505">{new Date(t.createdAt).toLocaleDateString()}</td>
+                        <td className="py-3 pl-4 text-right space-x-2">
+                          {t.status === "Pending" && (
+                            <>
+                              {t.targetBranchId === user?.branchId && (
+                                <>
+                                  <button
+                                    onClick={() => handleApproveTransfer(t.id)}
+                                    className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-bold rounded transition-colors active:scale-95"
+                                  >
+                                    Approve
+                                  </button>
+                                  <button
+                                    onClick={() => handleRejectTransfer(t.id)}
+                                    className="px-2.5 py-1 bg-red-600 hover:bg-red-700 text-white text-[10px] font-bold rounded transition-colors active:scale-95"
+                                  >
+                                    Reject
+                                  </button>
+                                </>
+                              )}
+                              {t.sourceBranchId === user?.branchId && (
+                                <button
+                                  onClick={() => handleCancelTransfer(t.id)}
+                                  className="px-2.5 py-1 bg-slate-800 hover:bg-slate-750 text-slate-300 text-[10px] font-bold rounded transition-colors active:scale-95"
+                                >
+                                  Cancel
+                                </button>
+                              )}
+                            </>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        )}
       </main>
 
       {/* Adjust Stock Modal */}
@@ -430,6 +689,78 @@ export default function ManagerDashboard() {
                 ))
               )}
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Initiate Stock Transfer Modal */}
+      {showAddTransferModal && (
+        <div className="fixed inset-0 bg-slate-950/70 backdrop-blur-md flex justify-center items-center p-4 z-50">
+          <div className="w-full max-w-md p-6 bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl animate-in zoom-in-95 duration-200">
+            <h3 className="text-xl font-bold text-slate-100 mb-2">Initiate Branch Stock Transfer</h3>
+            {transferError && <div className="mb-4 p-3 bg-red-950/50 border border-red-800 text-red-450 rounded-lg text-xs">{transferError}</div>}
+            <form onSubmit={handleInitiateTransfer} className="space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1.5">Select Product</label>
+                <select
+                  value={transferProductId}
+                  onChange={(e) => setTransferProductId(e.target.value)}
+                  className="w-full px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-lg text-slate-100 text-sm focus:outline-none"
+                >
+                  {products.map((p) => (
+                    <option key={p.id} value={p.id}>{p.name} (Available: {p.totalStock})</option>
+                  ))}
+                </select>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1.5">Source Branch (Your Branch)</label>
+                  <input
+                    type="text"
+                    value={branchName}
+                    disabled
+                    className="w-full px-4 py-2.5 bg-slate-950/50 border border-slate-850 rounded-lg text-slate-400 text-sm focus:outline-none cursor-not-allowed font-medium"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1.5">Target Destination Branch</label>
+                  <select
+                    value={transferTargetBranchId}
+                    onChange={(e) => setTransferTargetBranchId(e.target.value)}
+                    className="w-full px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-lg text-slate-100 text-sm focus:outline-none font-semibold text-emerald-450"
+                  >
+                    {branches.filter(br => br.id !== user?.branchId).map((br) => (
+                      <option key={br.id} value={br.id}>{br.name}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1.5">Quantity to Transfer</label>
+                <input
+                  type="number"
+                  min="1"
+                  value={transferQuantity}
+                  onChange={(e) => setTransferQuantity(parseInt(e.target.value) || 1)}
+                  required
+                  className="w-full px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-lg text-slate-100 text-sm focus:outline-none"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1.5">Transfer Notes</label>
+                <input
+                  type="text"
+                  value={transferNotes}
+                  onChange={(e) => setTransferNotes(e.target.value)}
+                  placeholder="Coca-cola branch restock"
+                  className="w-full px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-lg text-slate-100 text-sm focus:outline-none"
+                />
+              </div>
+              <div className="flex space-x-3 pt-4 border-t border-slate-850">
+                <button type="button" onClick={() => setShowAddTransferModal(false)} className="flex-1 py-2.5 bg-slate-800 text-slate-350 text-xs font-bold rounded-lg">Cancel</button>
+                <button type="submit" disabled={transferSubmitting} className="flex-1 py-2.5 bg-emerald-650 text-white text-xs font-bold rounded-lg">{transferSubmitting ? "Initiating..." : "Confirm Transfer"}</button>
+              </div>
+            </form>
           </div>
         </div>
       )}

@@ -116,3 +116,46 @@ The inventory system supports two distinct stock control modes managed at the bu
 - **Query Filter Bypass (`IgnoreQueryFilters`)**:
   - Used in audit-log queries (e.g. `StockAdjustmentLogs`) to load the modifying user/staff entity (`AdjustedByUser`) even if the user resides in a different branch context than the caller (for example, when an Owner without a branch context makes adjustments on a branch product, or a Manager views logs made by the global Owner).
   - Explicit manual filters are applied to the query after `IgnoreQueryFilters()` to preserve strict tenant boundaries and branch log security.
+
+---
+
+## 7. Stock Transfer System Architecture
+
+The Stock Transfer System manages inter-branch inventory movement with atomic state transitions, strict validation rules, and double-entry adjustments logs.
+
+### State Transitions & Inventory Lifecycle:
+```mermaid
+stateDiagram-v2
+    [*] --> Pending : Initiate (source quantity deducted & reserved)
+    Pending --> Approved : Resolve - Approve (target quantity added)
+    Pending --> Rejected : Resolve - Reject (source quantity returned)
+    Pending --> Cancelled : Resolve - Cancel (source quantity returned)
+    Approved --> [*]
+    Rejected --> [*]
+    Cancelled --> [*]
+```
+
+1. **Initiation**:
+   - Source branch stock availability is verified.
+   - The requested quantity is immediately deducted from the source branch (`ProductStock`) to "reserve" it, preventing double-selling.
+   - An outbound adjustment log (`StockAdjustmentLog`) is written for auditing.
+   - The transfer is saved in a `Pending` state.
+2. **Approval**:
+   - Adds the reserved stock quantity to the destination branch (`ProductStock`), creating the stock record if it doesn't already exist.
+   - Writes an inbound adjustment log for auditing.
+   - Transition state to `Approved`.
+3. **Rejection / Cancellation**:
+   - Reverses the initial reservation by adding the quantity back to the source branch (`ProductStock`).
+   - Writes a return adjustment log for auditing.
+   - Transition state to `Rejected` (for receiver rejection) or `Cancelled` (for sender cancellation).
+
+### Access Rules and Constraints:
+- **Shared Stock Mode Block**: Stock transfers are blocked when `SharedStockMode` is active.
+- **Cashier Restriction**: Cashiers are blocked from all stock transfer operations (including details and listing).
+- **Manager Scope**:
+  - Outgoing Scope: Managers can only initiate or cancel transfers where the source branch matches their assigned branch.
+  - Incoming Scope: Managers can only approve or reject transfers where the target branch matches their assigned branch.
+  - Query Scope: Managers can only list transfers involving their branch (source or target).
+- **Query Filter Bypass (`IgnoreQueryFilters`)**:
+  - Relational joins (e.g., loading `SourceBranch`, `TargetBranch`, `InitiatedByUser`, or `ResolvedByUser` in `StockTransfer` listing) would normally fail or exclude records if the other branch/user is outside the Manager's active branch context.
+  - We use `.IgnoreQueryFilters()` on the `StockTransfers` query and manually apply the tenant isolation (`BusinessId == tenantId`) and branch isolation filters in the controller.

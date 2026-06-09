@@ -23,7 +23,7 @@ public class BranchesController : ControllerBase
         _context = context;
     }
 
-    [Authorize(Roles = "Owner")]
+    [Authorize(Roles = "Owner,Manager")]
     [HttpGet]
     public async Task<IActionResult> GetBranches()
     {

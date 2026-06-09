@@ -24,6 +24,7 @@ public class ApplicationDbContext : IdentityDbContext<User, IdentityRole<Guid>, 
     public DbSet<Product> Products => Set<Product>();
     public DbSet<ProductStock> ProductStocks => Set<ProductStock>();
     public DbSet<StockAdjustmentLog> StockAdjustmentLogs => Set<StockAdjustmentLog>();
+    public DbSet<StockTransfer> StockTransfers => Set<StockTransfer>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -205,6 +206,58 @@ public class ApplicationDbContext : IdentityDbContext<User, IdentityRole<Guid>, 
             entity.HasQueryFilter(sal => 
                 (!_tenantProvider.TenantId.HasValue || sal.Product.BusinessId == _tenantProvider.TenantId) &&
                 (sal.BranchId == null || !_tenantProvider.BranchId.HasValue || sal.BranchId == _tenantProvider.BranchId)
+            );
+        });
+
+        // Configure StockTransfer entity
+        builder.Entity<StockTransfer>(entity =>
+        {
+            entity.HasKey(st => st.Id);
+            entity.Property(st => st.Notes).HasMaxLength(500);
+            entity.Property(st => st.RejectionReason).HasMaxLength(250);
+
+            // StockTransfer - Business relationship
+            entity.HasOne(st => st.Business)
+                .WithMany()
+                .HasForeignKey(st => st.BusinessId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // StockTransfer - Product relationship
+            entity.HasOne(st => st.Product)
+                .WithMany()
+                .HasForeignKey(st => st.ProductId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // StockTransfer - SourceBranch relationship
+            entity.HasOne(st => st.SourceBranch)
+                .WithMany()
+                .HasForeignKey(st => st.SourceBranchId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // StockTransfer - TargetBranch relationship
+            entity.HasOne(st => st.TargetBranch)
+                .WithMany()
+                .HasForeignKey(st => st.TargetBranchId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // StockTransfer - InitiatedByUser relationship
+            entity.HasOne(st => st.InitiatedByUser)
+                .WithMany()
+                .HasForeignKey(st => st.InitiatedByUserId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // StockTransfer - ResolvedByUser relationship
+            entity.HasOne(st => st.ResolvedByUser)
+                .WithMany()
+                .HasForeignKey(st => st.ResolvedByUserId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // Tenant & Branch Query Filter:
+            // Filters based on current tenant/business.
+            // If branch context is active, only show transfers where the branch is either source or target.
+            entity.HasQueryFilter(st => 
+                (!_tenantProvider.TenantId.HasValue || st.BusinessId == _tenantProvider.TenantId) &&
+                (!_tenantProvider.BranchId.HasValue || st.SourceBranchId == _tenantProvider.BranchId || st.TargetBranchId == _tenantProvider.BranchId)
             );
         });
     }

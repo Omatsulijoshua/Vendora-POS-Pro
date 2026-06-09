@@ -424,3 +424,96 @@ Soft deletes a product from the catalog.
 
 *   **Endpoint**: `DELETE /api/products/{id}`
 *   **Authentication**: Bearer JWT (Owner role only)
+
+---
+
+## Stock Transfer Management Endpoints
+
+### 1. Get Stock Transfers
+Retrieves all stock transfers belonging to the active business context. If the caller has a branch context (e.g. Manager), only returns transfers where their branch is either the source or target.
+
+*   **Endpoint**: `GET /api/stocktransfers`
+*   **Authentication**: Bearer JWT (Owner or Manager role only)
+*   **Success Response** (200 OK):
+    ```json
+    [
+      {
+        "id": "bb49ff14-75e1-45a2-b7f9-762d2cfac664",
+        "productId": "6f5b5480-b8f7-4f3e-9d2f-910049272ba6",
+        "productName": "Coca Cola",
+        "sourceBranchId": "d850d7f0-588f-4a79-892a-cc6b0bc00461",
+        "sourceBranchName": "Branch Alpha",
+        "targetBranchId": "1c449042-fd31-4da6-b315-2c5a98316aab",
+        "targetBranchName": "Branch Beta",
+        "quantity": 15,
+        "status": "Pending",
+        "initiatedByUserId": "019ea7a1-9023-748d-9ca3-f9050db997f7",
+        "initiatedByUserName": "Amy Manager",
+        "resolvedByUserId": null,
+        "resolvedByUserName": null,
+        "notes": "Moving Coke to Beta",
+        "rejectionReason": null,
+        "createdAt": "2026-06-09T07:20:00Z",
+        "updatedAt": null
+      }
+    ]
+    ```
+
+### 2. Get Stock Transfer Detail
+Retrieves the details of a specific stock transfer, restricted to the caller's active business and branch context.
+
+*   **Endpoint**: `GET /api/stocktransfers/{id}`
+*   **Authentication**: Bearer JWT (Owner or Manager role only)
+
+### 3. Initiate Stock Transfer
+Creates a new pending stock transfer, reserving (deducting) the requested quantity immediately from the source branch stock and logging a reservation log.
+
+*   **Endpoint**: `POST /api/stocktransfers`
+*   **Authentication**: Bearer JWT (Owner or Manager role only. Managers can only transfer from their assigned branch.)
+*   **Request Body**:
+    ```json
+    {
+      "productId": "6f5b5480-b8f7-4f3e-9d2f-910049272ba6",
+      "sourceBranchId": "d850d7f0-588f-4a79-892a-cc6b0bc00461",
+      "targetBranchId": "1c449042-fd31-4da6-b315-2c5a98316aab",
+      "quantity": 15,
+      "notes": "Restocking Pepsi in Beta"
+    }
+    ```
+*   **Success Response** (201 Created)
+
+### 4. Approve Stock Transfer
+Approves a pending stock transfer, adding the reserved quantity to the destination branch stock and logging an inbound audit trail.
+
+*   **Endpoint**: `PUT /api/stocktransfers/{id}/approve`
+*   **Authentication**: Bearer JWT (Owner or Manager role only. Managers can only approve incoming transfers to their assigned branch.)
+*   **Request Body**:
+    ```json
+    {
+      "notes": "Received in good condition"
+    }
+    ```
+
+### 5. Reject Stock Transfer
+Rejects a pending stock transfer, returning the reserved stock quantity back to the source branch and logging a return log.
+
+*   **Endpoint**: `PUT /api/stocktransfers/{id}/reject`
+*   **Authentication**: Bearer JWT (Owner or Manager role only. Managers can only reject incoming transfers to their assigned branch.)
+*   **Request Body**:
+    ```json
+    {
+      "rejectionReason": "No warehouse space"
+    }
+    ```
+
+### 6. Cancel Stock Transfer
+Cancels a pending stock transfer, returning the reserved stock quantity back to the source branch and logging a return log.
+
+*   **Endpoint**: `PUT /api/stocktransfers/{id}/cancel`
+*   **Authentication**: Bearer JWT (Owner or Manager role only. Managers can only cancel transfers initiated by their assigned branch.)
+*   **Request Body**:
+    ```json
+    {
+      "notes": "Cancelled by initiator"
+    }
+    ```

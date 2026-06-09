@@ -19,7 +19,7 @@ export default function OwnerDashboard() {
   const [loadingProducts, setLoadingProducts] = useState(false);
 
   // Active Tab
-  const [activeTab, setActiveTab] = useState<"overview" | "inventory" | "categories">("overview");
+  const [activeTab, setActiveTab] = useState<"overview" | "inventory" | "categories" | "transfers">("overview");
 
   // Modals visibility
   const [showAddBusinessModal, setShowAddBusinessModal] = useState(false);
@@ -83,6 +83,18 @@ export default function OwnerDashboard() {
   const [adjReason, setAdjReason] = useState("");
   const [adjError, setAdjError] = useState("");
   const [adjSubmitting, setAdjSubmitting] = useState(false);
+
+  // Phase 7 Stock Transfers
+  const [transfers, setTransfers] = useState<any[]>([]);
+  const [loadingTransfers, setLoadingTransfers] = useState(false);
+  const [showAddTransferModal, setShowAddTransferModal] = useState(false);
+  const [transferProductId, setTransferProductId] = useState("");
+  const [transferSourceBranchId, setTransferSourceBranchId] = useState("");
+  const [transferTargetBranchId, setTransferTargetBranchId] = useState("");
+  const [transferQuantity, setTransferQuantity] = useState(1);
+  const [transferNotes, setTransferNotes] = useState("");
+  const [transferError, setTransferError] = useState("");
+  const [transferSubmitting, setTransferSubmitting] = useState(false);
 
   // Dropdown states
   const [bizDropdownOpen, setBizDropdownOpen] = useState(false);
@@ -178,6 +190,24 @@ export default function OwnerDashboard() {
     }
   };
 
+  // Fetch stock transfers
+  const fetchTransfers = async () => {
+    try {
+      setLoadingTransfers(true);
+      const res = await fetch("http://localhost:5149/api/stocktransfers", {
+        headers: { "Authorization": `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setTransfers(data);
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoadingTransfers(false);
+    }
+  };
+
   // Initial load
   useEffect(() => {
     if (token) {
@@ -192,6 +222,7 @@ export default function OwnerDashboard() {
       fetchStaff();
       fetchCategories();
       fetchProducts();
+      fetchTransfers();
     }
   }, [token, user?.businessId, user?.branchId]);
 
@@ -248,6 +279,114 @@ export default function OwnerDashboard() {
       } else {
         const err = await res.json();
         alert(err.message || "Failed to toggle stock mode.");
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  // Submit Business
+  const handleInitiateTransfer = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setTransferError("");
+    setTransferSubmitting(true);
+    try {
+      const res = await fetch("http://localhost:5149/api/stocktransfers", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          productId: transferProductId,
+          sourceBranchId: transferSourceBranchId,
+          targetBranchId: transferTargetBranchId,
+          quantity: transferQuantity,
+          notes: transferNotes.trim() || null
+        })
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.message || "Failed to initiate transfer.");
+      }
+      setShowAddTransferModal(false);
+      setTransferProductId("");
+      setTransferSourceBranchId("");
+      setTransferTargetBranchId("");
+      setTransferQuantity(1);
+      setTransferNotes("");
+      fetchTransfers();
+      fetchProducts();
+    } catch (err: any) {
+      setTransferError(err.message);
+    } finally {
+      setTransferSubmitting(false);
+    }
+  };
+
+  const handleApproveTransfer = async (id: string) => {
+    try {
+      const res = await fetch(`http://localhost:5149/api/stocktransfers/${id}/approve`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify({ notes: "Approved by Owner" })
+      });
+      if (res.ok) {
+        fetchTransfers();
+        fetchProducts();
+      } else {
+        const err = await res.json();
+        alert(err.message || "Failed to approve transfer.");
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleRejectTransfer = async (id: string) => {
+    const reason = prompt("Enter rejection reason:");
+    if (reason === null) return;
+    try {
+      const res = await fetch(`http://localhost:5149/api/stocktransfers/${id}/reject`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify({ rejectionReason: reason || "Rejected by Owner" })
+      });
+      if (res.ok) {
+        fetchTransfers();
+        fetchProducts();
+      } else {
+        const err = await res.json();
+        alert(err.message || "Failed to reject transfer.");
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleCancelTransfer = async (id: string) => {
+    if (!confirm("Are you sure you want to cancel this transfer?")) return;
+    try {
+      const res = await fetch(`http://localhost:5149/api/stocktransfers/${id}/cancel`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify({ notes: "Cancelled by Owner" })
+      });
+      if (res.ok) {
+        fetchTransfers();
+        fetchProducts();
+      } else {
+        const err = await res.json();
+        alert(err.message || "Failed to cancel transfer.");
       }
     } catch (err) {
       console.error(err);
@@ -775,11 +914,20 @@ export default function OwnerDashboard() {
                 onClick={() => {
                   if (activeTab === "categories") setShowAddCategoryModal(true);
                   else if (activeTab === "inventory") setShowAddProductModal(true);
+                  else if (activeTab === "transfers") {
+                    if (products.length > 0) setTransferProductId(products[0].id);
+                    if (branches.length > 0) setTransferSourceBranchId(branches[0].id);
+                    if (branches.length > 1) setTransferTargetBranchId(branches[1].id);
+                    setTransferQuantity(1);
+                    setTransferNotes("");
+                    setTransferError("");
+                    setShowAddTransferModal(true);
+                  }
                   else setShowAddBranchModal(true);
                 }}
-                className="px-4 py-2.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs transition-all shadow-md shadow-indigo-600/20"
+                className="px-4 py-2.5 rounded-lg bg-indigo-650 hover:bg-indigo-750 text-white font-bold text-xs transition-all shadow-md shadow-indigo-600/20"
               >
-                {activeTab === "categories" ? "+ Create Category" : activeTab === "inventory" ? "+ Add Product" : "+ Add Branch"}
+                {activeTab === "categories" ? "+ Create Category" : activeTab === "inventory" ? "+ Add Product" : activeTab === "transfers" ? "+ Initiate Transfer" : "+ Add Branch"}
               </button>
             </div>
           </div>
@@ -804,6 +952,12 @@ export default function OwnerDashboard() {
             className={`pb-3 border-b-2 transition-colors ${activeTab === "categories" ? "border-indigo-500 text-indigo-400" : "border-transparent text-slate-400 hover:text-slate-200"}`}
           >
             Categories
+          </button>
+          <button
+            onClick={() => setActiveTab("transfers")}
+            className={`pb-3 border-b-2 transition-colors ${activeTab === "transfers" ? "border-indigo-500 text-indigo-400" : "border-transparent text-slate-400 hover:text-slate-200"}`}
+          >
+            Stock Transfers
           </button>
         </div>
 
@@ -1098,6 +1252,103 @@ export default function OwnerDashboard() {
                           >
                             Delete
                           </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        )}
+
+        {activeTab === "transfers" && (
+          <div className="border border-slate-900 bg-slate-900/20 rounded-xl p-6 space-y-6 animate-in fade-in duration-300">
+            <div className="flex justify-between items-center">
+              <h3 className="font-bold text-lg text-slate-100">Stock Transfers</h3>
+              {!activeBusiness.sharedStockMode && (
+                <button
+                  onClick={() => {
+                    if (products.length > 0) setTransferProductId(products[0].id);
+                    if (branches.length > 0) setTransferSourceBranchId(branches[0].id);
+                    if (branches.length > 1) setTransferTargetBranchId(branches[1].id);
+                    setTransferQuantity(1);
+                    setTransferNotes("");
+                    setTransferError("");
+                    setShowAddTransferModal(true);
+                  }}
+                  className="px-3 py-1.5 bg-indigo-650 hover:bg-indigo-700 text-xs font-bold text-white rounded-lg transition-colors"
+                >
+                  + Initiate Transfer
+                </button>
+              )}
+            </div>
+
+            {activeBusiness.sharedStockMode ? (
+              <div className="text-sm text-slate-500 bg-slate-950/40 p-4 rounded-lg border border-slate-900">
+                ⚠️ Shared Stock Mode is active. Stock transfers between branches are disabled because inventory is managed in a single unified pool.
+              </div>
+            ) : loadingTransfers ? (
+              <div className="text-sm text-slate-500">Loading transfer history...</div>
+            ) : transfers.length === 0 ? (
+              <div className="text-sm text-slate-500">No stock transfers logged. Click "+ Initiate Transfer" to begin moving stock.</div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse text-xs">
+                  <thead>
+                    <tr className="border-b border-slate-850 text-slate-400 font-semibold">
+                      <th className="pb-3 pr-4">Product</th>
+                      <th className="pb-3 px-4">From Branch</th>
+                      <th className="pb-3 px-4">To Branch</th>
+                      <th className="pb-3 px-4 text-center">Quantity</th>
+                      <th className="pb-3 px-4 text-center">Status</th>
+                      <th className="pb-3 px-4">Initiated By</th>
+                      <th className="pb-3 px-4">Date</th>
+                      <th className="pb-3 pl-4 text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-900 text-slate-350">
+                    {transfers.map((t) => (
+                      <tr key={t.id} className="hover:bg-slate-900/5 transition-colors">
+                        <td className="py-3 pr-4 font-semibold text-slate-200">{t.productName}</td>
+                        <td className="py-3 px-4 text-slate-400">{t.sourceBranchName}</td>
+                        <td className="py-3 px-4 text-slate-400">{t.targetBranchName}</td>
+                        <td className="py-3 px-4 text-center font-bold text-slate-200">{t.quantity}</td>
+                        <td className="py-3 px-4 text-center">
+                          <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${
+                            t.status === "Approved" ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" :
+                            t.status === "Rejected" ? "bg-red-500/10 text-red-400 border-red-500/20" :
+                            t.status === "Cancelled" ? "bg-slate-800 text-slate-400 border-slate-700" :
+                            "bg-yellow-500/10 text-yellow-400 border-yellow-500/20 animate-pulse"
+                          }`}>
+                            {t.status}
+                          </span>
+                        </td>
+                        <td className="py-3 px-4">{t.initiatedByUserName}</td>
+                        <td className="py-3 px-4 text-slate-500">{new Date(t.createdAt).toLocaleDateString()}</td>
+                        <td className="py-3 pl-4 text-right space-x-2">
+                          {t.status === "Pending" && (
+                            <>
+                              <button
+                                onClick={() => handleApproveTransfer(t.id)}
+                                className="px-2 py-1 bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-bold rounded"
+                              >
+                                Approve
+                              </button>
+                              <button
+                                onClick={() => handleRejectTransfer(t.id)}
+                                className="px-2 py-1 bg-red-650 hover:bg-red-700 text-white text-[10px] font-bold rounded"
+                              >
+                                Reject
+                              </button>
+                              <button
+                                onClick={() => handleCancelTransfer(t.id)}
+                                className="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 text-[10px] font-bold rounded"
+                              >
+                                Cancel
+                              </button>
+                            </>
+                          )}
                         </td>
                       </tr>
                     ))}
@@ -1738,6 +1989,81 @@ export default function OwnerDashboard() {
                 ))
               )}
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Initiate Transfer Modal */}
+      {showAddTransferModal && (
+        <div className="fixed inset-0 bg-slate-950/70 backdrop-blur-md flex justify-center items-center p-4 z-50">
+          <div className="w-full max-w-md p-6 bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl">
+            <h3 className="text-xl font-bold text-slate-100 mb-2">Initiate Stock Transfer</h3>
+            {transferError && <div className="mb-4 p-3 bg-red-950/50 border border-red-800 text-red-400 rounded-lg text-xs">{transferError}</div>}
+            <form onSubmit={handleInitiateTransfer} className="space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1.5">Select Product</label>
+                <select
+                  value={transferProductId}
+                  onChange={(e) => setTransferProductId(e.target.value)}
+                  className="w-full px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-lg text-slate-100 text-sm focus:outline-none"
+                >
+                  {products.map((p) => (
+                    <option key={p.id} value={p.id}>{p.name} (Available: {p.totalStock})</option>
+                  ))}
+                </select>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1.5">Source Branch</label>
+                  <select
+                    value={transferSourceBranchId}
+                    onChange={(e) => setTransferSourceBranchId(e.target.value)}
+                    className="w-full px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-lg text-slate-100 text-sm focus:outline-none"
+                  >
+                    {branches.map((br) => (
+                      <option key={br.id} value={br.id}>{br.name}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1.5">Target Branch</label>
+                  <select
+                    value={transferTargetBranchId}
+                    onChange={(e) => setTransferTargetBranchId(e.target.value)}
+                    className="w-full px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-lg text-slate-100 text-sm focus:outline-none"
+                  >
+                    {branches.map((br) => (
+                      <option key={br.id} value={br.id}>{br.name}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1.5">Quantity to Transfer</label>
+                <input
+                  type="number"
+                  min="1"
+                  value={transferQuantity}
+                  onChange={(e) => setTransferQuantity(parseInt(e.target.value) || 1)}
+                  required
+                  className="w-full px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-lg text-slate-100 text-sm focus:outline-none"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1.5">Transfer Notes</label>
+                <input
+                  type="text"
+                  value={transferNotes}
+                  onChange={(e) => setTransferNotes(e.target.value)}
+                  placeholder="Coca-cola branch restock"
+                  className="w-full px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-lg text-slate-100 text-sm focus:outline-none"
+                />
+              </div>
+              <div className="flex space-x-3 pt-4 border-t border-slate-850">
+                <button type="button" onClick={() => setShowAddTransferModal(false)} className="flex-1 py-2.5 bg-slate-800 text-slate-350 text-xs font-bold rounded-lg">Cancel</button>
+                <button type="submit" disabled={transferSubmitting} className="flex-1 py-2.5 bg-indigo-650 text-white text-xs font-bold rounded-lg">{transferSubmitting ? "Initiating..." : "Confirm Transfer"}</button>
+              </div>
+            </form>
           </div>
         </div>
       )}

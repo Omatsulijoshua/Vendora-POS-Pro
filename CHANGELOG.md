@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.6.0] - 2026-06-09
+
+### Added
+- **Stock Transfer System (Phase 7):**
+  - Created domain model `StockTransfer` with enum `TransferStatus` (Pending, Approved, Rejected, Cancelled).
+  - Configured schema relationships, indexes, query filters in `ApplicationDbContext`, generated and applied migration `AddStockTransferSystem`.
+  - Implemented `StockTransfersController` REST endpoints (Initiate, Approve, Reject, Cancel, List, Get) with strict multi-tenant context.
+  - Implemented automatic inventory reservation (deducting stock immediately at source branch) and restoration logic upon rejection or cancellation.
+  - Enforced security constraints: Cashiers are completely forbidden (403 Forbidden); Managers can only initiate/cancel from their own branch and resolve incoming to their own branch.
+  - Disabled stock transfers when `SharedStockMode` setting is active.
+  - Built out Owner Dashboard Stock Transfers panel with listings, initiate modal, and approval/rejection/cancellation controls.
+  - Built out Manager Dashboard Stock Transfers panel with destination branch selection and custom action triggers scoped to branch context.
+  - Added list branches access support for the `Manager` role.
+  - Created and executed a comprehensive PowerShell integration test suite (`verify_phase7.ps1`).
+
 ## [0.5.0] - 2026-06-09
 
 ### Added
