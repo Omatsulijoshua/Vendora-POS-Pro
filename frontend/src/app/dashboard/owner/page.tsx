@@ -102,6 +102,10 @@ export default function OwnerDashboard() {
   const [selectedSale, setSelectedSale] = useState<any>(null);
   const [showReceiptDetailModal, setShowReceiptDetailModal] = useState(false);
 
+  // Phase 12 Owner Stats
+  const [stats, setStats] = useState<any>(null);
+  const [loadingStats, setLoadingStats] = useState(false);
+
   // Phase 9 Promotion States
   const [discounts, setDiscounts] = useState<any[]>([]);
   const [coupons, setCoupons] = useState<any[]>([]);
@@ -280,6 +284,28 @@ export default function OwnerDashboard() {
     }
   };
 
+  // Fetch owner stats
+  const fetchOwnerStats = async () => {
+    if (!token) return;
+    try {
+      setLoadingStats(true);
+      const url = user?.businessId
+        ? `http://localhost:5149/api/businesses/owner-stats?businessId=${user.businessId}`
+        : "http://localhost:5149/api/businesses/owner-stats";
+      const res = await fetch(url, {
+        headers: { "Authorization": `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setStats(data);
+      }
+    } catch (err) {
+      console.error("Failed to fetch owner stats", err);
+    } finally {
+      setLoadingStats(false);
+    }
+  };
+
   const fetchDiscounts = async () => {
     try {
       setLoadingDiscounts(true);
@@ -442,8 +468,16 @@ export default function OwnerDashboard() {
       fetchSales();
       fetchDiscounts();
       fetchCoupons();
+      fetchOwnerStats();
     }
   }, [token, user?.businessId, user?.branchId]);
+
+  // Load owner stats on tab active
+  useEffect(() => {
+    if (token && activeTab === "overview") {
+      fetchOwnerStats();
+    }
+  }, [token, user?.businessId, activeTab]);
 
   // Set default branch option when staff modal opens
   useEffect(() => {
@@ -1386,121 +1420,326 @@ export default function OwnerDashboard() {
 
         {activeTab === "overview" && (
           <div className="space-y-8 animate-in fade-in duration-300">
-            {/* Stats Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              {[
-                { label: "Branches Mapped", value: branches.length.toString(), sub: "Total locations" },
-                { label: "Context Net Sales", value: getBranchSales(), sub: activeBranch ? "Branch sales" : "Global sales" },
-                { label: "Active Staff Listed", value: staff.length.toString(), sub: activeBranch ? "In branch" : "Consolidated team" },
-                { label: "Product Types", value: products.length.toString(), sub: "Registered products" },
-              ].map((stat, i) => (
-                <div key={i} className="border border-slate-900 bg-slate-900/20 rounded-xl p-5">
-                  <span className="text-xs font-semibold text-slate-400">{stat.label}</span>
-                  <p className="text-3xl font-bold mt-3 text-slate-100">{stat.value}</p>
-                  <p className="text-xs text-indigo-400 mt-1 font-medium">{stat.sub}</p>
+            {loadingStats || !stats ? (
+              <div className="text-sm text-slate-500 py-12 text-center bg-slate-900/20 border border-slate-900 rounded-xl">
+                Loading consolidated dashboard stats...
+              </div>
+            ) : (
+              <>
+                {/* Stats Grid */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                  {[
+                    { label: "Total Revenue", value: `$${stats.totalRevenue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, sub: activeBranch?.name ? `Branch: ${activeBranch.name}` : "Consolidated revenue" },
+                    { label: "Gross Profit", value: `$${stats.totalProfit.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, sub: `Margin: ${stats.profitMargin.toFixed(1)}%`, highlight: true },
+                    { label: "Transactions Count", value: stats.totalSalesCount.toString(), sub: "Completed checkouts" },
+                    { label: "Avg Transaction Value", value: `$${stats.averageTransactionValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, sub: "ATV per invoice" },
+                  ].map((stat, i) => (
+                    <div key={i} className={`border border-slate-900 bg-slate-900/20 rounded-xl p-5 ${stat.highlight ? "ring-1 ring-indigo-500/30" : ""}`}>
+                      <span className="text-xs font-semibold text-slate-400">{stat.label}</span>
+                      <p className={`text-3xl font-black mt-3 ${stat.highlight ? "text-indigo-400" : "text-slate-100"}`}>{stat.value}</p>
+                      <p className="text-xs text-slate-500 mt-1 font-medium">{stat.sub}</p>
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-              {/* Branch List */}
-              <div className="border border-slate-900 bg-slate-900/20 rounded-xl p-6 space-y-6">
-                <div className="flex justify-between items-center">
-                  <h3 className="font-bold text-lg text-slate-100">Branch Locations</h3>
-                  <span className="text-xs text-slate-500 font-semibold">Total: {branches.length}</span>
+                {/* 7-Day Performance Trend Chart */}
+                <div className="border border-slate-900 bg-slate-900/20 rounded-xl p-6 flex flex-col min-h-[320px]">
+                  <div>
+                    <h3 className="font-bold text-lg text-slate-100">Consolidated Daily Trend</h3>
+                    <p className="text-xs text-slate-500 mb-6">Daily revenue and gross profit over the last 7 days</p>
+                  </div>
+                  
+                  {stats.dailyTrend.length === 0 ? (
+                    <div className="flex-1 flex items-center justify-center text-sm text-slate-650">No recent sales data.</div>
+                  ) : (
+                    <div className="flex-1 flex items-end justify-between gap-2 h-44 px-4 bg-slate-950/20 border border-slate-900/40 rounded-xl pt-6">
+                      {stats.dailyTrend.map((trend: any, index: number) => {
+                        const maxRev = Math.max(...stats.dailyTrend.map((t: any) => t.revenue), 1);
+                        const revHeight = (trend.revenue / maxRev) * 100;
+                        const profHeight = (trend.profit / maxRev) * 100;
+
+                        return (
+                          <div key={index} className="flex-1 flex flex-col items-center group relative h-full justify-end">
+                            {/* Tooltip */}
+                            <div className="absolute top-[-48px] bg-slate-900 border border-slate-800 text-[10px] text-slate-100 font-bold py-1.5 px-2.5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10 shadow-2xl whitespace-nowrap text-center space-y-0.5">
+                              <p className="font-semibold text-slate-400">{trend.date}</p>
+                              <p>Revenue: <span className="text-indigo-400 font-bold">${trend.revenue.toFixed(2)}</span></p>
+                              <p>Profit: <span className="text-emerald-400 font-bold">${trend.profit.toFixed(2)}</span></p>
+                              <p className="text-[9px] text-slate-550">{trend.salesCount} checkout(s)</p>
+                            </div>
+
+                            {/* Stacked / Adjacent bars */}
+                            <div className="w-full flex justify-center gap-1.5 h-full items-end">
+                              {/* Revenue Bar */}
+                              <div 
+                                className="w-3 sm:w-5 bg-indigo-600 hover:bg-indigo-550 rounded-t transition-all shadow-md shadow-indigo-500/10"
+                                style={{ height: `${Math.max(4, revHeight)}%` }}
+                              ></div>
+                              {/* Profit Bar */}
+                              <div 
+                                className="w-3 sm:w-5 bg-emerald-600 hover:bg-emerald-555 rounded-t transition-all shadow-md shadow-emerald-500/10"
+                                style={{ height: `${Math.max(4, profHeight)}%` }}
+                              ></div>
+                            </div>
+
+                            <span className="text-[9px] text-slate-500 mt-2 font-mono font-semibold">
+                              {new Date(trend.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
-                {loadingBranches ? (
-                  <div className="text-sm text-slate-500">Loading branch records...</div>
-                ) : branches.length === 0 ? (
-                  <div className="text-sm text-slate-500">No branches registered.</div>
-                ) : (
-                  <div className="space-y-3">
-                    {branches.map((b) => (
-                      <div
-                        key={b.id}
-                        onClick={() => handleSwitchBranch(b.id)}
-                        className={`p-4 rounded-lg bg-slate-950/40 border flex justify-between items-center cursor-pointer transition-colors ${
-                          activeBranch?.id === b.id ? "border-purple-500" : "border-slate-900 hover:border-slate-850"
-                        }`}
-                      >
-                        <div>
-                          <p className="font-semibold text-slate-200">{b.name}</p>
-                          <p className="text-xs text-slate-500">{b.address || "No address"}</p>
-                          <p className="text-xs text-slate-400">Phone: {b.phone || "N/A"}</p>
-                        </div>
-                        <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold bg-purple-500/10 text-purple-400 border border-purple-500/20">
-                          Select Context
-                        </span>
+
+                {/* Comparative Panels (Cross-Business vs Branch Comparison) */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                  {/* Cross-Business Metrics */}
+                  <div className="border border-slate-900 bg-slate-900/20 rounded-xl p-6 space-y-6">
+                    <div>
+                      <h3 className="font-bold text-lg text-slate-100">Cross-Business Analytics</h3>
+                      <p className="text-xs text-slate-500">Comparative revenue and gross profit across all your businesses</p>
+                    </div>
+
+                    {stats.businessMetrics.length === 0 ? (
+                      <p className="text-sm text-slate-500">No businesses registered.</p>
+                    ) : (
+                      <div className="space-y-4">
+                        {stats.businessMetrics.map((bm: any) => {
+                          const maxRevenue = Math.max(...stats.businessMetrics.map((b: any) => b.revenue), 1);
+                          const pct = (bm.revenue / maxRevenue) * 100;
+                          return (
+                            <div key={bm.businessId} className="p-4 rounded-lg bg-slate-950/40 border border-slate-900 space-y-2">
+                              <div className="flex justify-between items-center text-xs">
+                                <span className="font-bold text-slate-200 text-sm">{bm.businessName}</span>
+                                <span className="text-slate-400 font-mono">
+                                  {bm.branchesCount} branch(es)
+                                </span>
+                              </div>
+                              <div className="flex justify-between text-xs text-slate-400">
+                                <span>Revenue: <strong className="text-indigo-400">${bm.revenue.toFixed(2)}</strong></span>
+                                <span>Profit: <strong className="text-emerald-450">${bm.profit.toFixed(2)}</strong></span>
+                              </div>
+                              <div className="w-full bg-slate-950 rounded-full h-1.5 border border-slate-900">
+                                <div 
+                                  className="bg-gradient-to-r from-indigo-500 to-purple-650 h-full rounded-full" 
+                                  style={{ width: `${Math.max(3, pct)}%` }}
+                                ></div>
+                              </div>
+                            </div>
+                          );
+                        })}
                       </div>
-                    ))}
+                    )}
                   </div>
-                )}
-              </div>
 
-              {/* Staff List */}
-              <div className="border border-slate-900 bg-slate-900/20 rounded-xl p-6 space-y-6">
-                <div className="flex justify-between items-center">
-                  <h3 className="font-bold text-lg text-slate-100">
-                    Staff Directory {activeBranch ? `(${activeBranch.name})` : "(Consolidated)"}
-                  </h3>
-                  <span className="text-xs text-slate-500 font-semibold">Count: {staff.length}</span>
-                </div>
-                {loadingStaff ? (
-                  <div className="text-sm text-slate-500">Loading team...</div>
-                ) : staff.length === 0 ? (
-                  <div className="text-sm text-slate-500">No staff users registered.</div>
-                ) : (
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-left border-collapse text-xs">
-                      <thead>
-                        <tr className="border-b border-slate-850 text-slate-400 font-semibold">
-                          <th className="pb-3 pr-4">Staff Member</th>
-                          <th className="pb-3 px-4">Role</th>
-                          <th className="pb-3 px-4">Branch</th>
-                          <th className="pb-3 px-4 text-center">Status</th>
-                          <th className="pb-3 pl-4 text-right">Actions</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-900 text-slate-350">
-                        {staff.map((s) => (
-                          <tr key={s.id} className="hover:bg-slate-900/5">
-                            <td className="py-3 pr-4">
-                              <p className="font-semibold text-slate-200">{s.firstName} {s.lastName}</p>
-                              <p className="text-[10px] text-slate-550">{s.email}</p>
-                            </td>
-                            <td className="py-3 px-4">
-                              <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                                s.role === "Manager" ? "bg-emerald-500/10 text-emerald-450 border border-emerald-500/25" : "bg-blue-500/10 text-blue-450 border border-blue-500/25"
-                              }`}>
-                                {s.role}
-                              </span>
-                            </td>
-                            <td className="py-3 px-4 text-slate-450">{s.branchName}</td>
-                            <td className="py-3 px-4 text-center">
-                              <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-bold ${s.isActive ? "bg-emerald-500/10 text-emerald-400" : "bg-slate-850 text-slate-400"}`}>
-                                {s.isActive ? "Active" : "Inactive"}
-                              </span>
-                            </td>
-                            <td className="py-3 pl-4 text-right">
-                              <button
-                                onClick={() => handleToggleStaffActive(s.id)}
-                                className={`px-2 py-1 rounded text-[10px] font-bold transition-all border ${
-                                  s.isActive 
-                                    ? "bg-red-950/20 text-red-400 border-red-900/40 hover:bg-red-900/30"
-                                    : "bg-emerald-950/20 text-emerald-400 border-emerald-900/40 hover:bg-emerald-900/30"
-                                }`}
-                              >
-                                {s.isActive ? "Deactivate" : "Activate"}
-                              </button>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
+                  {/* Branch Metrics (Scoped to active selected business) */}
+                  <div className="border border-slate-900 bg-slate-900/20 rounded-xl p-6 space-y-6">
+                    <div>
+                      <h3 className="font-bold text-lg text-slate-100">
+                        Branch Comparison {activeBusiness.name ? `(${activeBusiness.name})` : ""}
+                      </h3>
+                      <p className="text-xs text-slate-500">Performance rank across locations in the selected business context</p>
+                    </div>
+
+                    {!user?.businessId || stats.branchMetrics.length === 0 ? (
+                      <p className="text-sm text-slate-500">Select a business context or create branches to view comparison.</p>
+                    ) : (
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-left border-collapse text-xs">
+                          <thead>
+                            <tr className="border-b border-slate-850 text-slate-400 font-semibold uppercase tracking-wider text-[10px]">
+                              <th className="pb-3 pr-4">Branch Location</th>
+                              <th className="pb-3 px-4 text-right">Sales Count</th>
+                              <th className="pb-3 px-4 text-right">Revenue</th>
+                              <th className="pb-3 px-4 text-right">Gross Profit</th>
+                              <th className="pb-3 pl-4 text-right">Staff</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-slate-900/60 text-slate-350">
+                            {stats.branchMetrics.map((br: any) => (
+                              <tr key={br.branchId} className="hover:bg-slate-900/10 transition-colors">
+                                <td className="py-3 pr-4 font-bold text-slate-200">{br.branchName}</td>
+                                <td className="py-3 px-4 text-right">{br.salesCount}</td>
+                                <td className="py-3 px-4 text-right text-indigo-400 font-bold">${br.revenue.toFixed(2)}</td>
+                                <td className="py-3 px-4 text-right text-emerald-450 font-bold">${br.profit.toFixed(2)}</td>
+                                <td className="py-3 pl-4 text-right font-mono">{br.staffCount} staff</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
                   </div>
-                )}
-              </div>
-            </div>
+                </div>
+
+                {/* Leaderboards (Top Products vs Top Cashiers) */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                  {/* Top Products */}
+                  <div className="border border-slate-900 bg-slate-900/20 rounded-xl p-6 space-y-6">
+                    <div>
+                      <h3 className="font-bold text-lg text-slate-100">Top Selling Products</h3>
+                      <p className="text-xs text-slate-500">Highest volume and most profitable catalog items</p>
+                    </div>
+
+                    {stats.topProducts.length === 0 ? (
+                      <p className="text-sm text-slate-500">No products sold yet.</p>
+                    ) : (
+                      <div className="space-y-4">
+                        {stats.topProducts.map((tp: any) => (
+                          <div key={tp.productId} className="flex justify-between items-center p-3 bg-slate-950/30 border border-slate-900 rounded-lg">
+                            <div className="space-y-0.5">
+                              <p className="font-semibold text-slate-200 text-xs">{tp.productName}</p>
+                              <p className="text-[10px] text-slate-505 font-mono">SKU: {tp.sku}</p>
+                            </div>
+                            <div className="text-right text-xs">
+                              <p className="font-bold text-slate-300">{tp.quantitySold} sold</p>
+                              <p className="text-[10px] text-slate-450">
+                                Rev: <strong className="text-indigo-400">${tp.revenue.toFixed(2)}</strong> | Prof: <strong className="text-emerald-400">${tp.profit.toFixed(2)}</strong>
+                              </p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Top Cashiers */}
+                  <div className="border border-slate-900 bg-slate-900/20 rounded-xl p-6 space-y-6">
+                    <div>
+                      <h3 className="font-bold text-lg text-slate-100">Top Cashier Performers</h3>
+                      <p className="text-xs text-slate-500">Leaderboard of cashier staff by sales revenue</p>
+                    </div>
+
+                    {stats.topCashiers.length === 0 ? (
+                      <p className="text-sm text-slate-500">No checkout transactions registered.</p>
+                    ) : (
+                      <div className="space-y-4">
+                        {stats.topCashiers.map((tc: any) => (
+                          <div key={tc.userId} className="flex justify-between items-center p-3 bg-slate-950/30 border border-slate-900 rounded-lg">
+                            <div className="space-y-0.5">
+                              <p className="font-semibold text-slate-200 text-xs">{tc.cashierName}</p>
+                              <p className="text-[10px] text-slate-505">Branch: {tc.branchName}</p>
+                            </div>
+                            <div className="text-right text-xs">
+                              <p className="font-bold text-indigo-400">${tc.revenue.toFixed(2)}</p>
+                              <p className="text-[10px] text-slate-505">{tc.salesCount} sales</p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Contextual Branch & Staff Directory */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 border-t border-slate-900 pt-8 mt-8">
+                  {/* Branch Locations List */}
+                  <div className="border border-slate-900 bg-slate-900/20 rounded-xl p-6 space-y-6">
+                    <div className="flex justify-between items-center">
+                      <div>
+                        <h3 className="font-bold text-lg text-slate-100">Branch Switcher Context</h3>
+                        <p className="text-xs text-slate-500">Select branch context to filter dashboard views</p>
+                      </div>
+                      <span className="text-xs text-slate-500 font-semibold">Total: {branches.length}</span>
+                    </div>
+                    {loadingBranches ? (
+                      <div className="text-sm text-slate-500">Loading branch records...</div>
+                    ) : branches.length === 0 ? (
+                      <div className="text-sm text-slate-555">No branches registered.</div>
+                    ) : (
+                      <div className="space-y-3">
+                        {branches.map((b) => (
+                          <div
+                            key={b.id}
+                            onClick={() => handleSwitchBranch(b.id)}
+                            className={`p-4 rounded-lg bg-slate-955/40 border flex justify-between items-center cursor-pointer transition-colors ${
+                              activeBranch?.id === b.id ? "border-purple-500" : "border-slate-900 hover:border-slate-850"
+                            }`}
+                          >
+                            <div>
+                              <p className="font-semibold text-slate-200">{b.name}</p>
+                              <p className="text-xs text-slate-500">{b.address || "No address"}</p>
+                              <p className="text-xs text-slate-400">Phone: {b.phone || "N/A"}</p>
+                            </div>
+                            <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold bg-purple-500/10 text-purple-400 border border-purple-500/20">
+                              Select Context
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Staff Directory List */}
+                  <div className="border border-slate-900 bg-slate-900/20 rounded-xl p-6 space-y-6">
+                    <div className="flex justify-between items-center">
+                      <div>
+                        <h3 className="font-bold text-lg text-slate-100">
+                          Staff Operations Directory {activeBranch ? `(${activeBranch.name})` : "(Consolidated)"}
+                        </h3>
+                        <p className="text-xs text-slate-500">Manage cashier and manager active statuses</p>
+                      </div>
+                      <span className="text-xs text-slate-500 font-semibold">Count: {staff.length}</span>
+                    </div>
+                    {loadingStaff ? (
+                      <div className="text-sm text-slate-500">Loading team...</div>
+                    ) : staff.length === 0 ? (
+                      <div className="text-sm text-slate-555">No staff users registered.</div>
+                    ) : (
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-left border-collapse text-xs">
+                          <thead>
+                            <tr className="border-b border-slate-850 text-slate-400 font-semibold">
+                              <th className="pb-3 pr-4">Staff Member</th>
+                              <th className="pb-3 px-4">Role</th>
+                              <th className="pb-3 px-4">Branch</th>
+                              <th className="pb-3 px-4 text-center">Status</th>
+                              <th className="pb-3 pl-4 text-right">Actions</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-slate-900 text-slate-350">
+                            {staff.map((s) => (
+                              <tr key={s.id} className="hover:bg-slate-900/5">
+                                <td className="py-3 pr-4">
+                                  <p className="font-semibold text-slate-200">{s.firstName} {s.lastName}</p>
+                                  <p className="text-[10px] text-slate-550">{s.email}</p>
+                                </td>
+                                <td className="py-3 px-4">
+                                  <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                                    s.role === "Manager" ? "bg-emerald-500/10 text-emerald-450 border border-emerald-500/25" : "bg-blue-500/10 text-blue-450 border border-blue-500/25"
+                                  }`}>
+                                    {s.role}
+                                  </span>
+                                </td>
+                                <td className="py-3 px-4 text-slate-450">{s.branchName}</td>
+                                <td className="py-3 px-4 text-center">
+                                  <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-bold ${s.isActive ? "bg-emerald-500/10 text-emerald-400" : "bg-slate-850 text-slate-400"}`}>
+                                    {s.isActive ? "Active" : "Inactive"}
+                                  </span>
+                                </td>
+                                <td className="py-3 pl-4 text-right">
+                                  <button
+                                    onClick={() => handleToggleStaffActive(s.id)}
+                                    className={`px-2 py-1 rounded text-[10px] font-bold transition-all border ${
+                                      s.isActive 
+                                        ? "bg-red-950/20 text-red-400 border-red-900/40 hover:bg-red-900/30"
+                                        : "bg-emerald-950/20 text-emerald-400 border-emerald-900/40 hover:bg-emerald-900/30"
+                                    }`}
+                                  >
+                                    {s.isActive ? "Deactivate" : "Activate"}
+                                  </button>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </>
+            )}
           </div>
         )}
 

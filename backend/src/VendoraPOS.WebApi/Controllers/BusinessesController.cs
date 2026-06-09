@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Security.Claims;
 using System.Threading.Tasks;
@@ -177,5 +178,196 @@ public class BusinessesController : ControllerBase
         await _context.SaveChangesAsync();
 
         return Ok(new { Id = business.Id, SharedStockMode = business.SharedStockMode });
+    }
+
+    [HttpGet("owner-stats")]
+    public async Task<IActionResult> GetOwnerStats([FromQuery] Guid? businessId = null)
+    {
+        var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (string.IsNullOrEmpty(userIdClaim) || !Guid.TryParse(userIdClaim, out var userId))
+        {
+            return Unauthorized();
+        }
+
+        // Get all businesses owned by this owner
+        var ownedBusinesses = await _context.Businesses
+            .IgnoreQueryFilters()
+            .Where(b => b.OwnerId == userId)
+            .ToListAsync();
+
+        var businessIds = ownedBusinesses.Select(b => b.Id).ToList();
+
+        // If no business owned, return empty stats
+        if (businessIds.Count == 0)
+        {
+            return Ok(new OwnerDashboardStatsDto());
+        }
+
+        // Determine active business context filter:
+        Guid? activeBusinessId = null;
+        if (businessId.HasValue && businessIds.Contains(businessId.Value))
+        {
+            activeBusinessId = businessId.Value;
+        }
+        else
+        {
+            var businessClaim = User.FindFirst("business_id")?.Value;
+            if (!string.IsNullOrEmpty(businessClaim) && Guid.TryParse(businessClaim, out var bId) && businessIds.Contains(bId))
+            {
+                activeBusinessId = bId;
+            }
+        }
+
+        // Fetch all sales, branches and staff across all owned businesses by ignoring query filters
+        var allSales = await _context.Sales
+            .IgnoreQueryFilters()
+            .Include(s => s.SaleItems)
+                .ThenInclude(si => si.Product)
+            .Include(s => s.User)
+            .Where(s => businessIds.Contains(s.BusinessId))
+            .ToListAsync();
+
+        var allBranches = await _context.Branches
+            .IgnoreQueryFilters()
+            .Where(b => businessIds.Contains(b.BusinessId))
+            .ToListAsync();
+
+        var allStaff = await _context.Users
+            .IgnoreQueryFilters()
+            .Where(u => u.BusinessId.HasValue && businessIds.Contains(u.BusinessId.Value))
+            .ToListAsync();
+
+        // Calculate consolidated KPIs (filtered by activeBusinessId if selected, otherwise consolidated over all owned businesses)
+        var contextSales = activeBusinessId.HasValue 
+            ? allSales.Where(s => s.BusinessId == activeBusinessId.Value).ToList() 
+            : allSales;
+
+        decimal totalRevenue = contextSales.Sum(s => s.Total);
+        int totalSalesCount = contextSales.Count;
+        decimal averageTransactionValue = totalSalesCount > 0 ? totalRevenue / totalSalesCount : 0m;
+
+        decimal totalProfit = contextSales.Sum(s => 
+            s.SaleItems.Sum(si => si.Total - (si.CostPrice * si.Quantity))
+        );
+        decimal profitMargin = totalRevenue > 0 ? (totalProfit / totalRevenue) * 100 : 0m;
+
+        // Calculate Cross-Business Metrics (always returns all owned businesses)
+        var businessMetrics = new List<BusinessMetricDto>();
+        foreach (var b in ownedBusinesses)
+        {
+            var bSales = allSales.Where(s => s.BusinessId == b.Id).ToList();
+            var bRev = bSales.Sum(s => s.Total);
+            var bProf = bSales.Sum(s => s.SaleItems.Sum(si => si.Total - (si.CostPrice * si.Quantity)));
+            var bBranchesCount = allBranches.Count(br => br.BusinessId == b.Id);
+
+            businessMetrics.Add(new BusinessMetricDto
+            {
+                BusinessId = b.Id,
+                BusinessName = b.Name,
+                Revenue = bRev,
+                Profit = bProf,
+                SalesCount = bSales.Count,
+                BranchesCount = bBranchesCount
+            });
+        }
+
+        // Calculate Branch Metrics (only if activeBusinessId is selected)
+        var branchMetrics = new List<BranchMetricDto>();
+        if (activeBusinessId.HasValue)
+        {
+            var activeBranches = allBranches.Where(br => br.BusinessId == activeBusinessId.Value).ToList();
+            foreach (var br in activeBranches)
+            {
+                var brSales = allSales.Where(s => s.BranchId == br.Id).ToList();
+                var brRev = brSales.Sum(s => s.Total);
+                var brProf = brSales.Sum(s => s.SaleItems.Sum(si => si.Total - (si.CostPrice * si.Quantity)));
+                var brStaffCount = allStaff.Count(u => u.BranchId == br.Id);
+
+                branchMetrics.Add(new BranchMetricDto
+                {
+                    BranchId = br.Id,
+                    BranchName = br.Name,
+                    Revenue = brRev,
+                    Profit = brProf,
+                    SalesCount = brSales.Count,
+                    StaffCount = brStaffCount
+                });
+            }
+        }
+
+        // Calculate Top Products
+        var topProducts = contextSales
+            .SelectMany(s => s.SaleItems)
+            .GroupBy(si => new { si.ProductId, si.Product.Name, si.Product.SKU })
+            .Select(g => new OwnerTopProductDto
+            {
+                ProductId = g.Key.ProductId,
+                ProductName = g.Key.Name,
+                SKU = g.Key.SKU,
+                QuantitySold = g.Sum(si => si.Quantity),
+                Revenue = g.Sum(si => si.Total),
+                Profit = g.Sum(si => si.Total - (si.CostPrice * si.Quantity))
+            })
+            .OrderByDescending(tp => tp.QuantitySold)
+            .Take(5)
+            .ToList();
+
+        // Calculate Top Cashiers
+        var topCashiers = contextSales
+            .GroupBy(s => s.UserId)
+            .Select(g => {
+                var userObj = allStaff.FirstOrDefault(u => u.Id == g.Key);
+                var name = userObj != null ? $"{userObj.FirstName} {userObj.LastName}" : "Unknown Staff";
+                var brObj = allBranches.FirstOrDefault(b => b.Id == userObj?.BranchId);
+                var brName = brObj != null ? brObj.Name : "Unassigned";
+
+                return new OwnerTopCashierDto
+                {
+                    UserId = g.Key,
+                    CashierName = name,
+                    BranchName = brName,
+                    SalesCount = g.Count(),
+                    Revenue = g.Sum(s => s.Total)
+                };
+            })
+            .OrderByDescending(tc => tc.Revenue)
+            .Take(5)
+            .ToList();
+
+        // Calculate 7-day trend
+        var dailyTrend = new List<OwnerDailyTrendDto>();
+        var todayLocal = DateTime.UtcNow.Date;
+        for (int i = 6; i >= 0; i--)
+        {
+            var dateTarget = todayLocal.AddDays(-i);
+            var dateStr = dateTarget.ToString("yyyy-MM-dd");
+            var matches = contextSales.Where(s => s.CreatedAt.Date == dateTarget).ToList();
+            var rev = matches.Sum(s => s.Total);
+            var prof = matches.Sum(s => s.SaleItems.Sum(si => si.Total - (si.CostPrice * si.Quantity)));
+
+            dailyTrend.Add(new OwnerDailyTrendDto
+            {
+                Date = dateStr,
+                Revenue = rev,
+                Profit = prof,
+                SalesCount = matches.Count
+            });
+        }
+
+        var dto = new OwnerDashboardStatsDto
+        {
+            TotalRevenue = totalRevenue,
+            TotalProfit = totalProfit,
+            TotalSalesCount = totalSalesCount,
+            AverageTransactionValue = averageTransactionValue,
+            ProfitMargin = profitMargin,
+            BusinessMetrics = businessMetrics,
+            BranchMetrics = branchMetrics,
+            TopProducts = topProducts,
+            TopCashiers = topCashiers,
+            DailyTrend = dailyTrend
+        };
+
+        return Ok(dto);
     }
 }

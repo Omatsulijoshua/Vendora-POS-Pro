@@ -130,6 +130,78 @@ Registers an additional business (tenant) owned by the current owner.
 *   **Endpoint**: `POST /api/businesses`
 *   **Authentication**: Bearer JWT (Owner role only)
 
+### 3. Get Owner Dashboard Stats
+Retrieves consolidated, cross-business statistics, branch comparisons, daily trends, cashier metrics, and top products across all businesses owned by the authenticated Owner user. Supports scoping metrics to a specific business or branch via query parameters.
+
+*   **Endpoint**: `GET /api/businesses/owner-stats`
+*   **Authentication**: Bearer JWT (Owner role only)
+*   **Query Parameters**:
+    *   `businessId` (uuid, optional) - Scope metrics to a specific business. If omitted, uses active business context or consolidates across all owned businesses.
+    *   `branchId` (uuid, optional) - Scope metrics to a specific branch. If provided, `businessId` is also required.
+*   **Success Response** (200 OK):
+    ```json
+    {
+      "totalRevenue": 23.76,
+      "totalProfit": 15.00,
+      "totalSalesCount": 2,
+      "averageTransactionValue": 11.88,
+      "profitMargin": 63.13,
+      "businessMetrics": [
+        {
+          "businessId": "85bc4e99-1e86-40b0-a350-6bae0fc92220",
+          "businessName": "Oliver Bakery 1509406149",
+          "revenue": 10.80,
+          "profit": 6.00,
+          "salesCount": 1
+        },
+        {
+          "businessId": "837a52aa-1fa6-46d7-9ab9-2d5b42ebc18c",
+          "businessName": "Oliver Cafe 1509406149",
+          "revenue": 12.96,
+          "profit": 9.00,
+          "salesCount": 1
+        }
+      ],
+      "branchMetrics": [
+        {
+          "branchId": "c8d880c9-9b12-43c7-9cef-12c788e9d005",
+          "branchName": "Oliver Bakery Branch",
+          "businessName": "Oliver Bakery 1509406149",
+          "revenue": 10.80,
+          "profit": 6.00,
+          "salesCount": 1
+        }
+      ],
+      "topProducts": [
+        {
+          "productId": "6f5b5480-b8f7-4f3e-9d2f-910049272ba6",
+          "productName": "Coffee",
+          "sku": "COF-01",
+          "quantitySold": 3,
+          "totalRevenue": 12.00,
+          "totalProfit": 9.00
+        }
+      ],
+      "topCashiers": [
+        {
+          "cashierId": "019ea7a1-9023-748d-9ca3-f9050db997f7",
+          "cashierName": "Charlie Cashier",
+          "branchName": "Oliver Cafe Branch",
+          "revenue": 12.96,
+          "salesCount": 1
+        }
+      ],
+      "dailySalesTrend": [
+        {
+          "date": "2026-06-09",
+          "revenue": 23.76,
+          "profit": 15.00,
+          "salesCount": 2
+        }
+      ]
+    }
+    ```
+
 ---
 
 ## Branch Management Endpoints

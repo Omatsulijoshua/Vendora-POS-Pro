@@ -201,3 +201,30 @@ To protect transaction history and prevent unauthorized access to sensitive fina
 ### 3. Frontend Separation (Register vs Performance):
 * The Cashier dashboard separates action workflows (barcode scanning register catalog) from analytics/history dashboards.
 * Custom lightweight visualization graphs (built strictly with Tailwind CSS and HTML elements) display the cashier's daily trends and top product volumes, avoiding heavy external graphing library bundles.
+
+---
+
+## 10. Business Owner Dashboard & Consolidated Analytics Strategy
+
+To provide business owners with a holistic, top-level view of their business empire across multiple separate legal entities (businesses/tenants) and branch locations, the system implements a cross-business aggregation strategy:
+
+### 1. Global Query Filter Bypassing for Consolidated Views:
+* **The Challenge**: Standard database queries on `Sale`, `Product`, `Branch`, and `User` are logically isolated by `BusinessId` via global EF Core query filters. By default, an Owner logged into Business A cannot query or aggregate data for Business B.
+* **The Solution**: The `GET /api/businesses/owner-stats` endpoint executes `.IgnoreQueryFilters()` on the DbContext queries. It then explicitly restricts the query using an `IN` clause against all business IDs owned by the authenticated owner user.
+* **Database Verification**: The owned business IDs are resolved by querying the `Businesses` table where `OwnerId == currentUserId`. This ensures strict multi-tenant security and guarantees that owners can never view statistics for businesses owned by other platform users.
+
+### 2. Multi-Level Parameter Scoping:
+* **Consolidated View**: If no `businessId` query parameter is provided, the API computes metrics consolidated across all owned businesses.
+* **Business-Specific Scoping**: If a `businessId` query parameter is provided, the endpoint validates that the business belongs to the owner, and then scopes all KPI calculations (Revenue, Profit, ATV, Margin, Top Products, Top Cashiers, Trends) to that specific business context.
+* **Branch-Specific Scoping**: If a `branchId` query parameter is provided (with a valid `businessId`), the API validates branch ownership, and scopes metrics strictly to that branch's transactions.
+
+### 3. Core Metric Calculations:
+* **Total Revenue**: Calculated as `Sum(Sale.Total)` which includes tax and discounts at the sale level.
+* **Total Profit**: Calculated dynamically at the item level: `Profit = SaleItem.Total - (SaleItem.CostPrice * SaleItem.Quantity)`. This uses the historical `CostPrice` recorded in `SaleItem` at checkout time, ensuring that cost fluctuations or subsequent product updates do not alter historical reporting.
+* **Average Transaction Value (ATV)**: Computed as `TotalRevenue / SalesCount`.
+* **Profit Margin**: Computed as `(TotalProfit / TotalRevenue) * 100`.
+
+### 4. Zero-Dependency Frontend Visualizations:
+* All charts, trends, and leaderboard metrics in the Owner dashboard overview are rendered using native HTML/SVG and Tailwind CSS without installing external graphing libraries. This ensures minimal bundle sizes and fast loading times.
+* The 7-day revenue vs profit trend uses native flex-column height ratio charts with SVG grids and tooltip hover overlays.
+

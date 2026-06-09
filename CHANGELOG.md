@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.11.0] - 2026-06-09
+
+### Added
+- **Business Owner Dashboard & Advanced Reports (Phase 12):**
+  - Created backend `OwnerDashboardStatsDto.cs` defining consolidated KPIs (Revenue, Profit, ATV, Margin), cross-business analytics, multi-branch comparisons, product leaderboards, cashier performance, and daily trends.
+  - Implemented `GET /api/businesses/owner-stats` endpoint in `BusinessesController.cs` for consolidation of metrics across all owned businesses by bypassing global EF Core query filters using `.IgnoreQueryFilters()`.
+  - Added support for query parameters (`businessId`, `branchId`) to drill down analytics to a specific business or branch.
+  - Secured the endpoint by strictly validating the owner's identity and checking that the target business/branch belongs to them.
+  - Refactored `owner/page.tsx` on the frontend with stats fetching hooks and a redesigned glassmorphic Overview dashboard.
+  - Rendered consolidated cards for total revenue, profit, average transaction value (ATV), and margin.
+  - Created cross-business comparative panel displaying comparative revenue/profit metrics.
+  - Added multi-branch comparisons leaderboard rankings table.
+  - Plotted 7-day revenue vs profit trends using native CSS/Tailwind-based SVG and markup visualizations.
+  - Rendered Top Products (ranked by quantity sold, revenue, and profit) and Top Cashiers (ranked by sales volume and cashier revenue) leaderboards.
+  - Developed and successfully ran PowerShell integration test script `verify_phase12.ps1` confirming scoping correctness, data calculations, and access control.
+
 ## [0.10.0] - 2026-06-09
 
 ### Added
