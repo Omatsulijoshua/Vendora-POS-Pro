@@ -2,13 +2,57 @@
 
 import React, { useState, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
+import NotificationBell from "@/components/NotificationBell";
 
 export default function ManagerDashboard() {
   const { user, token, logout } = useAuth();
   const [branchName, setBranchName] = useState("Loading branch...");
   const [products, setProducts] = useState<any[]>([]);
   const [loadingProducts, setLoadingProducts] = useState(false);
-  const [activeTab, setActiveTab] = useState<"overview" | "stock" | "transfers" | "sales" | "promo" | "receipt" | "audit-logs">("overview");
+  const [activeTab, setActiveTab] = useState<"overview" | "stock" | "transfers" | "sales" | "promo" | "receipt" | "audit-logs" | "notifications">("overview");
+
+  // Phase 16 Notifications State
+  const [notifications, setNotifications] = useState<any[]>([]);
+  const [loadingNotifications, setLoadingNotifications] = useState(false);
+
+  const fetchNotifications = async () => {
+    if (!token) return;
+    setLoadingNotifications(true);
+    try {
+      const res = await fetch("http://localhost:5149/api/notifications", {
+        headers: {
+          "Authorization": `Bearer ${token}`
+        }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setNotifications(data);
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoadingNotifications(false);
+    }
+  };
+
+  const handleMarkAsRead = async (id: string) => {
+    if (!token) return;
+    try {
+      const res = await fetch(`http://localhost:5149/api/notifications/${id}/read`, {
+        method: "PUT",
+        headers: {
+          "Authorization": `Bearer ${token}`
+        }
+      });
+      if (res.ok) {
+        setNotifications(prev =>
+          prev.map(n => n.id === id ? { ...n, isRead: true } : n)
+        );
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
 
   // Phase 7 Stock Transfers
   const [transfers, setTransfers] = useState<any[]>([]);
@@ -219,6 +263,9 @@ export default function ManagerDashboard() {
   useEffect(() => {
     if (token && activeTab === "audit-logs") {
       fetchAuditLogs();
+    }
+    if (token && activeTab === "notifications") {
+      fetchNotifications();
     }
   }, [token, activeTab]);
 
@@ -755,6 +802,7 @@ export default function ManagerDashboard() {
             </span>
           </div>
           <div className="flex items-center space-x-4">
+            <NotificationBell token={token} onViewAll={() => setActiveTab("notifications")} />
             <div className="text-right hidden sm:block">
               <p className="text-sm font-medium text-slate-300">
                 {user?.firstName} {user?.lastName}
@@ -838,6 +886,12 @@ export default function ManagerDashboard() {
             className={`pb-3 border-b-2 transition-colors ${activeTab === "audit-logs" ? "border-emerald-500 text-emerald-450" : "border-transparent text-slate-400 hover:text-slate-200"}`}
           >
             Audit Logs
+          </button>
+          <button
+            onClick={() => setActiveTab("notifications")}
+            className={`pb-3 border-b-2 transition-colors ${activeTab === "notifications" ? "border-emerald-500 text-emerald-450" : "border-transparent text-slate-400 hover:text-slate-200"}`}
+          >
+            Notifications
           </button>
         </div>
 
@@ -1816,6 +1870,90 @@ export default function ManagerDashboard() {
                           </td>
                           <td className="p-4 text-slate-400 max-w-xs sm:max-w-md md:max-w-lg truncate" title={log.details}>
                             {log.details}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {activeTab === "notifications" && (
+          <div className="space-y-6 animate-in fade-in duration-300">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-slate-900 pb-5">
+              <div>
+                <h3 className="font-bold text-lg text-slate-200">Notifications Center</h3>
+                <p className="text-xs text-slate-500">Monitor low stock alerts and branch alerts</p>
+              </div>
+              <button
+                onClick={fetchNotifications}
+                disabled={loadingNotifications}
+                className="px-4 py-2 bg-slate-950 border border-slate-800 hover:bg-slate-900 text-slate-300 hover:text-slate-100 text-xs font-bold rounded-xl transition-all shadow-lg flex items-center gap-2"
+              >
+                {loadingNotifications ? "Refreshing..." : "Refresh"}
+              </button>
+            </div>
+
+            {loadingNotifications ? (
+              <div className="text-sm text-slate-500 py-12 text-center bg-slate-900/20 border border-slate-900 rounded-xl animate-pulse">
+                Loading notifications...
+              </div>
+            ) : notifications.length === 0 ? (
+              <div className="text-sm text-slate-500 py-12 text-center bg-slate-900/20 border border-slate-900 rounded-xl">
+                No notifications found.
+              </div>
+            ) : (
+              <div className="border border-slate-900 bg-slate-900/10 rounded-2xl overflow-hidden backdrop-blur-sm">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left border-collapse text-xs">
+                    <thead>
+                      <tr className="border-b border-slate-900 bg-slate-900/40 text-slate-400 font-bold">
+                        <th className="p-4">Timestamp</th>
+                        <th className="p-4">Type</th>
+                        <th className="p-4">Title</th>
+                        <th className="p-4">Recipient</th>
+                        <th className="p-4">Message</th>
+                        <th className="p-4">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-900/40 text-slate-300">
+                      {notifications.map((n) => (
+                        <tr key={n.id} className="hover:bg-slate-900/20 transition-colors">
+                          <td className="p-4 whitespace-nowrap text-slate-555">
+                            {new Date(n.timestamp).toLocaleString()}
+                          </td>
+                          <td className="p-4 whitespace-nowrap">
+                            <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${
+                              n.type === "LowStock"
+                                ? "bg-red-950/40 text-red-400 border-red-900/20"
+                                : "bg-amber-950/40 text-amber-400 border-amber-900/20"
+                            }`}>
+                              {n.type}
+                            </span>
+                          </td>
+                          <td className="p-4 whitespace-nowrap font-medium text-slate-200">
+                            {n.title}
+                          </td>
+                          <td className="p-4 whitespace-nowrap text-slate-555">
+                            {n.recipientEmail}
+                          </td>
+                          <td className="p-4 text-slate-400 max-w-xs sm:max-w-md md:max-w-lg truncate" title={n.message}>
+                            {n.message}
+                          </td>
+                          <td className="p-4 whitespace-nowrap">
+                            {n.isRead ? (
+                              <span className="text-slate-500">Read</span>
+                            ) : (
+                              <button
+                                onClick={() => handleMarkAsRead(n.id)}
+                                className="px-2.5 py-1 bg-purple-950/40 border border-purple-900/20 hover:bg-purple-900/30 text-purple-400 text-[10px] font-bold rounded-lg transition-colors"
+                              >
+                                Mark Read
+                              </button>
+                            )}
                           </td>
                         </tr>
                       ))}

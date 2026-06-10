@@ -21,15 +21,18 @@ public class StockTransfersController : ControllerBase
     private readonly ApplicationDbContext _context;
     private readonly ITenantProvider _tenantProvider;
     private readonly IAuditLogService _auditLogService;
+    private readonly INotificationService _notificationService;
 
     public StockTransfersController(
         ApplicationDbContext context, 
         ITenantProvider tenantProvider,
-        IAuditLogService auditLogService)
+        IAuditLogService auditLogService,
+        INotificationService notificationService)
     {
         _context = context;
         _tenantProvider = tenantProvider;
         _auditLogService = auditLogService;
+        _notificationService = notificationService;
     }
 
     [HttpGet]
@@ -221,6 +224,9 @@ public class StockTransfersController : ControllerBase
         _context.StockAdjustmentLogs.Add(log);
 
         await _context.SaveChangesAsync();
+
+        // Check for low stock alerts on source branch
+        await _notificationService.CheckAndTriggerLowStockAlertAsync(dto.ProductId, dto.SourceBranchId);
 
         var userEmail = User.FindFirst(ClaimTypes.Email)?.Value ?? "user@vendorapos.com";
         var ip = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "127.0.0.1";

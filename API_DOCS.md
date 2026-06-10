@@ -1172,5 +1172,64 @@ Receives Stripe webhook notifications. Handled dynamically under simulated/mock 
     }
     ```
 
+---
+
+# XVI. Notifications
+
+Endpoints to manage system notifications (e.g. low stock alerts, subscription reminders).
+
+### 1. Get Notifications
+Retrieves the latest 100 notifications for the active business. Scoped by user role context (for instance, managers and cashiers will only see global notifications or those scoped to their active branch).
+
+*   **Endpoint**: `GET /api/notifications`
+*   **Authentication**: Bearer JWT (All authenticated users)
+*   **Success Response** (200 OK):
+    ```json
+    [
+      {
+        "id": "e5b8d277-2f1d-4560-bf8f-8d9e0f34ac23",
+        "recipientEmail": "owner@example.com",
+        "title": "Low Stock Alert: Alert Product",
+        "message": "Product 'Alert Product' (SKU: ALT-SKU-123) in branch 'North Branch' is low on stock. Current quantity: 4, Min Stock Level: 5.",
+        "type": "LowStock",
+        "channel": "Email",
+        "isRead": false,
+        "timestamp": "2026-06-10T22:31:30Z",
+        "readAt": null
+      }
+    ]
+    ```
+
+### 2. Mark Notification as Read
+Marks a specific notification as read.
+
+*   **Endpoint**: `PUT /api/notifications/{id}/read`
+*   **Authentication**: Bearer JWT (All authenticated users)
+*   **Success Response** (200 OK):
+    ```json
+    {
+      "message": "Notification marked as read successfully."
+    }
+    ```
+*   **Error Response** (404 Not Found):
+    ```json
+    {
+      "message": "Notification not found."
+    }
+    ```
+
+### 3. Check Subscription Reminders
+Triggers a sweep check on all active businesses. For any subscription expiring within 30 days, generates a reminder alert (with 7-day duplicate spam prevention). Restricted to Owners and SuperAdmins.
+
+*   **Endpoint**: `POST /api/notifications/check-subscription-reminders`
+*   **Authentication**: Bearer JWT (Owner, SuperAdmin)
+*   **Success Response** (200 OK):
+    ```json
+    {
+      "message": "Subscription reminders check completed successfully."
+    }
+    ```
+
+
 
 

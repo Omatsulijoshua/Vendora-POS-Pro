@@ -19,6 +19,7 @@ This document tracks the implementation progress of the **Vendora POS Pro** SaaS
 | **Phase 13** | Super Admin Dashboard & Platform Controls | ✅ Completed | June 2026 |
 | **Phase 14** | Subscription Billing & Stripe Integration | ✅ Completed | June 2026 |
 | **Phase 15** | Audit Log System | ✅ Completed | June 2026 |
+| **Phase 16** | Notifications System | ✅ Completed | June 2026 |
 
 ---
 
@@ -220,3 +221,26 @@ This document tracks the implementation progress of the **Vendora POS Pro** SaaS
 - [x] Design glassmorphic timeline widget tabs inside Owner and Manager dashboards
 - [x] Integrate Refund trigger button in receipt view modals and refunded indicator badges in sales tables
 - [x] Create and execute integration test suite `verify_phase14_auditing.ps1` validating all events and isolation rules
+
+---
+
+## Phase 16 Detail Checklist (Notifications System)
+
+- [x] Create `Notification.cs` domain entity in Domain layer
+- [x] Add `Notifications` DbSet, mapping configurations, and tenant query filters in `ApplicationDbContext.cs`
+- [x] Generate and apply EF database migration `AddNotificationsSystem`
+- [x] Create `INotificationService.cs` in Application layer
+- [x] Create `NotificationService.cs` with simulation features in Infrastructure layer
+- [x] Register `INotificationService` in DI container (`Program.cs`)
+- [x] Integrate low-stock checking in `SalesController.cs` checkout path
+- [x] Integrate low-stock checking in `ProductsController.cs` manual adjustments path
+- [x] Integrate low-stock checking in `StockTransfersController.cs` approval path
+- [x] Create `NotificationsController.cs` with GET list, PUT read status, and POST subscription scans endpoints
+- [x] Build `NotificationBell.tsx` component in frontend
+- [x] Integrate `NotificationBell` in Owner Dashboard navbar
+- [x] Integrate `NotificationBell` in Manager Dashboard navbar
+- [x] Create Notifications manager tab timeline in Owner Dashboard (`owner/page.tsx`)
+- [x] Create Notifications manager tab timeline in Manager Dashboard (`manager/page.tsx`)
+- [x] Compile backend & typecheck frontend system
+- [x] Create and run validation integration test suite `verify_phase16_notifications.ps1`
+- [x] Update progress tracker, changelog, database schema, and API documentation

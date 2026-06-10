@@ -163,6 +163,19 @@ erDiagram
         DateTime CreatedAt
         DateTime UpdatedAt
     }
+    Notifications {
+        Guid Id PK
+        Guid BusinessId FK
+        Guid BranchId FK
+        string RecipientEmail
+        string Title
+        string Message
+        string Type
+        string Channel
+        bool IsRead
+        DateTime SentAt
+        DateTime ReadAt
+    }
 
     AspNetUsers }o--o| Businesses : "operates in active business"
     AspNetUsers }o--o| Branches : "works in active branch"
@@ -194,6 +207,8 @@ erDiagram
     Businesses ||--o{ ReceiptSettings : "configures"
     Branches ||--o{ ReceiptSettings : "overrides"
     Businesses ||--o{ AuditLogs : "logs"
+    Businesses ||--o{ Notifications : "owns"
+    Branches ||--o{ Notifications : "scoped to"
 ```
 
 ---
@@ -441,4 +456,26 @@ Stores business and branch customizable layouts and print preferences.
 > Unique constraints: 
 > - Unique index on `(BusinessId, BranchId)` restricts each context to one settings row.
 > - A filtered index `IX_ReceiptSettings_BusinessId_GlobalOnly` on `BusinessId` where `"BranchId" IS NULL` ensures exactly one global defaults record per business.
+
+---
+
+## 7. Notifications Table
+
+### `Notifications`
+Stores low stock warning alerts, subscription reminders, and other system-generated notification records. Bounded by global tenant query filter.
+
+| Column | Type | Constraints | Description |
+| :--- | :--- | :--- | :--- |
+| `Id` | `uuid` | `PRIMARY KEY` | Unique identifier |
+| `BusinessId` | `uuid` | `NULL, FOREIGN KEY` | Owner business (`Businesses.Id`) |
+| `BranchId` | `uuid` | `NULL, FOREIGN KEY` | Active branch context (`Branches.Id`) |
+| `RecipientEmail` | `varchar(256)` | `NOT NULL` | Notification recipient email |
+| `Title` | `varchar(200)` | `NOT NULL` | Title header text |
+| `Message` | `varchar(1000)` | `NOT NULL` | Content body text |
+| `Type` | `varchar(50)` | `NOT NULL` | Type ("LowStock", "SubscriptionReminder", "General") |
+| `Channel` | `varchar(50)` | `NOT NULL` | Dispatch channel ("Email", "SMS") |
+| `IsRead` | `boolean` | `NOT NULL, DEFAULT false` | Indicates if the notification was read |
+| `SentAt` | `timestamp` | `NOT NULL` | Notification creation/dispatch timestamp |
+| `ReadAt` | `timestamp` | `NULL` | Timestamp of read status update |
+
 

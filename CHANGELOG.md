@@ -5,7 +5,27 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.15.0] - 2026-06-10
+
+### Added
+- **Notifications System (Phase 16):**
+  - Created domain entity `Notification.cs` to store multi-tenant notifications with title, message, type (LowStock, SubscriptionReminder, General), channel (Email, SMS), read status (`IsRead`, `ReadAt`), and recipient email.
+  - Configured `Notifications` DbSet in `ApplicationDbContext` with logical multi-tenant query filter scoped to `ITenantProvider.TenantId` context.
+  - Generated and applied EF database migration `AddNotificationsSystem`.
+  - Implemented `INotificationService` and `NotificationService` supporting:
+    - Stock checks (`CheckAndTriggerLowStockAlertAsync`) to alert owner and managers if item levels fall below configured thresholds (configured in checkout, transfers, or manual adjustments).
+    - Subscription scans (`CheckAndTriggerSubscriptionRemindersAsync`) to query subscriptions expiring in <= 30 days and alert owners, featuring 7-day duplicate prevention.
+    - Console simulation printing for sent Email/SMS and persistent logging in the audit log database.
+  - Implemented `NotificationsController` exposing:
+    - `GET /api/notifications` (fetches active notifications context-isolated for current tenant and branch scope).
+    - `PUT /api/notifications/{id}/read` (marks specific notification as read).
+    - `POST /api/notifications/check-subscription-reminders` (scans expiring business plans, restricted to Owner/SuperAdmin).
+  - Developed and integrated `NotificationBell.tsx` component in Next.js frontend to fetch notifications count, display dropdown list of 5 recent alerts, and allow marking them read.
+  - Refactored frontend dashboards (`owner/page.tsx` and `manager/page.tsx`) to show the notification bell in the navbar header, and added a dedicated **Notifications** history timeline table tab.
+  - Developed and successfully ran PowerShell integration test suite `verify_phase16_notifications.ps1` verifying low stock checkout triggers, mark-as-read updates, subscription date sweeps, spam prevention, and cashier RBAC lockout.
+
 ## [0.14.0] - 2026-06-10
+
 
 ### Added
 - **Audit Log System & Sales Refunds (Phase 15):**

@@ -21,15 +21,18 @@ public class SalesController : ControllerBase
     private readonly ApplicationDbContext _context;
     private readonly ITenantProvider _tenantProvider;
     private readonly IAuditLogService _auditLogService;
+    private readonly INotificationService _notificationService;
 
     public SalesController(
         ApplicationDbContext context,
         ITenantProvider tenantProvider,
-        IAuditLogService auditLogService)
+        IAuditLogService auditLogService,
+        INotificationService notificationService)
     {
         _context = context;
         _tenantProvider = tenantProvider;
         _auditLogService = auditLogService;
+        _notificationService = notificationService;
     }
 
     [HttpPost]
@@ -240,6 +243,15 @@ public class SalesController : ControllerBase
                     tenantId.Value,
                     ip
                 );
+            }
+
+            // Check for low stock alerts on each product item
+            if (activeBranchId.HasValue)
+            {
+                foreach (var itemDto in dto.Items)
+                {
+                    await _notificationService.CheckAndTriggerLowStockAlertAsync(itemDto.ProductId, activeBranchId.Value);
+                }
             }
 
             // Resolve names for DTO mapping

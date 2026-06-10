@@ -31,6 +31,7 @@ public class ApplicationDbContext : IdentityDbContext<User, IdentityRole<Guid>, 
     public DbSet<Coupon> Coupons => Set<Coupon>();
     public DbSet<ReceiptSetting> ReceiptSettings => Set<ReceiptSetting>();
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
+    public DbSet<Notification> Notifications => Set<Notification>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -423,6 +424,30 @@ public class ApplicationDbContext : IdentityDbContext<User, IdentityRole<Guid>, 
 
             // Global Query Filter: isolate logs by tenant (SuperAdmin sees all, Owners see their own)
             entity.HasQueryFilter(al => !_tenantProvider.TenantId.HasValue || al.BusinessId == _tenantProvider.TenantId);
+        });
+
+        // Configure Notification entity
+        builder.Entity<Notification>(entity =>
+        {
+            entity.HasKey(n => n.Id);
+            entity.Property(n => n.RecipientEmail).IsRequired().HasMaxLength(256);
+            entity.Property(n => n.Title).IsRequired().HasMaxLength(200);
+            entity.Property(n => n.Message).IsRequired().HasMaxLength(1000);
+            entity.Property(n => n.Type).IsRequired().HasMaxLength(50);
+            entity.Property(n => n.Channel).IsRequired().HasMaxLength(50);
+
+            entity.HasOne(n => n.Business)
+                .WithMany()
+                .HasForeignKey(n => n.BusinessId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(n => n.Branch)
+                .WithMany()
+                .HasForeignKey(n => n.BranchId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // Logical multi-tenant query filter
+            entity.HasQueryFilter(n => !_tenantProvider.TenantId.HasValue || n.BusinessId == _tenantProvider.TenantId);
         });
     }
 }

@@ -101,6 +101,7 @@ builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ITenantProvider, HttpContextTenantProvider>();
 builder.Services.AddScoped<IJwtTokenGenerator, JwtTokenGenerator>();
 builder.Services.AddScoped<IAuditLogService, AuditLogService>();
+builder.Services.AddScoped<INotificationService, NotificationService>();
 builder.Services.AddScoped<IStripeService, StripeService>();
 
 // Configure CORS

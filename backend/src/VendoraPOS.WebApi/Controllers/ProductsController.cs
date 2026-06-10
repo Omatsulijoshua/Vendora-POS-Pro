@@ -21,15 +21,18 @@ public class ProductsController : ControllerBase
     private readonly ApplicationDbContext _context;
     private readonly ITenantProvider _tenantProvider;
     private readonly IAuditLogService _auditLogService;
+    private readonly INotificationService _notificationService;
 
     public ProductsController(
         ApplicationDbContext context, 
         ITenantProvider tenantProvider,
-        IAuditLogService auditLogService)
+        IAuditLogService auditLogService,
+        INotificationService notificationService)
     {
         _context = context;
         _tenantProvider = tenantProvider;
         _auditLogService = auditLogService;
+        _notificationService = notificationService;
     }
 
     [HttpGet]
@@ -541,6 +544,9 @@ public class ProductsController : ControllerBase
 
         _context.StockAdjustmentLogs.Add(log);
         await _context.SaveChangesAsync();
+
+        // Check for low stock alerts
+        await _notificationService.CheckAndTriggerLowStockAlertAsync(id, dto.BranchId ?? Guid.Empty);
 
         // Audit Log
         var userEmail = User.FindFirst(ClaimTypes.Email)?.Value ?? "owner@vendorapos.com";
