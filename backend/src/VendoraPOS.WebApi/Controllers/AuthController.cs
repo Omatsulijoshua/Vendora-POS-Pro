@@ -23,19 +23,22 @@ public class AuthController : ControllerBase
     private readonly RoleManager<IdentityRole<Guid>> _roleManager;
     private readonly ApplicationDbContext _context;
     private readonly IJwtTokenGenerator _jwtTokenGenerator;
+    private readonly IAuditLogService _auditLogService;
 
     public AuthController(
         UserManager<User> userManager,
         SignInManager<User> signInManager,
         RoleManager<IdentityRole<Guid>> roleManager,
         ApplicationDbContext context,
-        IJwtTokenGenerator jwtTokenGenerator)
+        IJwtTokenGenerator jwtTokenGenerator,
+        IAuditLogService auditLogService)
     {
         _userManager = userManager;
         _signInManager = signInManager;
         _roleManager = roleManager;
         _context = context;
         _jwtTokenGenerator = jwtTokenGenerator;
+        _auditLogService = auditLogService;
     }
 
     [HttpPost("register-owner")]
@@ -136,6 +139,8 @@ public class AuthController : ControllerBase
 
         if (user == null)
         {
+            var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "127.0.0.1";
+            await _auditLogService.LogAsync("LoginFailure", "Failed login: user not found", model.Email, null, ipAddress);
             return Unauthorized(new { Message = "Invalid email or password." });
         }
 
@@ -143,12 +148,16 @@ public class AuthController : ControllerBase
         var result = await _signInManager.CheckPasswordSignInAsync(user, model.Password, false);
         if (!result.Succeeded)
         {
+            var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "127.0.0.1";
+            await _auditLogService.LogAsync("LoginFailure", "Failed login: incorrect password", model.Email, user.BusinessId, ipAddress);
             return Unauthorized(new { Message = "Invalid email or password." });
         }
 
         // Verify account is active
         if (!user.IsActive)
         {
+            var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "127.0.0.1";
+            await _auditLogService.LogAsync("LoginFailureDeactivated", "Failed login: user account deactivated", model.Email, user.BusinessId, ipAddress);
             return BadRequest(new { Message = "Your account has been deactivated. Please contact your administrator." });
         }
 
@@ -167,6 +176,8 @@ public class AuthController : ControllerBase
             {
                 if (!business.IsActive)
                 {
+                    var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "127.0.0.1";
+                    await _auditLogService.LogAsync("LoginFailureSuspended", "Failed login: business is suspended", model.Email, user.BusinessId, ipAddress);
                     return StatusCode(403, new { Message = "Your business account has been suspended. Please contact the administrator." });
                 }
 
@@ -178,6 +189,8 @@ public class AuthController : ControllerBase
                     var isOwner = roles.Contains(UserRole.Owner.ToString());
                     if (!isOwner)
                     {
+                        var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "127.0.0.1";
+                        await _auditLogService.LogAsync("LoginFailureSubscriptionExpired", "Failed login: business subscription expired", model.Email, user.BusinessId, ipAddress);
                         return StatusCode(402, new { Message = "The business subscription has expired or is inactive. Please contact the business owner." });
                     }
                     isSubscriptionActive = false;
@@ -187,6 +200,9 @@ public class AuthController : ControllerBase
 
         // Generate Token
         var token = _jwtTokenGenerator.GenerateToken(user, roles);
+
+        var ip = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "127.0.0.1";
+        await _auditLogService.LogAsync("LoginSuccess", "User logged in successfully", user.Email ?? string.Empty, user.BusinessId, ip);
 
         return Ok(new AuthResponseDto
         {

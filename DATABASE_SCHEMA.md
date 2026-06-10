@@ -104,6 +104,8 @@ erDiagram
         string PaymentDetails
         Guid AppliedCouponId FK
         string AppliedCouponCode
+        bool IsRefunded
+        DateTime RefundedAt
         DateTime CreatedAt
     }
     SaleItems {
@@ -353,6 +355,8 @@ Stores transaction headers for all branch/business sales.
 | `PaymentDetails` | `varchar(1000)` | `NULL` | JSON metadata for split payments |
 | `AppliedCouponId` | `uuid` | `NULL, FOREIGN KEY` | References `Coupons.Id` |
 | `AppliedCouponCode` | `varchar(50)` | `NULL` | Audit copy of the coupon code used |
+| `IsRefunded` | `boolean` | `NOT NULL, DEFAULT false` | Indicates if the transaction was refunded |
+| `RefundedAt` | `timestamp` | `NULL` | Timestamp of refund processing |
 | `CreatedAt` | `timestamp` | `NOT NULL` | Sale creation timestamp |
 
 ### `SaleItems`

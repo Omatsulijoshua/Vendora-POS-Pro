@@ -18,6 +18,7 @@ This document tracks the implementation progress of the **Vendora POS Pro** SaaS
 | **Phase 11** | Cashier Dashboard (Personal Tracking & Metrics) | ✅ Completed | June 2026 |
 | **Phase 13** | Super Admin Dashboard & Platform Controls | ✅ Completed | June 2026 |
 | **Phase 14** | Subscription Billing & Stripe Integration | ✅ Completed | June 2026 |
+| **Phase 15** | Audit Log System | ✅ Completed | June 2026 |
 
 ---
 
@@ -206,5 +207,16 @@ This document tracks the implementation progress of the **Vendora POS Pro** SaaS
 - [x] Update documentation (PROJECT_PROGRESS.md, CHANGELOG.md, ARCHITECTURE.md, API_DOCS.md)
 
 
+---
 
+## Phase 15 Detail Checklist (Audit Log System)
 
+- [x] Add `IsRefunded` and `RefundedAt` to `Sale.cs` entity and mapping configuration
+- [x] Generate and execute EF database migration (`AddSaleRefundColumns`)
+- [x] Create scoped `AuditLogsController` to fetch tenant-isolated chronological logs mapped to `/api/audit-logs`
+- [x] Inject `IAuditLogService` into `AuthController`, `SalesController`, promotion managers, product control, and stock transfer managers
+- [x] Log user access attempts, sales checkouts, coupons applications, manual stock adjustments, transfers, refunds, and promo updates
+- [x] Implement `/api/sales/{id}/refund` endpoint that restocks branch quantities and logs restocking details
+- [x] Design glassmorphic timeline widget tabs inside Owner and Manager dashboards
+- [x] Integrate Refund trigger button in receipt view modals and refunded indicator badges in sales tables
+- [x] Create and execute integration test suite `verify_phase14_auditing.ps1` validating all events and isolation rules

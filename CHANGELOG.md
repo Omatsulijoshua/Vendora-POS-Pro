@@ -5,6 +5,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.14.0] - 2026-06-10
+
+### Added
+- **Audit Log System & Sales Refunds (Phase 15):**
+  - Added `IsRefunded` and `RefundedAt` to the `Sale` model and registered database configurations.
+  - Generated and applied database migration `AddSaleRefundColumns`.
+  - Created `AuditLogsController` with endpoint `GET /api/audit-logs` restricted to Owner and Manager roles. Projects database keys to `ActorEmail` and `Timestamp` to match user layouts.
+  - Integrated scoped `IAuditLogService` across controllers to write audit entries.
+  - Configured auth login audits tracking: success, failure, deactivation, suspension, and subscription expiration.
+  - Configured promo CRUD audit tracking for coupons and discounts.
+  - Configured stock adjustment logs tracking for manual adjustments and stock transfers.
+  - Implemented sales refund checkout endpoint `POST /api/sales/{id}/refund` that flags transactions, restores quantities to branch inventory, and logs stock adjustments.
+  - Refactored Owner and Manager dashboards to render an **Audit Logs** tab featuring a Chronological log timeline table.
+  - Added a **Refund Transaction** button in the sales history receipt modals, which triggers the refund endpoint and updates active quantities.
+  - Added a **Refunded** status badge inside sales lists.
+  - Developed and successfully verified integration test suite `verify_phase14_auditing.ps1` confirming checkout logging, logins auditing, stock restoration, and role isolation checks.
+
 ## [0.13.0] - 2026-06-09
 
 ### Added

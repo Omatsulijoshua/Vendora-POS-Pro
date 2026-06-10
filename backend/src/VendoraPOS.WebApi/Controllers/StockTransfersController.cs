@@ -20,11 +20,16 @@ public class StockTransfersController : ControllerBase
 {
     private readonly ApplicationDbContext _context;
     private readonly ITenantProvider _tenantProvider;
+    private readonly IAuditLogService _auditLogService;
 
-    public StockTransfersController(ApplicationDbContext context, ITenantProvider tenantProvider)
+    public StockTransfersController(
+        ApplicationDbContext context, 
+        ITenantProvider tenantProvider,
+        IAuditLogService auditLogService)
     {
         _context = context;
         _tenantProvider = tenantProvider;
+        _auditLogService = auditLogService;
     }
 
     [HttpGet]
@@ -217,6 +222,16 @@ public class StockTransfersController : ControllerBase
 
         await _context.SaveChangesAsync();
 
+        var userEmail = User.FindFirst(ClaimTypes.Email)?.Value ?? "user@vendorapos.com";
+        var ip = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "127.0.0.1";
+        await _auditLogService.LogAsync(
+            "StockTransferInitiated",
+            $"Initiated stock transfer {transfer.Id} of {transfer.Quantity} items of product {transfer.ProductId} from branch {transfer.SourceBranchId} to branch {transfer.TargetBranchId}.",
+            userEmail,
+            tenantId.Value,
+            ip
+        );
+
         return CreatedAtAction(nameof(GetStockTransfer), new { id = transfer.Id }, new StockTransferDto
         {
             Id = transfer.Id,
@@ -320,6 +335,16 @@ public class StockTransfersController : ControllerBase
 
         await _context.SaveChangesAsync();
 
+        var userEmail = User.FindFirst(ClaimTypes.Email)?.Value ?? "user@vendorapos.com";
+        var ip = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "127.0.0.1";
+        await _auditLogService.LogAsync(
+            "StockTransferApproved",
+            $"Approved stock transfer {transfer.Id} of {transfer.Quantity} items of product {transfer.ProductId} from branch {transfer.SourceBranchId} to branch {transfer.TargetBranchId}.",
+            userEmail,
+            tenantId.Value,
+            ip
+        );
+
         return Ok(new { Message = "Stock transfer approved successfully." });
     }
 
@@ -404,6 +429,16 @@ public class StockTransfersController : ControllerBase
         _context.StockAdjustmentLogs.Add(log);
 
         await _context.SaveChangesAsync();
+
+        var userEmail = User.FindFirst(ClaimTypes.Email)?.Value ?? "user@vendorapos.com";
+        var ip = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "127.0.0.1";
+        await _auditLogService.LogAsync(
+            "StockTransferRejected",
+            $"Rejected stock transfer {transfer.Id} of {transfer.Quantity} items of product {transfer.ProductId} from branch {transfer.SourceBranchId} to branch {transfer.TargetBranchId}. Reason: {transfer.RejectionReason}.",
+            userEmail,
+            tenantId.Value,
+            ip
+        );
 
         return Ok(new { Message = "Stock transfer rejected successfully. Inventory returned to source." });
     }
@@ -490,6 +525,16 @@ public class StockTransfersController : ControllerBase
         _context.StockAdjustmentLogs.Add(log);
 
         await _context.SaveChangesAsync();
+
+        var userEmail = User.FindFirst(ClaimTypes.Email)?.Value ?? "user@vendorapos.com";
+        var ip = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "127.0.0.1";
+        await _auditLogService.LogAsync(
+            "StockTransferCancelled",
+            $"Cancelled stock transfer {transfer.Id} of {transfer.Quantity} items of product {transfer.ProductId} from branch {transfer.SourceBranchId} to branch {transfer.TargetBranchId}.",
+            userEmail,
+            tenantId.Value,
+            ip
+        );
 
         return Ok(new { Message = "Stock transfer cancelled successfully. Inventory returned to source." });
     }

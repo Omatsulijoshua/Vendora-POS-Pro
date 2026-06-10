@@ -20,11 +20,16 @@ public class ProductsController : ControllerBase
 {
     private readonly ApplicationDbContext _context;
     private readonly ITenantProvider _tenantProvider;
+    private readonly IAuditLogService _auditLogService;
 
-    public ProductsController(ApplicationDbContext context, ITenantProvider tenantProvider)
+    public ProductsController(
+        ApplicationDbContext context, 
+        ITenantProvider tenantProvider,
+        IAuditLogService auditLogService)
     {
         _context = context;
         _tenantProvider = tenantProvider;
+        _auditLogService = auditLogService;
     }
 
     [HttpGet]
@@ -536,6 +541,17 @@ public class ProductsController : ControllerBase
 
         _context.StockAdjustmentLogs.Add(log);
         await _context.SaveChangesAsync();
+
+        // Audit Log
+        var userEmail = User.FindFirst(ClaimTypes.Email)?.Value ?? "owner@vendorapos.com";
+        var ip = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "127.0.0.1";
+        await _auditLogService.LogAsync(
+            "StockAdjusted",
+            $"Manually adjusted stock of '{product.Name}' (SKU: {product.SKU}) from {previousQty} to {dto.Quantity}. Reason: {dto.Reason ?? "Manual adjustment"}",
+            userEmail,
+            tenantId.Value,
+            ip
+        );
 
         return Ok(new { Message = "Stock level adjusted successfully.", PreviousQuantity = previousQty, NewQuantity = dto.Quantity });
     }

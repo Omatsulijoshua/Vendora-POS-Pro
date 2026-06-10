@@ -16,6 +16,8 @@ public class VerifiedSaleDto
     public decimal TaxAmount { get; set; }
     public decimal Total { get; set; }
     public string PaymentMethod { get; set; } = null!;
+    public bool IsRefunded { get; set; }
+    public DateTime? RefundedAt { get; set; }
     public DateTime CreatedAt { get; set; }
     public List<VerifiedSaleItemDto> Items { get; set; } = new();
 }

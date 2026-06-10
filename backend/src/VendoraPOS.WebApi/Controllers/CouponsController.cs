@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Security.Claims;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -19,11 +20,16 @@ public class CouponsController : ControllerBase
 {
     private readonly ApplicationDbContext _context;
     private readonly ITenantProvider _tenantProvider;
+    private readonly IAuditLogService _auditLogService;
 
-    public CouponsController(ApplicationDbContext context, ITenantProvider tenantProvider)
+    public CouponsController(
+        ApplicationDbContext context, 
+        ITenantProvider tenantProvider,
+        IAuditLogService auditLogService)
     {
         _context = context;
         _tenantProvider = tenantProvider;
+        _auditLogService = auditLogService;
     }
 
     [Authorize(Roles = "Owner,Manager")]
@@ -124,6 +130,16 @@ public class CouponsController : ControllerBase
         _context.Coupons.Add(coupon);
         await _context.SaveChangesAsync();
 
+        var userEmail = User.FindFirst(ClaimTypes.Email)?.Value ?? "user@vendorapos.com";
+        var ip = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "127.0.0.1";
+        await _auditLogService.LogAsync(
+            "CouponCreated",
+            $"Created coupon '{coupon.Code}' ({coupon.Type}: {coupon.Value}).",
+            userEmail,
+            tenantId.Value,
+            ip
+        );
+
         var resultDto = new CouponDto
         {
             Id = coupon.Id,
@@ -184,6 +200,17 @@ public class CouponsController : ControllerBase
         coupon.IsActive = dto.IsActive;
 
         await _context.SaveChangesAsync();
+
+        var userEmail = User.FindFirst(ClaimTypes.Email)?.Value ?? "user@vendorapos.com";
+        var ip = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "127.0.0.1";
+        await _auditLogService.LogAsync(
+            "CouponUpdated",
+            $"Updated coupon '{coupon.Code}' ({coupon.Type}: {coupon.Value}).",
+            userEmail,
+            tenantId.Value,
+            ip
+        );
+
         return NoContent();
     }
 
@@ -202,6 +229,16 @@ public class CouponsController : ControllerBase
 
         _context.Coupons.Remove(coupon);
         await _context.SaveChangesAsync();
+
+        var userEmail = User.FindFirst(ClaimTypes.Email)?.Value ?? "user@vendorapos.com";
+        var ip = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "127.0.0.1";
+        await _auditLogService.LogAsync(
+            "CouponDeleted",
+            $"Deleted coupon '{coupon.Code}' ({coupon.Type}: {coupon.Value}).",
+            userEmail,
+            tenantId.Value,
+            ip
+        );
 
         return NoContent();
     }

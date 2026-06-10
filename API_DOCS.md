@@ -748,6 +748,24 @@ An anonymous unauthenticated endpoint to verify receipt authenticity. Bypasses s
     }
     ```
 
+### 6. Refund Sale
+Flags a sale transaction as refunded, increments corresponding product stocks back to the branch's inventory, writes stock adjustment logs, and records audit trail logs. Restricted to owners and managers.
+
+*   **Endpoint**: `POST /api/sales/{id}/refund`
+*   **Authentication**: Bearer JWT (Owner, Manager)
+*   **Success Response** (200 OK):
+    ```json
+    {
+      "message": "Transaction refunded successfully."
+    }
+    ```
+*   **Error Response** (400 Bad Request):
+    ```json
+    {
+      "message": "This transaction has already been refunded."
+    }
+    ```
+
 ---
 
 ## Promotions & Discount Endpoints
@@ -896,6 +914,29 @@ Handles multipart file upload for branded receipt logos. Only permits JPG/PNG fo
     {
       "logoUrl": "http://localhost:5149/uploads/logos/unique-filename.png"
     }
+    ```
+
+---
+
+## Audit Log Endpoints
+
+### 1. Get Audit Logs
+Retrieves the business tenant's audit logs, tracking login activity, sales checkouts, coupons applications, stock adjustments/transfers, and refunds. Restricted to owners and managers.
+
+*   **Endpoint**: `GET /api/audit-logs`
+*   **Authentication**: Bearer JWT (Owner, Manager)
+*   **Success Response** (200 OK):
+    ```json
+    [
+      {
+        "id": "e2a3b04c-cf4d-4be9-81a1-9a7c8d8b9e0f",
+        "action": "SaleRefunded",
+        "details": "Refunded sale 050a8f6f-0205-44b3-a35e-e623a3f1d0e1 for total: $200.00. Restored stock for 1 products",
+        "actorEmail": "owner@example.com",
+        "ipAddress": "127.0.0.1",
+        "timestamp": "2026-06-10T22:24:20Z"
+      }
+    ]
     ```
 
 ---

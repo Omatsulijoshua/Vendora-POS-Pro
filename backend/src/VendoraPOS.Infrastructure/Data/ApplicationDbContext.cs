@@ -280,6 +280,7 @@ public class ApplicationDbContext : IdentityDbContext<User, IdentityRole<Guid>, 
             entity.HasKey(s => s.Id);
             entity.Property(s => s.Subtotal).HasPrecision(18, 2);
             entity.Property(s => s.DiscountAmount).HasPrecision(18, 2);
+            entity.Property(s => s.IsRefunded).HasDefaultValue(false);
             entity.Property(s => s.TaxAmount).HasPrecision(18, 2);
             entity.Property(s => s.Total).HasPrecision(18, 2);
             entity.Property(s => s.PaymentDetails).HasMaxLength(1000);

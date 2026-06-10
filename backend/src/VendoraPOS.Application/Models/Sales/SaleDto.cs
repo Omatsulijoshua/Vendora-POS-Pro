@@ -18,6 +18,8 @@ public class SaleDto
     public string? PaymentDetails { get; set; }
     public Guid? AppliedCouponId { get; set; }
     public string? AppliedCouponCode { get; set; }
+    public bool IsRefunded { get; set; }
+    public DateTime? RefundedAt { get; set; }
     public DateTime CreatedAt { get; set; }
     public List<SaleItemDto> Items { get; set; } = new();
 }

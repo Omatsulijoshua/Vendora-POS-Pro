@@ -17,6 +17,8 @@ public class Sale
     public string? PaymentDetails { get; set; } // JSON metadata for mixed payments
     public Guid? AppliedCouponId { get; set; }
     public string? AppliedCouponCode { get; set; }
+    public bool IsRefunded { get; set; } = false;
+    public DateTime? RefundedAt { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
     public virtual Business Business { get; set; } = null!;

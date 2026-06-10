@@ -20,11 +20,16 @@ public class SalesController : ControllerBase
 {
     private readonly ApplicationDbContext _context;
     private readonly ITenantProvider _tenantProvider;
+    private readonly IAuditLogService _auditLogService;
 
-    public SalesController(ApplicationDbContext context, ITenantProvider tenantProvider)
+    public SalesController(
+        ApplicationDbContext context,
+        ITenantProvider tenantProvider,
+        IAuditLogService auditLogService)
     {
         _context = context;
         _tenantProvider = tenantProvider;
+        _auditLogService = auditLogService;
     }
 
     [HttpPost]
@@ -214,6 +219,29 @@ public class SalesController : ControllerBase
             await _context.SaveChangesAsync();
             await transaction.CommitAsync();
 
+            // Log SaleProcessed and CouponApplied to audit logs
+            var cashierEmail = User.FindFirst(ClaimTypes.Email)?.Value ?? "cashier@vendorapos.com";
+            var ip = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "127.0.0.1";
+            
+            await _auditLogService.LogAsync(
+                "SaleProcessed",
+                $"Processed sale {sale.Id} for total {sale.Total:F2}. Payment method: {sale.PaymentMethod}.",
+                cashierEmail,
+                tenantId.Value,
+                ip
+            );
+
+            if (coupon != null)
+            {
+                await _auditLogService.LogAsync(
+                    "CouponApplied",
+                    $"Applied coupon '{coupon.Code}' (Discount: {sale.DiscountAmount:F2}) to sale {sale.Id}.",
+                    cashierEmail,
+                    tenantId.Value,
+                    ip
+                );
+            }
+
             // Resolve names for DTO mapping
             var cashierUser = await _context.Users.IgnoreQueryFilters().FirstOrDefaultAsync(u => u.Id == currentUserId);
             var branch = activeBranchId.HasValue 
@@ -235,6 +263,8 @@ public class SalesController : ControllerBase
                 PaymentDetails = sale.PaymentDetails,
                 AppliedCouponId = sale.AppliedCouponId,
                 AppliedCouponCode = sale.AppliedCouponCode,
+                IsRefunded = sale.IsRefunded,
+                RefundedAt = sale.RefundedAt,
                 CreatedAt = sale.CreatedAt,
                 Items = sale.SaleItems.Select(si => new SaleItemDto
                 {
@@ -314,6 +344,8 @@ public class SalesController : ControllerBase
                 PaymentDetails = s.PaymentDetails,
                 AppliedCouponId = s.AppliedCouponId,
                 AppliedCouponCode = s.AppliedCouponCode,
+                IsRefunded = s.IsRefunded,
+                RefundedAt = s.RefundedAt,
                 CreatedAt = s.CreatedAt,
                 Items = s.SaleItems.Select(si => new SaleItemDto
                 {
@@ -490,6 +522,8 @@ public class SalesController : ControllerBase
             PaymentDetails = sale.PaymentDetails,
             AppliedCouponId = sale.AppliedCouponId,
             AppliedCouponCode = sale.AppliedCouponCode,
+            IsRefunded = sale.IsRefunded,
+            RefundedAt = sale.RefundedAt,
             CreatedAt = sale.CreatedAt,
             Items = sale.SaleItems.Select(si => new SaleItemDto
             {
@@ -539,6 +573,8 @@ public class SalesController : ControllerBase
             TaxAmount = sale.TaxAmount,
             Total = sale.Total,
             PaymentMethod = sale.PaymentMethod.ToString(),
+            IsRefunded = sale.IsRefunded,
+            RefundedAt = sale.RefundedAt,
             CreatedAt = sale.CreatedAt,
             Items = sale.SaleItems.Select(si => new VerifiedSaleItemDto
             {
@@ -550,5 +586,106 @@ public class SalesController : ControllerBase
         };
 
         return Ok(dto);
+    }
+
+    [Authorize(Roles = "Owner,Manager")]
+    [HttpPost("{id}/refund")]
+    public async Task<IActionResult> RefundSale(Guid id)
+    {
+        var tenantId = _tenantProvider.TenantId;
+        if (!tenantId.HasValue) return BadRequest(new { Message = "Tenant context not found." });
+
+        var currentUserId = Guid.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? Guid.Empty.ToString());
+        var userEmail = User.FindFirst(ClaimTypes.Email)?.Value ?? "owner@vendorapos.com";
+        var ip = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "127.0.0.1";
+
+        using var transaction = await _context.Database.BeginTransactionAsync();
+        try
+        {
+            var sale = await _context.Sales
+                .IgnoreQueryFilters()
+                .Include(s => s.SaleItems)
+                .FirstOrDefaultAsync(s => s.Id == id && s.BusinessId == tenantId.Value);
+
+            if (sale == null)
+            {
+                return NotFound(new { Message = "Sale not found." });
+            }
+
+            if (sale.IsRefunded)
+            {
+                return BadRequest(new { Message = "Sale has already been refunded." });
+            }
+
+            // Mark as refunded
+            sale.IsRefunded = true;
+            sale.RefundedAt = DateTime.UtcNow;
+
+            // Restore stocks
+            foreach (var item in sale.SaleItems)
+            {
+                ProductStock stock = null;
+                if (sale.BranchId.HasValue)
+                {
+                    stock = await _context.ProductStocks
+                        .IgnoreQueryFilters()
+                        .FirstOrDefaultAsync(ps => ps.ProductId == item.ProductId && ps.BranchId == sale.BranchId.Value);
+                }
+                else
+                {
+                    stock = await _context.ProductStocks
+                        .IgnoreQueryFilters()
+                        .FirstOrDefaultAsync(ps => ps.ProductId == item.ProductId && ps.BranchId == null);
+                }
+
+                if (stock != null)
+                {
+                    var prevStockQty = stock.Quantity;
+                    stock.Quantity += item.Quantity;
+                    _context.ProductStocks.Update(stock);
+
+                    // Log stock adjustment
+                    var adjustmentLog = new StockAdjustmentLog
+                    {
+                        ProductId = item.ProductId,
+                        BranchId = sale.BranchId,
+                        PreviousQuantity = prevStockQty,
+                        NewQuantity = stock.Quantity,
+                        AdjustedByUserId = currentUserId,
+                        Reason = $"Refund of Sale (Receipt ID: {sale.Id})"
+                    };
+                    _context.StockAdjustmentLogs.Add(adjustmentLog);
+
+                    // Log audit log for stock change
+                    await _auditLogService.LogAsync(
+                        "StockAdjusted",
+                        $"Restored {item.Quantity} items of product {item.ProductId} to stock due to sale {sale.Id} refund.",
+                        userEmail,
+                        tenantId.Value,
+                        ip
+                    );
+                }
+            }
+
+            _context.Sales.Update(sale);
+            await _context.SaveChangesAsync();
+            await transaction.CommitAsync();
+
+            // Log refund audit entry
+            await _auditLogService.LogAsync(
+                "SaleRefunded",
+                $"Refunded sale {sale.Id} for total {sale.Total:F2}. Restored stock for {sale.SaleItems.Count} products.",
+                userEmail,
+                tenantId.Value,
+                ip
+            );
+
+            return Ok(new { Message = "Transaction refunded successfully.", SaleId = sale.Id });
+        }
+        catch (Exception ex)
+        {
+            await transaction.RollbackAsync();
+            return StatusCode(500, new { Message = "Failed to process refund.", Details = ex.Message });
+        }
     }
 }

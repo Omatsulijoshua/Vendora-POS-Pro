@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Security.Claims;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -19,11 +20,16 @@ public class DiscountsController : ControllerBase
 {
     private readonly ApplicationDbContext _context;
     private readonly ITenantProvider _tenantProvider;
+    private readonly IAuditLogService _auditLogService;
 
-    public DiscountsController(ApplicationDbContext context, ITenantProvider tenantProvider)
+    public DiscountsController(
+        ApplicationDbContext context, 
+        ITenantProvider tenantProvider,
+        IAuditLogService auditLogService)
     {
         _context = context;
         _tenantProvider = tenantProvider;
+        _auditLogService = auditLogService;
     }
 
     [HttpGet]
@@ -137,6 +143,16 @@ public class DiscountsController : ControllerBase
         _context.Discounts.Add(discount);
         await _context.SaveChangesAsync();
 
+        var userEmail = User.FindFirst(ClaimTypes.Email)?.Value ?? "user@vendorapos.com";
+        var ip = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "127.0.0.1";
+        await _auditLogService.LogAsync(
+            "DiscountCreated",
+            $"Created discount '{discount.Name}' ({discount.Type}: {discount.Value}) target: {discount.Target}.",
+            userEmail,
+            tenantId.Value,
+            ip
+        );
+
         var product = discount.ProductId.HasValue
             ? await _context.Products.IgnoreQueryFilters().FirstOrDefaultAsync(p => p.Id == discount.ProductId.Value)
             : null;
@@ -200,6 +216,17 @@ public class DiscountsController : ControllerBase
         discount.IsActive = dto.IsActive;
 
         await _context.SaveChangesAsync();
+
+        var userEmail = User.FindFirst(ClaimTypes.Email)?.Value ?? "user@vendorapos.com";
+        var ip = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "127.0.0.1";
+        await _auditLogService.LogAsync(
+            "DiscountUpdated",
+            $"Updated discount '{discount.Name}' ({discount.Type}: {discount.Value}) target: {discount.Target}.",
+            userEmail,
+            tenantId.Value,
+            ip
+        );
+
         return NoContent();
     }
 
@@ -218,6 +245,16 @@ public class DiscountsController : ControllerBase
 
         _context.Discounts.Remove(discount);
         await _context.SaveChangesAsync();
+
+        var userEmail = User.FindFirst(ClaimTypes.Email)?.Value ?? "user@vendorapos.com";
+        var ip = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "127.0.0.1";
+        await _auditLogService.LogAsync(
+            "DiscountDeleted",
+            $"Deleted discount '{discount.Name}' ({discount.Type}: {discount.Value}).",
+            userEmail,
+            tenantId.Value,
+            ip
+        );
 
         return NoContent();
     }

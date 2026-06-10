@@ -8,7 +8,7 @@ export default function ManagerDashboard() {
   const [branchName, setBranchName] = useState("Loading branch...");
   const [products, setProducts] = useState<any[]>([]);
   const [loadingProducts, setLoadingProducts] = useState(false);
-  const [activeTab, setActiveTab] = useState<"overview" | "stock" | "transfers" | "sales" | "promo" | "receipt">("overview");
+  const [activeTab, setActiveTab] = useState<"overview" | "stock" | "transfers" | "sales" | "promo" | "receipt" | "audit-logs">("overview");
 
   // Phase 7 Stock Transfers
   const [transfers, setTransfers] = useState<any[]>([]);
@@ -28,6 +28,11 @@ export default function ManagerDashboard() {
   const [loadingSales, setLoadingSales] = useState(false);
   const [selectedSale, setSelectedSale] = useState<any>(null);
   const [showReceiptDetailModal, setShowReceiptDetailModal] = useState(false);
+  const [refundingSaleId, setRefundingSaleId] = useState<string | null>(null);
+
+  // Phase 14 Audit Logs
+  const [auditLogs, setAuditLogs] = useState<any[]>([]);
+  const [loadingAuditLogs, setLoadingAuditLogs] = useState(false);
 
   // Phase 9 Promotion States
   const [discounts, setDiscounts] = useState<any[]>([]);
@@ -165,6 +170,57 @@ export default function ManagerDashboard() {
       setLoadingSales(false);
     }
   };
+
+  const fetchAuditLogs = async () => {
+    try {
+      setLoadingAuditLogs(true);
+      const res = await fetch("http://localhost:5149/api/audit-logs", {
+        headers: { "Authorization": `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setAuditLogs(data);
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoadingAuditLogs(false);
+    }
+  };
+
+  const handleRefundSale = async (id: string) => {
+    if (!confirm("Are you sure you want to refund this transaction? This will restock all items and cannot be undone.")) return;
+    try {
+      setRefundingSaleId(id);
+      const res = await fetch(`http://localhost:5149/api/sales/${id}/refund`, {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${token}`
+        }
+      });
+      if (res.ok) {
+        alert("Transaction refunded successfully.");
+        setShowReceiptDetailModal(false);
+        setSelectedSale(null);
+        fetchSales();
+        fetchProducts();
+      } else {
+        const err = await res.json();
+        alert(err.message || "Failed to refund sale.");
+      }
+    } catch (err) {
+      console.error(err);
+      alert("An error occurred during refund processing.");
+    } finally {
+      setRefundingSaleId(null);
+    }
+  };
+
+  useEffect(() => {
+    if (token && activeTab === "audit-logs") {
+      fetchAuditLogs();
+    }
+  }, [token, activeTab]);
 
   useEffect(() => {
     if (token) {
@@ -777,6 +833,12 @@ export default function ManagerDashboard() {
           >
             Receipt Settings
           </button>
+          <button
+            onClick={() => setActiveTab("audit-logs")}
+            className={`pb-3 border-b-2 transition-colors ${activeTab === "audit-logs" ? "border-emerald-500 text-emerald-450" : "border-transparent text-slate-400 hover:text-slate-200"}`}
+          >
+            Audit Logs
+          </button>
         </div>
 
         {activeTab === "overview" && (
@@ -1061,6 +1123,11 @@ export default function ManagerDashboard() {
                           }`}>
                             {sale.paymentMethod}
                           </span>
+                          {sale.isRefunded && (
+                            <span className="ml-2 px-2 py-0.5 rounded text-[10px] font-bold bg-red-500/10 text-red-400 border border-red-500/20">
+                              Refunded
+                            </span>
+                          )}
                         </td>
                         <td className="py-3 px-4 text-slate-400">{sale.items.length} items</td>
                         <td className="py-3 px-4 text-slate-500">{new Date(sale.createdAt).toLocaleString()}</td>
@@ -1684,6 +1751,81 @@ export default function ManagerDashboard() {
             </div>
           </div>
         )}
+
+        {activeTab === "audit-logs" && (
+          <div className="space-y-6 animate-in fade-in duration-300">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-slate-900 pb-5">
+              <div>
+                <h3 className="font-bold text-lg text-slate-200">Audit Logs Timeline</h3>
+                <p className="text-xs text-slate-500">Track and monitor every significant event in your branch context</p>
+              </div>
+              <button
+                onClick={fetchAuditLogs}
+                disabled={loadingAuditLogs}
+                className="px-4 py-2 bg-slate-950 border border-slate-800 hover:bg-slate-900 text-slate-300 hover:text-slate-100 text-xs font-bold rounded-xl transition-all shadow-lg flex items-center gap-2"
+              >
+                {loadingAuditLogs ? "Refreshing..." : "Refresh Logs"}
+              </button>
+            </div>
+
+            {loadingAuditLogs ? (
+              <div className="text-sm text-slate-500 py-12 text-center bg-slate-900/20 border border-slate-900 rounded-xl animate-pulse">
+                Loading audit logs timeline...
+              </div>
+            ) : auditLogs.length === 0 ? (
+              <div className="text-sm text-slate-555 py-12 text-center bg-slate-900/20 border border-slate-900 rounded-xl">
+                No audit logs found for this branch context.
+              </div>
+            ) : (
+              <div className="border border-slate-900 bg-slate-900/10 rounded-2xl overflow-hidden backdrop-blur-sm">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left border-collapse text-xs">
+                    <thead>
+                      <tr className="border-b border-slate-900 bg-slate-900/40 text-slate-400 font-bold">
+                        <th className="p-4">Timestamp</th>
+                        <th className="p-4">Action</th>
+                        <th className="p-4">Actor</th>
+                        <th className="p-4">IP Address</th>
+                        <th className="p-4">Details</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-900/40 text-slate-300">
+                      {auditLogs.map((log) => (
+                        <tr key={log.id} className="hover:bg-slate-900/20 transition-colors">
+                          <td className="p-4 whitespace-nowrap text-slate-555">
+                            {new Date(log.timestamp).toLocaleString()}
+                          </td>
+                          <td className="p-4 whitespace-nowrap">
+                            <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${
+                              log.action === "SaleRefunded" || log.action === "DiscountDeleted" || log.action === "CouponDeleted"
+                                ? "bg-red-950/40 text-red-400 border-red-900/20"
+                                : log.action === "SaleProcessed" || log.action === "LoginSuccess"
+                                ? "bg-green-950/40 text-green-400 border-green-900/20"
+                                : log.action === "StockAdjusted" || log.action === "StockTransferApproved"
+                                ? "bg-blue-950/40 text-blue-400 border-blue-900/20"
+                                : "bg-indigo-950/40 text-indigo-400 border-indigo-900/20"
+                            }`}>
+                              {log.action}
+                            </span>
+                          </td>
+                          <td className="p-4 whitespace-nowrap font-medium text-slate-200">
+                            {log.actorEmail}
+                          </td>
+                          <td className="p-4 whitespace-nowrap text-slate-555">
+                            {log.ipAddress || "127.0.0.1"}
+                          </td>
+                          <td className="p-4 text-slate-400 max-w-xs sm:max-w-md md:max-w-lg truncate" title={log.details}>
+                            {log.details}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
       </main>
 
       {/* Adjust Stock Modal */}
@@ -1936,12 +2078,29 @@ export default function ManagerDashboard() {
               <p>Please keep this receipt as proof of purchase.</p>
             </div>
 
+            {selectedSale.isRefunded && (
+              <div className="mt-4 p-2.5 bg-red-50 border border-red-200 text-red-655 font-bold rounded-xl text-center">
+                REFUNDED ON {new Date(selectedSale.refundedAt).toLocaleString()}
+              </div>
+            )}
+
+            {!selectedSale.isRefunded && (
+              <button
+                type="button"
+                onClick={() => handleRefundSale(selectedSale.id)}
+                disabled={refundingSaleId === selectedSale.id}
+                className="mt-4 py-2.5 w-full bg-red-650 hover:bg-red-750 text-white font-bold rounded-xl text-xs transition-colors active:scale-95 shadow-md shadow-red-900/10"
+              >
+                {refundingSaleId === selectedSale.id ? "Processing Refund..." : "Refund Transaction"}
+              </button>
+            )}
+
             <button
               onClick={() => {
                 setShowReceiptDetailModal(false);
                 setSelectedSale(null);
               }}
-              className="mt-6 py-2.5 w-full bg-slate-905 text-white font-bold rounded-xl text-xs hover:bg-slate-800 transition-colors"
+              className="mt-2 py-2.5 w-full bg-slate-905 text-white font-bold rounded-xl text-xs hover:bg-slate-800 transition-colors"
             >
               Close Receipt
             </button>
