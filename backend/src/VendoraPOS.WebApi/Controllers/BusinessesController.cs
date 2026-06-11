@@ -63,6 +63,21 @@ public class BusinessesController : ControllerBase
             return Unauthorized();
         }
 
+        // Retrieve existing businesses owned by this owner
+        var existingBusinesses = await _context.Businesses
+            .IgnoreQueryFilters()
+            .Where(b => b.OwnerId == userId)
+            .ToListAsync();
+
+        if (existingBusinesses.Count >= 1)
+        {
+            var hasStarter = existingBusinesses.Any(b => string.Equals(b.SubscriptionTier, "Starter", StringComparison.OrdinalIgnoreCase));
+            if (hasStarter)
+            {
+                return BadRequest(new { Message = "You currently have a business on the Starter plan, which is limited to 1 business account. Please upgrade your existing business plan to create multiple businesses." });
+            }
+        }
+
         // Check if subdomain is taken globally
         var subdomainExists = await _context.Businesses
             .IgnoreQueryFilters()

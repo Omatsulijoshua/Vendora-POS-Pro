@@ -102,6 +102,27 @@ public class BranchesController : ControllerBase
             return BadRequest(new { Message = "No active business context selected." });
         }
 
+        // Retrieve the business to check subscription tier limits
+        var business = await _context.Businesses
+            .FirstOrDefaultAsync(b => b.Id == businessId);
+        if (business == null)
+        {
+            return BadRequest(new { Message = "Active business context not found." });
+        }
+
+        var branchCount = await _context.Branches
+            .CountAsync(b => b.BusinessId == businessId);
+
+        if (string.Equals(business.SubscriptionTier, "Starter", StringComparison.OrdinalIgnoreCase) && branchCount >= 2)
+        {
+            return BadRequest(new { Message = "Your business is on the Starter plan, which is limited to 2 branches. Please upgrade your plan to create more branches." });
+        }
+
+        if (string.Equals(business.SubscriptionTier, "Pro", StringComparison.OrdinalIgnoreCase) && branchCount >= 10)
+        {
+            return BadRequest(new { Message = "Your business is on the Professional plan, which is limited to 10 branches. Please upgrade to Enterprise to create more branches." });
+        }
+
         // Check if branch name is already taken in this business
         var exists = await _context.Branches
             .AnyAsync(b => b.BusinessId == businessId && b.Name.ToLower() == model.Name.ToLower());
