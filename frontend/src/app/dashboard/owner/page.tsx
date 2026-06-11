@@ -1960,7 +1960,15 @@ export default function OwnerDashboard() {
                         </h3>
                         <p className="text-xs text-slate-500">Manage cashier and manager active statuses</p>
                       </div>
-                      <span className="text-xs text-slate-500 font-semibold">Count: {staff.length}</span>
+                      <div className="flex items-center space-x-4">
+                        <button
+                          onClick={() => setShowAddStaffModal(true)}
+                          className="px-3.5 py-1.5 bg-indigo-650 hover:bg-indigo-700 text-white text-xs font-bold rounded-lg transition-colors active:scale-95 shadow-sm shadow-indigo-650/15"
+                        >
+                          + Add Staff
+                        </button>
+                        <span className="text-xs text-slate-500 font-semibold">Count: {staff.length}</span>
+                      </div>
                     </div>
                     {loadingStaff ? (
                       <div className="text-sm text-slate-500">Loading team...</div>
