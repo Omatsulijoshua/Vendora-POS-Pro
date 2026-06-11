@@ -375,7 +375,7 @@ export default function CashierDashboard() {
     
     // Check cashier limits on checkout initiation
     if (user?.role === "Cashier" && (discountAmount > 50 || (subtotal > 0 && discountAmount / subtotal > 0.15))) {
-      alert("Checkout blocked: Discount exceeds cashier limit (max 15% of subtotal or $50.00).");
+      alert("Checkout blocked: Discount exceeds cashier limit (max 15% of subtotal or ₦50,000.00).");
       return;
     }
 
@@ -395,7 +395,7 @@ export default function CashierDashboard() {
     if (paymentMethod === "Mixed") {
       const sum = Number(cashAmount) + Number(transferAmount) + Number(posAmount);
       if (Math.abs(sum - total) > 0.01) {
-        setCheckoutError(`Mixed payment amounts (${sum.toFixed(2)}) must sum up to exactly the total amount (${total.toFixed(2)}).`);
+        setCheckoutError(`Mixed payment amounts (${sum.toFixed(2)}) must sum up to exactly the total amount (₦${total.toFixed(2)}).`);
         setCheckoutSubmitting(false);
         return;
       }
@@ -690,7 +690,7 @@ export default function CashierDashboard() {
                       <p className="font-semibold text-sm text-slate-200">{item.name}</p>
                       <p className="text-[10px] text-slate-550 font-mono">{item.sku}</p>
                       <p className="text-xs text-slate-500">
-                        {item.quantity} x ${item.price.toFixed(2)}
+                        {item.quantity} x ₦{item.price.toFixed(2)}
                       </p>
                     </div>
                     <div className="flex items-center space-x-4">
@@ -719,7 +719,7 @@ export default function CashierDashboard() {
                 
                 {/* Manual Discount */}
                 <div className="flex items-center space-x-2">
-                  <span className="text-[11px] text-slate-400 w-20">Manual ($):</span>
+                  <span className="text-[11px] text-slate-400 w-20">Manual (₦):</span>
                   <input
                     type="number"
                     min="0"
@@ -780,28 +780,28 @@ export default function CashierDashboard() {
                 {/* Cashier limit warning */}
                 {user?.role === "Cashier" && (discountAmount > 50 || (subtotal > 0 && discountAmount / subtotal > 0.15)) && (
                   <div className="p-2 bg-red-950/40 border border-red-900/50 rounded text-[10px] text-red-400 font-bold">
-                    ⚠️ Limit Exceeded: Cashiers cannot apply discounts &gt; 15% (${(subtotal * 0.15).toFixed(2)}) or $50.00.
+                    ⚠️ Limit Exceeded: Cashiers cannot apply discounts &gt; 15% (${(subtotal * 0.15).toFixed(2)}) or ₦50,000.00.
                   </div>
                 )}
               </div>
 
               <div className="flex justify-between text-sm text-slate-400">
                 <span>Subtotal</span>
-                <span>${subtotal.toFixed(2)}</span>
+                <span>₦{subtotal.toFixed(2)}</span>
               </div>
               {discountAmount > 0 && (
                 <div className="flex justify-between text-sm text-red-400">
                   <span>Discount</span>
-                  <span>-${discountAmount.toFixed(2)}</span>
+                  <span>-₦{discountAmount.toFixed(2)}</span>
                 </div>
               )}
               <div className="flex justify-between text-sm text-slate-400">
                 <span>Tax (8%)</span>
-                <span>${tax.toFixed(2)}</span>
+                <span>₦{tax.toFixed(2)}</span>
               </div>
               <div className="flex justify-between text-lg font-bold text-slate-100 border-t border-slate-900 pt-3">
                 <span>Total</span>
-                <span className="text-indigo-400">${total.toFixed(2)}</span>
+                <span className="text-indigo-400">₦{total.toFixed(2)}</span>
               </div>
 
               <button
@@ -881,7 +881,7 @@ export default function CashierDashboard() {
 
                     <div className="flex justify-between items-end mt-2">
                       <span className="text-base font-bold text-indigo-400 group-hover:text-indigo-300">
-                        ${p.price.toFixed(2)}
+                        ₦{p.price.toFixed(2)}
                       </span>
                       <span className="text-[10px] font-bold px-2 py-1 rounded bg-slate-950 border border-slate-850 text-slate-350 group-hover:bg-indigo-600 group-hover:text-white group-hover:border-indigo-500 transition-colors">
                         {p.totalStock <= 0 ? "Out of Stock" : "+ Add"}
@@ -907,7 +907,7 @@ export default function CashierDashboard() {
                 <div className="bg-slate-900/30 border border-slate-900 p-4 rounded-xl flex flex-col justify-between space-y-2">
                   <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Today's Sales</span>
                   <div>
-                    <h2 className="text-xl font-black text-slate-100">${stats.todaySalesAmount.toFixed(2)}</h2>
+                    <h2 className="text-xl font-black text-slate-100">₦{stats.todaySalesAmount.toFixed(2)}</h2>
                     <p className="text-[10px] text-slate-550 font-bold">{stats.todaySalesCount} sales completed</p>
                   </div>
                 </div>
@@ -915,7 +915,7 @@ export default function CashierDashboard() {
                 <div className="bg-slate-900/30 border border-slate-900 p-4 rounded-xl flex flex-col justify-between space-y-2">
                   <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Weekly Sales</span>
                   <div>
-                    <h2 className="text-xl font-black text-slate-100">${stats.weeklySalesAmount.toFixed(2)}</h2>
+                    <h2 className="text-xl font-black text-slate-100">₦{stats.weeklySalesAmount.toFixed(2)}</h2>
                     <p className="text-[10px] text-slate-550 font-bold">{stats.weeklySalesCount} sales completed</p>
                   </div>
                 </div>
@@ -923,7 +923,7 @@ export default function CashierDashboard() {
                 <div className="bg-slate-900/30 border border-slate-900 p-4 rounded-xl flex flex-col justify-between space-y-2">
                   <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Monthly Sales</span>
                   <div>
-                    <h2 className="text-xl font-black text-slate-100">${stats.monthlySalesAmount.toFixed(2)}</h2>
+                    <h2 className="text-xl font-black text-slate-100">₦{stats.monthlySalesAmount.toFixed(2)}</h2>
                     <p className="text-[10px] text-slate-550 font-bold">{stats.monthlySalesCount} sales completed</p>
                   </div>
                 </div>
@@ -931,7 +931,7 @@ export default function CashierDashboard() {
                 <div className="bg-slate-900/30 border border-slate-900 p-4 rounded-xl flex flex-col justify-between space-y-2">
                   <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Lifetime Sales</span>
                   <div>
-                    <h2 className="text-xl font-black text-slate-100">${stats.lifetimeSalesAmount.toFixed(2)}</h2>
+                    <h2 className="text-xl font-black text-slate-100">₦{stats.lifetimeSalesAmount.toFixed(2)}</h2>
                     <p className="text-[10px] text-slate-550 font-bold">{stats.lifetimeSalesCount} sales completed</p>
                   </div>
                 </div>
@@ -939,7 +939,7 @@ export default function CashierDashboard() {
                 <div className="bg-slate-900/30 border border-slate-900 p-4 rounded-xl flex flex-col justify-between space-y-2 col-span-2 lg:col-span-1">
                   <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Avg Transaction Value</span>
                   <div>
-                    <h2 className="text-xl font-black text-indigo-400">${stats.averageTransactionValue.toFixed(2)}</h2>
+                    <h2 className="text-xl font-black text-indigo-400">₦{stats.averageTransactionValue.toFixed(2)}</h2>
                     <p className="text-[10px] text-slate-550 font-bold">Revenue per invoice</p>
                   </div>
                 </div>
@@ -960,7 +960,7 @@ export default function CashierDashboard() {
                       return (
                         <div key={index} className="flex flex-col items-center flex-1 group relative">
                           <div className="absolute top-[-32px] bg-slate-900 border border-slate-800 text-slate-100 text-[9px] font-black py-1 px-1.5 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10 shadow-xl whitespace-nowrap">
-                            ${trend.amount.toFixed(2)} ({trend.count} sales)
+                            ₦{trend.amount.toFixed(2)} ({trend.count} sales)
                           </div>
                           <div 
                             className="w-10 sm:w-14 bg-gradient-to-t from-indigo-600 to-purple-650 rounded-t group-hover:from-indigo-550 group-hover:to-purple-550 transition-all cursor-pointer shadow-lg shadow-indigo-500/10"
@@ -991,7 +991,7 @@ export default function CashierDashboard() {
                             <div className="flex justify-between text-xs font-medium">
                               <span className="text-slate-300 truncate max-w-[150px]">{tp.productName}</span>
                               <span className="text-slate-455 font-mono text-[11px] font-bold">
-                                {tp.quantitySold} units (${tp.totalRevenue.toFixed(2)})
+                                {tp.quantitySold} units (₦{tp.totalRevenue.toFixed(2)})
                               </span>
                             </div>
                             <div className="w-full bg-slate-950 rounded-full h-1.5 border border-slate-850">
@@ -1020,7 +1020,7 @@ export default function CashierDashboard() {
                           <div key={method} className="bg-slate-955 p-3 border border-slate-900 rounded-xl flex flex-col justify-between">
                             <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">{method}</span>
                             <div className="mt-1">
-                              <p className="text-sm font-black text-indigo-400">${amt.toFixed(2)}</p>
+                              <p className="text-sm font-black text-indigo-400">₦{amt.toFixed(2)}</p>
                               <p className="text-[9px] text-slate-550 font-bold">{count} items ({pct.toFixed(0)}%)</p>
                             </div>
                           </div>
@@ -1075,11 +1075,11 @@ export default function CashierDashboard() {
                                   {sale.paymentMethod}
                                 </span>
                               </td>
-                              <td className="p-4 text-right text-slate-400">${sale.subtotal.toFixed(2)}</td>
+                              <td className="p-4 text-right text-slate-400">₦{sale.subtotal.toFixed(2)}</td>
                               <td className="p-4 text-right text-red-400">
-                                {sale.discountAmount > 0 ? `-$${sale.discountAmount.toFixed(2)}` : "-"}
+                                {sale.discountAmount > 0 ? `-₦${sale.discountAmount.toFixed(2)}` : "-"}
                               </td>
-                              <td className="p-4 text-right font-bold text-slate-200">${sale.total.toFixed(2)}</td>
+                              <td className="p-4 text-right font-bold text-slate-200">₦{sale.total.toFixed(2)}</td>
                               <td className="p-4 text-center">
                                 <button
                                   onClick={async () => {
@@ -1205,11 +1205,11 @@ export default function CashierDashboard() {
                     const remaining = total - currentSum;
                     return (
                       <div className="flex justify-between items-center text-[10px] pt-1">
-                        <span className="text-slate-500">Collected: <span className="text-slate-350 font-bold">${currentSum.toFixed(2)}</span> / ${total.toFixed(2)}</span>
+                        <span className="text-slate-500">Collected: <span className="text-slate-350 font-bold">₦{currentSum.toFixed(2)}</span> / ₦{total.toFixed(2)}</span>
                         {Math.abs(remaining) <= 0.01 ? (
                           <span className="text-emerald-400 font-bold">✓ Fully Allocated</span>
                         ) : remaining > 0 ? (
-                          <span className="text-yellow-450 font-semibold">Remaining: <span className="font-bold">${remaining.toFixed(2)}</span></span>
+                          <span className="text-yellow-450 font-semibold">Remaining: <span className="font-bold">₦{remaining.toFixed(2)}</span></span>
                         ) : (
                           <span className="text-red-400 font-semibold">Overallocated: <span className="font-bold">${Math.abs(remaining).toFixed(2)}</span></span>
                         )}
@@ -1221,7 +1221,7 @@ export default function CashierDashboard() {
 
               <div className="border-t border-slate-850 pt-4 mt-2 flex justify-between items-center text-sm">
                 <span className="text-slate-400">Total Due:</span>
-                <span className="text-lg font-bold text-indigo-400">${total.toFixed(2)}</span>
+                <span className="text-lg font-bold text-indigo-400">₦{total.toFixed(2)}</span>
               </div>
 
               <div className="flex space-x-3 pt-2">
@@ -1325,8 +1325,8 @@ export default function CashierDashboard() {
                           <td className="py-2.5 font-mono text-[10px] text-slate-500">{item.sku}</td>
                           <td className="py-2.5 font-semibold text-slate-800">{item.productName}</td>
                           <td className="py-2.5 text-right text-slate-650">{item.quantity}</td>
-                          <td className="py-2.5 text-right text-slate-650">${item.unitPrice.toFixed(2)}</td>
-                          <td className="py-2.5 text-right font-bold text-slate-800">${item.total.toFixed(2)}</td>
+                          <td className="py-2.5 text-right text-slate-650">₦{item.unitPrice.toFixed(2)}</td>
+                          <td className="py-2.5 text-right font-bold text-slate-800">₦{item.total.toFixed(2)}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -1337,21 +1337,21 @@ export default function CashierDashboard() {
                     <div className="w-48 space-y-1.5 text-right">
                       <div className="flex justify-between text-[10px] text-slate-500">
                         <span>Subtotal</span>
-                        <span className="font-medium text-slate-800">${completedSale.subtotal.toFixed(2)}</span>
+                        <span className="font-medium text-slate-800">₦{completedSale.subtotal.toFixed(2)}</span>
                       </div>
                       {completedSale.discountAmount > 0 && (
                         <div className="flex justify-between text-[10px] text-red-600 font-semibold">
                           <span>Discount</span>
-                          <span>-${completedSale.discountAmount.toFixed(2)}</span>
+                          <span>-₦{completedSale.discountAmount.toFixed(2)}</span>
                         </div>
                       )}
                       <div className="flex justify-between text-[10px] text-slate-500">
                         <span>Sales Tax (8%)</span>
-                        <span className="font-medium text-slate-800">${completedSale.taxAmount.toFixed(2)}</span>
+                        <span className="font-medium text-slate-800">₦{completedSale.taxAmount.toFixed(2)}</span>
                       </div>
                       <div className="flex justify-between border-t pt-2 text-sm font-black" style={{ borderTopColor: receiptSetting?.customBrandingColor || "#6366F1", color: receiptSetting?.customBrandingColor || "#6366F1" }}>
                         <span>Total Paid</span>
-                        <span>${completedSale.total.toFixed(2)}</span>
+                        <span>₦{completedSale.total.toFixed(2)}</span>
                       </div>
                     </div>
                   </div>
@@ -1422,10 +1422,10 @@ export default function CashierDashboard() {
                           <p className="font-bold">{item.productName}</p>
                           <p className="text-[9px] text-slate-500">{item.sku}</p>
                           <p className="text-[9px] text-slate-500">
-                            {item.quantity} x ${item.unitPrice.toFixed(2)}
+                            {item.quantity} x ₦{item.unitPrice.toFixed(2)}
                           </p>
                         </div>
-                        <span className="font-bold">${item.total.toFixed(2)}</span>
+                        <span className="font-bold">₦{item.total.toFixed(2)}</span>
                       </div>
                     ))}
                   </div>
@@ -1434,21 +1434,21 @@ export default function CashierDashboard() {
                   <div className="space-y-1 pt-1 text-[10px]">
                     <div className="flex justify-between">
                       <span>Subtotal</span>
-                      <span>${completedSale.subtotal.toFixed(2)}</span>
+                      <span>₦{completedSale.subtotal.toFixed(2)}</span>
                     </div>
                     {completedSale.discountAmount > 0 && (
                       <div className="flex justify-between text-red-650 font-bold">
                         <span>Discount</span>
-                        <span>-${completedSale.discountAmount.toFixed(2)}</span>
+                        <span>-₦{completedSale.discountAmount.toFixed(2)}</span>
                       </div>
                     )}
                     <div className="flex justify-between">
                       <span>Sales Tax</span>
-                      <span>${completedSale.taxAmount.toFixed(2)}</span>
+                      <span>₦{completedSale.taxAmount.toFixed(2)}</span>
                     </div>
                     <div className="flex justify-between text-xs font-bold border-t border-double pt-2 text-slate-900">
                       <span>TOTAL</span>
-                      <span>${completedSale.total.toFixed(2)}</span>
+                      <span>₦{completedSale.total.toFixed(2)}</span>
                     </div>
                   </div>
 
@@ -1530,7 +1530,7 @@ export default function CashierDashboard() {
           <div>
             <p className="text-[10px] text-indigo-200 font-bold uppercase tracking-wider">Active Receipt</p>
             <p className="text-sm font-black">
-              {cart.reduce((sum, item) => sum + item.quantity, 0)} Units | ${total.toFixed(2)}
+              {cart.reduce((sum, item) => sum + item.quantity, 0)} Units | ₦{total.toFixed(2)}
             </p>
           </div>
           <button
@@ -1615,8 +1615,8 @@ export default function CashierDashboard() {
                       <td className="py-3 font-mono text-slate-500">{item.sku}</td>
                       <td className="py-3 font-semibold text-slate-800">{item.productName}</td>
                       <td className="py-3 text-right text-slate-600">{item.quantity}</td>
-                      <td className="py-3 text-right text-slate-600">${item.unitPrice.toFixed(2)}</td>
-                      <td className="py-3 text-right font-bold text-slate-800">${item.total.toFixed(2)}</td>
+                      <td className="py-3 text-right text-slate-600">₦{item.unitPrice.toFixed(2)}</td>
+                      <td className="py-3 text-right font-bold text-slate-800">₦{item.total.toFixed(2)}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -1627,21 +1627,21 @@ export default function CashierDashboard() {
                 <div className="w-64 space-y-2 text-right">
                   <div className="flex justify-between text-slate-500">
                     <span>Subtotal</span>
-                    <span className="font-semibold text-slate-800">${completedSale.subtotal.toFixed(2)}</span>
+                    <span className="font-semibold text-slate-800">₦{completedSale.subtotal.toFixed(2)}</span>
                   </div>
                   {completedSale.discountAmount > 0 && (
                     <div className="flex justify-between text-red-600 font-bold">
                       <span>Discount</span>
-                      <span>-${completedSale.discountAmount.toFixed(2)}</span>
+                      <span>-₦{completedSale.discountAmount.toFixed(2)}</span>
                     </div>
                   )}
                   <div className="flex justify-between text-slate-500">
                     <span>Sales Tax (8%)</span>
-                    <span className="font-semibold text-slate-800">${completedSale.taxAmount.toFixed(2)}</span>
+                    <span className="font-semibold text-slate-800">₦{completedSale.taxAmount.toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between border-t pt-2.5 text-base font-black" style={{ borderColor: receiptSetting?.customBrandingColor || "#6366F1", color: receiptSetting?.customBrandingColor || "#6366F1" }}>
                     <span>Total Paid</span>
-                    <span>${completedSale.total.toFixed(2)}</span>
+                    <span>₦{completedSale.total.toFixed(2)}</span>
                   </div>
                 </div>
               </div>
@@ -1712,10 +1712,10 @@ export default function CashierDashboard() {
                       <p className="font-bold">{item.productName}</p>
                       <p className="text-[9px] text-slate-500">{item.sku}</p>
                       <p className="text-[9px] text-slate-500">
-                        {item.quantity} x ${item.unitPrice.toFixed(2)}
+                        {item.quantity} x ₦{item.unitPrice.toFixed(2)}
                       </p>
                     </div>
-                    <span className="font-bold shrink-0">${item.total.toFixed(2)}</span>
+                    <span className="font-bold shrink-0">₦{item.total.toFixed(2)}</span>
                   </div>
                 ))}
               </div>
@@ -1724,21 +1724,21 @@ export default function CashierDashboard() {
               <div className="py-2 space-y-1 text-[10px]">
                 <div className="flex justify-between">
                   <span>Subtotal</span>
-                  <span>${completedSale.subtotal.toFixed(2)}</span>
+                  <span>₦{completedSale.subtotal.toFixed(2)}</span>
                 </div>
                 {completedSale.discountAmount > 0 && (
                   <div className="flex justify-between font-bold text-red-600">
                     <span>Discount</span>
-                    <span>-${completedSale.discountAmount.toFixed(2)}</span>
+                    <span>-₦{completedSale.discountAmount.toFixed(2)}</span>
                   </div>
                 )}
                 <div className="flex justify-between">
                   <span>Sales Tax (8%)</span>
-                  <span>${completedSale.taxAmount.toFixed(2)}</span>
+                  <span>₦{completedSale.taxAmount.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between text-xs font-black border-t border-double border-slate-900 pt-2">
                   <span>TOTAL PAID</span>
-                  <span>${completedSale.total.toFixed(2)}</span>
+                  <span>₦{completedSale.total.toFixed(2)}</span>
                 </div>
               </div>
 
@@ -1778,7 +1778,7 @@ export default function CashierDashboard() {
               {receiptSetting?.showQRCode && (
                 <div className="flex flex-col items-center pt-4 border-t border-dashed border-slate-400 mt-4 space-y-1.5">
                   <img 
-                    src={`https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${encodeURIComponent(`${window.location.origin}/verify-receipt/${completedSale.id}`)}`}
+                    src={`https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${encodeURIComponent(`${window.location.origin}/verify-receipt/₦{completedSale.id}`)}`}
                     alt="Verification QR"
                     className="w-24 h-24 object-contain border p-1 bg-white rounded"
                   />

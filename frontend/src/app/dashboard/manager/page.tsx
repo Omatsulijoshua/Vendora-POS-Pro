@@ -995,7 +995,7 @@ export default function ManagerDashboard() {
                           <p className="text-[10px] text-slate-505">{p.barcode || "No Barcode"}</p>
                         </td>
                         <td className="py-3 px-4 font-semibold text-slate-200">{p.name}</td>
-                        <td className="py-3 px-4">${p.price.toFixed(2)}</td>
+                        <td className="py-3 px-4">₦{p.price.toFixed(2)}</td>
                         <td className="py-3 px-4 text-center">
                           <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold border ${
                             p.underStockAlert ? "bg-red-500/10 text-red-400 border-red-500/20" : "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
@@ -1185,7 +1185,7 @@ export default function ManagerDashboard() {
                         </td>
                         <td className="py-3 px-4 text-slate-400">{sale.items.length} items</td>
                         <td className="py-3 px-4 text-slate-500">{new Date(sale.createdAt).toLocaleString()}</td>
-                        <td className="py-3 px-4 text-right font-bold text-slate-200">${sale.total.toFixed(2)}</td>
+                        <td className="py-3 px-4 text-right font-bold text-slate-200">₦{sale.total.toFixed(2)}</td>
                         <td className="py-3 pl-4 text-right">
                           <button
                             onClick={() => {
@@ -2158,10 +2158,10 @@ export default function ManagerDashboard() {
                     <p className="font-bold">{item.productName}</p>
                     <p className="text-[9px] text-slate-500">{item.sku}</p>
                     <p className="text-[9px] text-slate-500">
-                      {item.quantity} x ${item.unitPrice.toFixed(2)}
+                      {item.quantity} x ₦{item.unitPrice.toFixed(2)}
                     </p>
                   </div>
-                  <span className="font-bold">${item.total.toFixed(2)}</span>
+                  <span className="font-bold">₦{item.total.toFixed(2)}</span>
                 </div>
               ))}
             </div>

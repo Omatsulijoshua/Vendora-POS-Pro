@@ -145,10 +145,10 @@ export default function VerifyReceiptPage() {
                 <div className="space-y-0.5">
                   <p className="font-semibold text-slate-200">{item.productName}</p>
                   <p className="text-[10px] text-slate-500">
-                    {item.quantity} x ${item.unitPrice.toFixed(2)}
+                    {item.quantity} x ₦{item.unitPrice.toFixed(2)}
                   </p>
                 </div>
-                <span className="font-bold text-slate-200">${item.total.toFixed(2)}</span>
+                <span className="font-bold text-slate-200">₦{item.total.toFixed(2)}</span>
               </div>
             ))}
           </div>
@@ -158,24 +158,24 @@ export default function VerifyReceiptPage() {
         <div className="pt-5 space-y-2.5 text-xs">
           <div className="flex justify-between text-slate-400">
             <span>Subtotal</span>
-            <span>${sale.subtotal.toFixed(2)}</span>
+            <span>₦{sale.subtotal.toFixed(2)}</span>
           </div>
 
           {sale.discountAmount > 0 && (
             <div className="flex justify-between text-red-400 font-semibold">
               <span>Applied Discounts</span>
-              <span>-${sale.discountAmount.toFixed(2)}</span>
+              <span>-₦{sale.discountAmount.toFixed(2)}</span>
             </div>
           )}
 
           <div className="flex justify-between text-slate-400">
             <span>Sales Tax</span>
-            <span>${sale.taxAmount.toFixed(2)}</span>
+            <span>₦{sale.taxAmount.toFixed(2)}</span>
           </div>
 
           <div className="flex justify-between text-sm font-black border-t border-slate-800 pt-3 text-white">
             <span>TOTAL PAID</span>
-            <span className="text-indigo-400 text-base">${sale.total.toFixed(2)}</span>
+            <span className="text-indigo-400 text-base">₦{sale.total.toFixed(2)}</span>
           </div>
         </div>
 

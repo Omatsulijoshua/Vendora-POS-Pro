@@ -1645,10 +1645,10 @@ export default function OwnerDashboard() {
                 {/* Stats Grid */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                   {[
-                    { label: "Total Revenue", value: `$${stats.totalRevenue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, sub: activeBranch?.name ? `Branch: ${activeBranch.name}` : "Consolidated revenue" },
-                    { label: "Gross Profit", value: `$${stats.totalProfit.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, sub: `Margin: ${stats.profitMargin.toFixed(1)}%`, highlight: true },
+                    { label: "Total Revenue", value: `₦${stats.totalRevenue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, sub: activeBranch?.name ? `Branch: ${activeBranch.name}` : "Consolidated revenue" },
+                    { label: "Gross Profit", value: `₦${stats.totalProfit.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, sub: `Margin: ${stats.profitMargin.toFixed(1)}%`, highlight: true },
                     { label: "Transactions Count", value: stats.totalSalesCount.toString(), sub: "Completed checkouts" },
-                    { label: "Avg Transaction Value", value: `$${stats.averageTransactionValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, sub: "ATV per invoice" },
+                    { label: "Avg Transaction Value", value: `₦${stats.averageTransactionValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, sub: "ATV per invoice" },
                   ].map((stat, i) => (
                     <div key={i} className={`border border-slate-900 bg-slate-900/20 rounded-xl p-5 ${stat.highlight ? "ring-1 ring-indigo-500/30" : ""}`}>
                       <span className="text-xs font-semibold text-slate-400">{stat.label}</span>
@@ -2005,7 +2005,7 @@ export default function OwnerDashboard() {
                           </span>
                         </td>
                         <td className="py-3 px-4">
-                          <p className="font-semibold text-slate-200">${p.price.toFixed(2)}</p>
+                          <p className="font-semibold text-slate-200">₦{p.price.toFixed(2)}</p>
                           <p className="text-[10px] text-slate-550">Cost: ${p.costPrice.toFixed(2)}</p>
                         </td>
                         <td className="py-3 px-4 text-center">
@@ -2291,7 +2291,7 @@ export default function OwnerDashboard() {
                         </td>
                         <td className="py-3 px-4 text-slate-400">{sale.items.length} items</td>
                         <td className="py-3 px-4 text-slate-500">{new Date(sale.createdAt).toLocaleString()}</td>
-                        <td className="py-3 px-4 text-right font-bold text-slate-200">${sale.total.toFixed(2)}</td>
+                        <td className="py-3 px-4 text-right font-bold text-slate-200">₦{sale.total.toFixed(2)}</td>
                         <td className="py-3 pl-4 text-right">
                           <button
                             onClick={() => {
@@ -4249,10 +4249,10 @@ export default function OwnerDashboard() {
                     <p className="font-bold">{item.productName}</p>
                     <p className="text-[9px] text-slate-500">{item.sku}</p>
                     <p className="text-[9px] text-slate-500">
-                      {item.quantity} x ${item.unitPrice.toFixed(2)}
+                      {item.quantity} x ₦{item.unitPrice.toFixed(2)}
                     </p>
                   </div>
-                  <span className="font-bold">${item.total.toFixed(2)}</span>
+                  <span className="font-bold">₦{item.total.toFixed(2)}</span>
                 </div>
               ))}
             </div>

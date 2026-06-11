@@ -119,9 +119,9 @@ public class SalesController : ControllerBase
 
         if (userRole == "Cashier")
         {
-            if (dto.DiscountAmount > 50.00m)
+            if (dto.DiscountAmount > 50000.00m)
             {
-                return BadRequest(new { Message = "Cashiers cannot apply a discount exceeding $50.00." });
+                return BadRequest(new { Message = "Cashiers cannot apply a discount exceeding ₦50,000.00." });
             }
             if (tempSubtotal > 0 && (dto.DiscountAmount / tempSubtotal) > 0.15m)
             {
@@ -131,7 +131,7 @@ public class SalesController : ControllerBase
 
         if (coupon != null && coupon.MinCartAmount.HasValue && tempSubtotal < coupon.MinCartAmount.Value)
         {
-            return BadRequest(new { Message = $"Minimum cart spend of ${coupon.MinCartAmount.Value:F2} is required to apply this coupon." });
+            return BadRequest(new { Message = $"Minimum cart spend of ₦{coupon.MinCartAmount.Value:F2} is required to apply this coupon." });
         }
 
         using var transaction = await _context.Database.BeginTransactionAsync();

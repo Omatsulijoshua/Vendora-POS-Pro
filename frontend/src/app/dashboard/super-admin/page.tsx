@@ -446,14 +446,14 @@ export default function SuperAdminDashboard() {
                         <td className="py-4 px-4 text-center font-bold text-slate-200">{b.branchesCount}</td>
                         <td className="py-4 px-4 text-center font-bold text-slate-200">{b.usersCount}</td>
                         <td className="py-4 px-6 text-right font-semibold text-slate-200">
-                          ${b.totalSalesRevenue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          ₦{b.totalSalesRevenue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                         </td>
                         <td className="py-4 px-6 text-center">
                           <div>
                             <span className="px-2 py-0.5 rounded text-xs font-bold bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
                               {b.subscriptionTier}
                             </span>
-                            <p className="text-xs text-slate-400 mt-1">${b.subscriptionPrice}/yr</p>
+                            <p className="text-xs text-slate-400 mt-1">₦{b.subscriptionPrice}/yr</p>
                           </div>
                         </td>
                         <td className="py-4 px-6 text-center">
@@ -642,7 +642,7 @@ export default function SuperAdminDashboard() {
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Yearly Plan Cost ($ USD)</label>
+                <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Yearly Plan Cost (₦ NGN)</label>
                 <input
                   type="number"
                   step="0.01"

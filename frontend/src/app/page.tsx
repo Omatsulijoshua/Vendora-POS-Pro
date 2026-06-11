@@ -132,12 +132,12 @@ export default function Home() {
 
                 <div className="flex-1 grid grid-cols-3 gap-3 overflow-hidden">
                   {[
-                    { name: "Organic Espresso Bean", price: "$24.99", stock: "45 Left" },
-                    { name: "Thermal Receipt Paper", price: "$4.50", stock: "120 Left" },
-                    { name: "Branded Ceramic Mug", price: "$15.00", stock: "18 Left" },
-                    { name: "Stainless French Press", price: "$35.00", stock: "9 Left" },
-                    { name: "Double Wall Tumbler", price: "$22.50", stock: "34 Left" },
-                    { name: "Caramel Latte Syrup", price: "$8.99", stock: "50 Left" }
+                    { name: "Organic Espresso Bean", price: "₦24,900", stock: "45 Left" },
+                    { name: "Thermal Receipt Paper", price: "₦4,500", stock: "120 Left" },
+                    { name: "Branded Ceramic Mug", price: "₦15,000", stock: "18 Left" },
+                    { name: "Stainless French Press", price: "₦35,000", stock: "9 Left" },
+                    { name: "Double Wall Tumbler", price: "₦22,500", stock: "34 Left" },
+                    { name: "Caramel Latte Syrup", price: "₦8,900", stock: "50 Left" }
                   ].map((p, i) => (
                     <div key={i} className="rounded-xl border border-slate-900 bg-slate-900/20 p-3 flex flex-col justify-between hover:border-slate-800/80 transition-colors">
                       <div>
@@ -157,11 +157,11 @@ export default function Home() {
                   <div className="flex flex-col gap-2 max-h-32 overflow-y-auto">
                     <div className="flex justify-between text-[11px]">
                       <span className="text-slate-400">1x Espresso Bean</span>
-                      <span className="text-slate-200 font-mono">$24.99</span>
+                      <span className="text-slate-200 font-mono">₦24,900</span>
                     </div>
                     <div className="flex justify-between text-[11px]">
                       <span className="text-slate-400">2x Thermal Paper</span>
-                      <span className="text-slate-200 font-mono">$9.00</span>
+                      <span className="text-slate-200 font-mono">₦9,000</span>
                     </div>
                   </div>
                 </div>
@@ -169,15 +169,15 @@ export default function Home() {
                 <div className="border-t border-slate-900 pt-3 flex flex-col gap-2">
                   <div className="flex justify-between text-xs">
                     <span className="text-slate-400">Subtotal</span>
-                    <span className="text-slate-200 font-mono">$33.99</span>
+                    <span className="text-slate-200 font-mono">₦33,900</span>
                   </div>
                   <div className="flex justify-between text-xs">
                     <span className="text-indigo-400">Coupon [10%]</span>
-                    <span className="text-indigo-400 font-mono">-$3.40</span>
+                    <span className="text-indigo-400 font-mono">-₦3,390</span>
                   </div>
                   <div className="flex justify-between text-sm font-bold border-t border-slate-900 pt-2 text-white mt-1">
                     <span>Total Due</span>
-                    <span className="text-indigo-400 font-mono">$30.59</span>
+                    <span className="text-indigo-400 font-mono">₦30,510</span>
                   </div>
                   <button className="w-full py-2 bg-indigo-600 rounded-lg text-xs font-bold text-center text-white mt-2 hover:bg-indigo-500 shadow-md shadow-indigo-600/10">
                     Process Checkout
@@ -287,8 +287,8 @@ export default function Home() {
           <div className="rounded-2xl border border-slate-900 bg-slate-950/50 p-8 flex flex-col justify-between">
             <div>
               <span className="text-xs font-semibold uppercase text-indigo-400">Starter</span>
-              <p className="text-3xl font-black text-white mt-4">$29.00 <span className="text-sm font-normal text-slate-500">/mo</span></p>
-              <p className="text-xs text-slate-500 mt-1">Billed annually ($348 total)</p>
+              <p className="text-3xl font-black text-white mt-4">₦15,000 <span className="text-sm font-normal text-slate-500">/mo</span></p>
+              <p className="text-xs text-slate-500 mt-1">Billed annually (₦180,000 total)</p>
               <div className="border-t border-slate-900 my-6" />
               <ul className="flex flex-col gap-3 text-sm text-slate-400">
                 <li className="flex items-center gap-2">✓ 1 Business Account</li>
@@ -312,8 +312,8 @@ export default function Home() {
             </span>
             <div>
               <span className="text-xs font-semibold uppercase text-indigo-400">Professional</span>
-              <p className="text-3xl font-black text-white mt-4">$99.00 <span className="text-sm font-normal text-slate-500">/mo</span></p>
-              <p className="text-xs text-slate-500 mt-1">Billed annually ($1,188 total)</p>
+              <p className="text-3xl font-black text-white mt-4">₦50,000 <span className="text-sm font-normal text-slate-500">/mo</span></p>
+              <p className="text-xs text-slate-500 mt-1">Billed annually (₦600,000 total)</p>
               <div className="border-t border-slate-900 my-6" />
               <ul className="flex flex-col gap-3 text-sm text-slate-300">
                 <li className="flex items-center gap-2 text-indigo-400 font-semibold">✓ Multiple Businesses Allowed</li>
@@ -335,8 +335,8 @@ export default function Home() {
           <div className="rounded-2xl border border-slate-900 bg-slate-950/50 p-8 flex flex-col justify-between">
             <div>
               <span className="text-xs font-semibold uppercase text-indigo-400">Enterprise</span>
-              <p className="text-3xl font-black text-white mt-4">$299.00 <span className="text-sm font-normal text-slate-500">/mo</span></p>
-              <p className="text-xs text-slate-500 mt-1">Billed annually ($3,588 total)</p>
+              <p className="text-3xl font-black text-white mt-4">₦150,000 <span className="text-sm font-normal text-slate-500">/mo</span></p>
+              <p className="text-xs text-slate-500 mt-1">Billed annually (₦1,800,000 total)</p>
               <div className="border-t border-slate-900 my-6" />
               <ul className="flex flex-col gap-3 text-sm text-slate-400">
                 <li className="flex items-center gap-2">✓ Unlimited Businesses & Branches</li>
