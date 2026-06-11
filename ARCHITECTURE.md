@@ -287,3 +287,32 @@ To provide business owners with a holistic, top-level view of their business emp
   * During token generation (`JwtTokenGenerator`), the database is queried to determine subscription validity. The `is_subscription_active` claim is appended as a boolean string claim in the JWT.
   * The frontend `AuthContext.tsx` decodes this claim and exposes it as `isSubscriptionActive` on the authenticated user profile.
   * In `owner/page.tsx`, if `isSubscriptionActive === false` and the user is not viewing the Billing tab, a glassmorphic **Subscription Expired Lock Overlay** blocks dashboard operation panels, forcing the owner to resolve their subscription.
+
+---
+
+## 13. Mobile & Responsive POS and Client-Side Offline Caching Architecture
+
+To support seamless checkout operations across different devices and in environments with unstable network connectivity, the Cashier POS includes a fully responsive design and client-side offline durability structures.
+
+### 1. Viewport-Based Layout Switching (Tailwind CSS)
+* **Desktop Layout (>= 1024px)**: Uses a standard two-column layout. The left column (400px width) displays the active cart, manual discount/coupon adjustments, and subtotal/total calculations. The right column takes the remaining width and displays the product grid, barcode search input, and keyword query filters.
+* **Mobile/Tablet Layout (< 1024px)**: Swaps the side-by-side columns for a single-column, tabbed panel layout.
+  - **Tabs**: Toggles active views between "Browse Catalog" and "Receipt Cart".
+  - **Mobile Floating Bar**: Rendered when catalog mode is active and the cart contains items. Displays a summary of selected items count and subtotal, with a quick redirect button to open the Cart page for checkout.
+  - **Responsive Modals**: Modal elements (such as split payment allocations and receipt previews) wrap content in scrollable containers (`max-h-[60vh] overflow-y-auto`) to fit vertically on mobile heights.
+
+### 2. Client-Side Catalog Cache Fallback
+* **Load Caching**: When the POS mount resolves successfully, fetched product listings are stored in `localStorage` under `vendora_cached_products`.
+* **Network Failover**: In `fetchProducts`, if the network request fails due to offline state or api server timeouts, the browser catches the exception and falls back to loading catalog data from the cache.
+
+### 3. Offline Transaction Queue & Local Deduction
+* **Network Error Catching**: When checkouts are submitted (`POST /api/sales`), the system intercepts fetch failures (unreachable server, user offline).
+* **Simulated Checkout**: If the server is unreachable, the POS prompts the cashier to record the checkout offline:
+  - Generates a simulated transaction with a temporary ID (`offline_{timestamp}`).
+  - Deducts sold item quantities from `vendora_cached_products` stock balances immediately.
+  - Clears active cart buffers, opens receipt preview print dialogs, and saves the transaction payload inside the `vendora_offline_sales` array in `localStorage`.
+* **Sync Indicators & Synchronization**:
+  - Displays a visual dot (🟢 Online / 🔴 Offline) in the POS header.
+  - Displays a warning badge (`Sync Pending: X`) if offline sales are queued.
+  - Clicking the badge triggers sequential asynchronous HTTP uploads of queued payloads to `/api/sales`. Once a queued sale is successfully stored on the server, it is removed from the client queue.
+

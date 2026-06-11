@@ -597,6 +597,8 @@ Cancels a pending stock transfer, returning the reserved stock quantity back to 
 ### 1. Checkout (Create Sale)
 Processes and records a new transaction, adjusting product stock levels and recording adjustment logs. Handles cash, card, and mixed payments. Automatically enforces cashier manual discount thresholds (max 15% and $50.00).
 
+*Note: This endpoint is also used by the frontend to sequentially synchronize offline transactions queued in the browser's localStorage when connectivity is restored.*
+
 *   **Endpoint**: `POST /api/sales`
 *   **Authentication**: Bearer JWT (Owner, Manager, Cashier)
 *   **Request Body**:

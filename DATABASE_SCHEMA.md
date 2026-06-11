@@ -478,4 +478,41 @@ Stores low stock warning alerts, subscription reminders, and other system-genera
 | `SentAt` | `timestamp` | `NOT NULL` | Notification creation/dispatch timestamp |
 | `ReadAt` | `timestamp` | `NULL` | Timestamp of read status update |
 
+---
+
+## 8. Client-Side Browser Storage (Offline Cache & Queue)
+
+To support offline-ready POS workflows, the frontend app utilizes the browser's `localStorage` API for caching the products catalog and queuing offline sales.
+
+### A. Cached Catalog (`vendora_cached_products`)
+Key: `vendora_cached_products`
+Format: JSON Array of Product Objects.
+Stored Fields:
+- `id` (uuid)
+- `name` (string)
+- `sku` (string)
+- `barcode` (string, nullable)
+- `price` (numeric)
+- `totalStock` (integer)
+- `categoryName` (string)
+- `underStockAlert` (boolean)
+
+### B. Offline Sales Queue (`vendora_offline_sales`)
+Key: `vendora_offline_sales`
+Format: JSON Array of Sale Objects.
+Stored Fields:
+- `id` (string, temporary format: `offline_{timestamp}`)
+- `isOffline` (boolean, always `true`)
+- `branchName` (string)
+- `cashierName` (string)
+- `createdAt` (timestamp string)
+- `subtotal` (numeric)
+- `discountAmount` (numeric)
+- `taxAmount` (numeric)
+- `total` (numeric)
+- `paymentMethod` (string)
+- `paymentDetails` (string, JSON payload representing mixed collections)
+- `items` (Array of item details: `productId`, `productName`, `sku`, `quantity`, `unitPrice`, `total`)
+
+
 

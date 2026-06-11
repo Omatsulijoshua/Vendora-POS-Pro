@@ -5,7 +5,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.16.0] - 2026-06-11
+
+### Added
+- **Mobile & Responsive POS (Phase 17):**
+  - Refactored the POS Cashier Dashboard `page.tsx` with responsive layout designs:
+    - **Desktop (>= 1024px)**: Maintained dual-pane view showing catalog on right and cart receipt on left.
+    - **Mobile/Tablet (< 1024px)**: Implemented tabbed selector views toggling between catalog browse and cart receipt lists.
+    - **Mobile Floating Bar**: Added sticky bottom action bar displaying total item counts and checkout totals with instant redirect triggers when catalog is active.
+    - **Modals**: Resized checkout confirmation and invoice preview modals for mobile viewports using auto-scrolling view wrappers.
+  - Implemented client-side offline durability structures:
+    - **Product Catalog Cache**: Automatically caches loaded items inside browser `localStorage` (`vendora_cached_products`) and falls back to cache on backend connection failure.
+    - **Offline Sales Queue**: When checkouts fail due to network outages, prompts cashiers to check out offline. Creates simulated offline sales logs (with temporary IDs), deducts stock levels locally in browser cache, and queues records inside `vendora_offline_sales`.
+    - **Status Bar Widgets**: Added animated connection status indicators (🟢 Online / 🔴 Offline) and sync queue buttons in the cashier navigation header.
+    - **Transaction Synchronization**: Built sequential sync handlers to post queued offline transactions to backend API endpoint (`POST /api/sales`) when connectivity returns.
+
 ## [0.15.0] - 2026-06-10
+
 
 ### Added
 - **Notifications System (Phase 16):**

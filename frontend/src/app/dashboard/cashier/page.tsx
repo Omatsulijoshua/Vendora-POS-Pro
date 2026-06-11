@@ -44,6 +44,95 @@ export default function CashierDashboard() {
   const [salesHistory, setSalesHistory] = useState<any[]>([]);
   const [loadingHistory, setLoadingHistory] = useState(false);
 
+  // Offline and Responsive layout states
+  const [isOnline, setIsOnline] = useState(true);
+  const [offlineSales, setOfflineSales] = useState<any[]>([]);
+  const [syncingSales, setSyncingSales] = useState(false);
+  const [syncStatusMsg, setSyncStatusMsg] = useState("");
+  const [mobileActiveTab, setMobileActiveTab] = useState<"catalog" | "cart">("catalog");
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      setIsOnline(navigator.onLine);
+      const handleOnline = () => setIsOnline(true);
+      const handleOffline = () => setIsOnline(false);
+      window.addEventListener("online", handleOnline);
+      window.addEventListener("offline", handleOffline);
+      
+      const stored = localStorage.getItem("vendora_offline_sales");
+      if (stored) {
+        try {
+          setOfflineSales(JSON.parse(stored));
+        } catch (e) {
+          console.error("Failed to parse offline sales", e);
+        }
+      }
+
+      return () => {
+        window.removeEventListener("online", handleOnline);
+        window.removeEventListener("offline", handleOffline);
+      };
+    }
+  }, []);
+
+  const handleSyncSales = async () => {
+    if (offlineSales.length === 0 || syncingSales) return;
+    setSyncingSales(true);
+    setSyncStatusMsg("Synchronizing offline sales...");
+    
+    let successCount = 0;
+    const remainingSales = [...offlineSales];
+    const failedSales: any[] = [];
+
+    for (const sale of remainingSales) {
+      const payload = {
+        paymentMethod: sale.paymentMethod,
+        paymentDetails: sale.paymentDetails,
+        discountAmount: sale.discountAmount,
+        taxAmount: sale.taxAmount,
+        items: sale.items.map((item: any) => ({
+          productId: item.productId,
+          quantity: item.quantity,
+          unitPrice: item.unitPrice,
+          discountAmount: 0
+        }))
+      };
+
+      try {
+        const res = await fetch("http://localhost:5149/api/sales", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${token}`
+          },
+          body: JSON.stringify(payload)
+        });
+
+        if (res.ok) {
+          successCount++;
+        } else {
+          failedSales.push(sale);
+        }
+      } catch (err) {
+        console.error("Failed to sync offline sale", sale.id, err);
+        failedSales.push(sale);
+      }
+    }
+
+    setOfflineSales(failedSales);
+    if (failedSales.length > 0) {
+      localStorage.setItem("vendora_offline_sales", JSON.stringify(failedSales));
+      setSyncStatusMsg(`Synced ${successCount} sale(s). ${failedSales.length} failed to sync.`);
+    } else {
+      localStorage.removeItem("vendora_offline_sales");
+      setSyncStatusMsg(`All offline sales (${successCount}) synced successfully!`);
+    }
+    
+    setSyncingSales(false);
+    fetchProducts();
+    setTimeout(() => setSyncStatusMsg(""), 5050);
+  };
+
   const fetchCashierStats = async () => {
     if (!token) return;
     try {
@@ -168,9 +257,19 @@ export default function CashierDashboard() {
       if (res.ok) {
         const data = await res.json();
         setProducts(data);
+        localStorage.setItem("vendora_cached_products", JSON.stringify(data));
+      } else {
+        const cached = localStorage.getItem("vendora_cached_products");
+        if (cached) {
+          setProducts(JSON.parse(cached));
+        }
       }
     } catch (err) {
       console.error(err);
+      const cached = localStorage.getItem("vendora_cached_products");
+      if (cached) {
+        setProducts(JSON.parse(cached));
+      }
     } finally {
       setLoadingProducts(false);
     }
@@ -343,6 +442,68 @@ export default function CashierDashboard() {
       setShowReceiptModal(true);
       fetchProducts();
     } catch (err: any) {
+      console.error("Online checkout failed", err);
+      const isNetworkError = !navigator.onLine || err.message?.includes("Failed to fetch") || err.name === "TypeError";
+      
+      if (isNetworkError) {
+        const confirmOffline = window.confirm(
+          "Network connection error detected. Would you like to process this sale offline? The transaction will be saved locally and syncs automatically once online."
+        );
+        if (confirmOffline) {
+          const offlineSaleId = `offline_${Date.now()}`;
+          const offlineSale = {
+            id: offlineSaleId,
+            isOffline: true,
+            branchName: branchName,
+            cashierName: `${user?.firstName} ${user?.lastName}`,
+            createdAt: new Date().toISOString(),
+            subtotal,
+            discountAmount,
+            taxAmount: tax,
+            total,
+            paymentMethod,
+            paymentDetails: payload.paymentDetails,
+            items: cart.map(item => ({
+              id: `offline_item_${item.id}_${Date.now()}`,
+              productId: item.id,
+              productName: item.name,
+              sku: item.sku,
+              quantity: item.quantity,
+              unitPrice: item.price,
+              total: item.price * item.quantity
+            }))
+          };
+
+          const updatedProducts = products.map(p => {
+            const cartItem = cart.find(item => item.id === p.id);
+            if (cartItem) {
+              return {
+                ...p,
+                totalStock: Math.max(0, p.totalStock - cartItem.quantity)
+              };
+            }
+            return p;
+          });
+          setProducts(updatedProducts);
+          localStorage.setItem("vendora_cached_products", JSON.stringify(updatedProducts));
+
+          const newQueue = [...offlineSales, offlineSale];
+          setOfflineSales(newQueue);
+          localStorage.setItem("vendora_offline_sales", JSON.stringify(newQueue));
+
+          setCompletedSale(offlineSale);
+          setCart([]);
+          setManualDiscountStr("0");
+          setCouponCode("");
+          setCouponError("");
+          setCouponSuccess("");
+          setAppliedCoupon(null);
+          setShowCheckoutModal(false);
+          setShowReceiptModal(true);
+          setCheckoutSubmitting(false);
+          return;
+        }
+      }
       setCheckoutError(err.message || "An error occurred during checkout.");
     } finally {
       setCheckoutSubmitting(false);
@@ -400,10 +561,26 @@ export default function CashierDashboard() {
             <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
               POS Terminal
             </span>
+            <div className="flex items-center space-x-1.5 bg-slate-950/45 px-2.5 py-1 rounded-full border border-slate-800 text-[10px]">
+              <span className={`h-2 w-2 rounded-full ${isOnline ? "bg-emerald-500 animate-pulse" : "bg-red-500"}`}></span>
+              <span className="font-bold uppercase tracking-wider text-slate-400 hidden sm:inline">
+                {isOnline ? "Online" : "Offline"}
+              </span>
+            </div>
+            {offlineSales.length > 0 && (
+              <button
+                onClick={handleSyncSales}
+                disabled={syncingSales}
+                className="flex items-center space-x-1 px-3 py-1 rounded-full bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/20 transition-all font-bold text-[10px] cursor-pointer"
+              >
+                <span>Sync Pending ({offlineSales.length})</span>
+                {syncingSales && <span className="animate-spin text-[8px]">⌛</span>}
+              </button>
+            )}
           </div>
           <div className="flex items-center space-x-4">
             <div className="text-right hidden sm:block">
-              <p className="text-sm font-medium text-slate-350">
+              <p className="text-sm font-medium text-slate-355">
                 {user?.firstName} {user?.lastName}
               </p>
               <p className="text-xs text-slate-500">Branch: {branchName}</p>
@@ -417,6 +594,13 @@ export default function CashierDashboard() {
           </div>
         </div>
       </header>
+
+      {/* Sync Status Banner */}
+      {syncStatusMsg && (
+        <div className="bg-indigo-650 text-white text-xs font-bold text-center py-2 px-4 shadow-md backdrop-blur-sm shrink-0 transition-all animate-in slide-in-from-top-1 duration-200">
+          {syncStatusMsg}
+        </div>
+      )}
 
       {/* Sub-Header Navigation */}
       <div className="bg-slate-900/40 border-b border-slate-900 shrink-0">
@@ -444,11 +628,37 @@ export default function CashierDashboard() {
         </div>
       </div>
 
+      {/* Mobile tabs switcher (Register tab only) */}
+      {activeTab === "register" && (
+        <div className="lg:hidden flex border-b border-slate-900 bg-slate-950/40 p-2 gap-2 shrink-0">
+          <button
+            onClick={() => setMobileActiveTab("catalog")}
+            className={`flex-1 py-2.5 text-xs font-bold rounded-lg border transition-all ${
+              mobileActiveTab === "catalog"
+                ? "bg-indigo-650/20 text-indigo-400 border-indigo-500/50"
+                : "bg-transparent border-transparent text-slate-400"
+            }`}
+          >
+            Browse Catalog
+          </button>
+          <button
+            onClick={() => setMobileActiveTab("cart")}
+            className={`flex-1 py-2.5 text-xs font-bold rounded-lg border transition-all flex items-center justify-center gap-1.5 ${
+              mobileActiveTab === "cart"
+                ? "bg-indigo-650/20 text-indigo-400 border-indigo-500/50"
+                : "bg-transparent border-transparent text-slate-400"
+            }`}
+          >
+            Receipt Cart ({cart.reduce((sum, item) => sum + item.quantity, 0)})
+          </button>
+        </div>
+      )}
+
       {/* Main Grid: Conditional Render */}
       {activeTab === "register" ? (
-        <div className="flex-1 flex overflow-hidden max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 gap-6">
+        <div className="flex-1 flex overflow-hidden max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 gap-6 relative">
           {/* Left Hand Side: Receipt / Register (40% width) */}
-          <div className="w-full md:w-[400px] border border-slate-800 bg-slate-900/20 rounded-2xl flex flex-col overflow-hidden">
+          <div className={`${mobileActiveTab === "cart" ? "flex" : "hidden"} lg:flex w-full lg:w-[400px] border border-slate-800 bg-slate-900/20 rounded-2xl flex-col overflow-hidden shrink-0`}>
             <div className="p-4 border-b border-slate-900 bg-slate-950/40 flex justify-between items-center shrink-0">
               <h3 className="font-bold text-slate-200">Current Receipt</h3>
               <button
@@ -605,7 +815,7 @@ export default function CashierDashboard() {
           </div>
 
           {/* Right Hand Side: Catalog Grid (60% width) */}
-          <div className="flex-1 flex flex-col space-y-4 overflow-hidden">
+          <div className={`${mobileActiveTab === "catalog" ? "flex" : "hidden"} lg:flex flex-1 flex flex-col space-y-4 overflow-hidden`}>
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 shrink-0">
               <div>
                 <h3 className="font-bold text-lg text-slate-200">Product Directory</h3>
@@ -1312,6 +1522,23 @@ export default function CashierDashboard() {
               </button>
             </div>
           </div>
+        </div>
+      )}
+      {/* Floating bottom action bar for mobile catalog */}
+      {activeTab === "register" && mobileActiveTab === "catalog" && cart.length > 0 && (
+        <div className="lg:hidden fixed bottom-4 left-4 right-4 bg-gradient-to-r from-indigo-600 to-purple-700 text-white rounded-xl shadow-2xl p-4 flex items-center justify-between border border-indigo-500/30 animate-in slide-in-from-bottom-5 duration-300 z-40">
+          <div>
+            <p className="text-[10px] text-indigo-200 font-bold uppercase tracking-wider">Active Receipt</p>
+            <p className="text-sm font-black">
+              {cart.reduce((sum, item) => sum + item.quantity, 0)} Units | ${total.toFixed(2)}
+            </p>
+          </div>
+          <button
+            onClick={() => setMobileActiveTab("cart")}
+            className="px-4 py-2 bg-white text-indigo-700 font-black text-xs rounded-lg shadow-md hover:bg-slate-50 transition-all active:scale-[0.97]"
+          >
+            View Cart ➔
+          </button>
         </div>
       )}
       </div>
