@@ -1,6 +1,6 @@
-# Production Deployment Playbook & Scaling Plan - Vendora POS Pro
+# Production Deployment Playbook & Scaling Plan - Vendora Inventory Management System
 
-This document contains step-by-step instructions for deploying **Vendora POS Pro** to production, managing environment variables, running database migrations, and scaling the system to support thousands of active tenants.
+This document contains step-by-step instructions for deploying **Vendora Inventory Management System** to production, managing environment variables, running database migrations, and scaling the system to support thousands of active tenants.
 
 ---
 

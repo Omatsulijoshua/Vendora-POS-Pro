@@ -1,4 +1,4 @@
-# API Documentation - Vendora POS Pro
+# API Documentation - Vendora Inventory Management System
 
 This document tracks all backend Web API endpoints.
 
@@ -728,7 +728,7 @@ An anonymous unauthenticated endpoint to verify receipt authenticity. Bypasses s
     ```json
     {
       "saleId": "a8a62bc7-76ca-4824-ac16-ecf816a67e64",
-      "businessName": "Vendora POS Pro",
+      "businessName": "Vendora Inventory Management System",
       "branchName": "Branch Alpha",
       "branchAddress": "123 Main Street",
       "branchPhone": "555-0199",

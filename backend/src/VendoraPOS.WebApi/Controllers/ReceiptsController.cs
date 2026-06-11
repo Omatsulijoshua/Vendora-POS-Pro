@@ -58,7 +58,7 @@ public class ReceiptsController : ControllerBase
             .IgnoreQueryFilters()
             .Where(b => b.Id == tenantId.Value)
             .Select(b => b.Name)
-            .FirstOrDefaultAsync() ?? "Vendora POS Pro";
+            .FirstOrDefaultAsync() ?? "Vendora Inventory Management System";
 
         // Try to fetch branch override first, if branchId is specified
         ReceiptSetting setting = null;
@@ -136,7 +136,7 @@ public class ReceiptsController : ControllerBase
             .IgnoreQueryFilters()
             .Where(b => b.Id == tenantId.Value)
             .Select(b => b.Name)
-            .FirstOrDefaultAsync() ?? "Vendora POS Pro";
+            .FirstOrDefaultAsync() ?? "Vendora Inventory Management System";
 
         // Find or create
         var setting = await _context.ReceiptSettings

@@ -112,9 +112,9 @@ export default function RegisterPage() {
       <div className="w-full max-w-lg p-8 bg-card border border-border rounded-2xl shadow-xl relative z-10">
         <div className="text-center mb-8 flex flex-col items-center">
           <Logo size={44} className="mb-3" />
-          <h1 className="text-2xl font-bold flex items-center">
+          <h1 className="text-2xl font-bold flex flex-wrap items-center justify-center gap-x-1.5 gap-y-0.5">
             <span className="text-foreground font-black">Vendora</span>
-            <span className="text-[#10B981] font-medium ml-1">POS Pro</span>
+            <span className="text-[#10B981] font-medium ml-1">Inventory Management System</span>
           </h1>
           <p className="text-muted-foreground mt-2 text-xs">Get started by setting up your brand new account</p>
         </div>

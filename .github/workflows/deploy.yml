@@ -1,4 +1,4 @@
-name: Vendora POS Pro CI
+name: Vendora Inventory Management System CI
 
 on:
   push:

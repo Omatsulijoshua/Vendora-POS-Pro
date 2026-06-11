@@ -209,7 +209,7 @@ export default function OwnerDashboard() {
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const [receiptSaveSuccess, setReceiptSaveSuccess] = useState("");
   const [receiptSaveError, setReceiptSaveError] = useState("");
-  const [receiptConfigName, setReceiptConfigName] = useState("Vendora POS Pro");
+  const [receiptConfigName, setReceiptConfigName] = useState("Vendora Inventory Management System");
 
   // Dropdown states
   const [bizDropdownOpen, setBizDropdownOpen] = useState(false);
@@ -504,7 +504,7 @@ export default function OwnerDashboard() {
         setReceiptLayout(data.receiptLayout || "Thermal");
         setReceiptCustomBrandingColor(data.customBrandingColor || "#6366F1");
         setReceiptLogoUrl(data.logoUrl);
-        setReceiptConfigName(data.businessName || "Vendora POS Pro");
+        setReceiptConfigName(data.businessName || "Vendora Inventory Management System");
       }
     } catch (err) {
       console.error(err);
@@ -1390,7 +1390,7 @@ export default function OwnerDashboard() {
   // Real consolidated dashboard sales values
   const getBranchSales = () => {
     const totalSales = sales.reduce((acc, sale) => acc + sale.total, 0);
-    return `$${totalSales.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    return `₦${totalSales.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   };
 
   return (
@@ -1680,8 +1680,8 @@ export default function OwnerDashboard() {
                             {/* Tooltip */}
                             <div className="absolute top-[-48px] bg-slate-900 border border-slate-800 text-[10px] text-slate-100 font-bold py-1.5 px-2.5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10 shadow-2xl whitespace-nowrap text-center space-y-0.5">
                               <p className="font-semibold text-slate-400">{trend.date}</p>
-                              <p>Revenue: <span className="text-indigo-400 font-bold">${trend.revenue.toFixed(2)}</span></p>
-                              <p>Profit: <span className="text-emerald-400 font-bold">${trend.profit.toFixed(2)}</span></p>
+                              <p>Revenue: <span className="text-indigo-400 font-bold">₦{trend.revenue.toFixed(2)}</span></p>
+                              <p>Profit: <span className="text-emerald-400 font-bold">₦{trend.profit.toFixed(2)}</span></p>
                               <p className="text-[9px] text-slate-550">{trend.salesCount} checkout(s)</p>
                             </div>
 
@@ -1734,12 +1734,12 @@ export default function OwnerDashboard() {
                                 </span>
                               </div>
                               <div className="flex justify-between text-xs text-slate-400">
-                                <span>Revenue: <strong className="text-indigo-400">${bm.revenue.toFixed(2)}</strong></span>
-                                <span>Profit: <strong className="text-emerald-450">${bm.profit.toFixed(2)}</strong></span>
+                                <span>Revenue: <strong className="text-indigo-400">₦{bm.revenue.toFixed(2)}</strong></span>
+                                <span>Profit: <strong className="text-emerald-450">₦{bm.profit.toFixed(2)}</strong></span>
                               </div>
                               <div className="w-full bg-slate-950 rounded-full h-1.5 border border-slate-900">
                                 <div 
-                                  className="bg-gradient-to-r from-indigo-500 to-purple-650 h-full rounded-full" 
+                                  className="bg-gradient-to-r from-primary to-accent h-full rounded-full" 
                                   style={{ width: `${Math.max(3, pct)}%` }}
                                 ></div>
                               </div>
@@ -1778,8 +1778,8 @@ export default function OwnerDashboard() {
                               <tr key={br.branchId} className="hover:bg-slate-900/10 transition-colors">
                                 <td className="py-3 pr-4 font-bold text-slate-200">{br.branchName}</td>
                                 <td className="py-3 px-4 text-right">{br.salesCount}</td>
-                                <td className="py-3 px-4 text-right text-indigo-400 font-bold">${br.revenue.toFixed(2)}</td>
-                                <td className="py-3 px-4 text-right text-emerald-450 font-bold">${br.profit.toFixed(2)}</td>
+                                <td className="py-3 px-4 text-right text-indigo-400 font-bold">₦{br.revenue.toFixed(2)}</td>
+                                <td className="py-3 px-4 text-right text-emerald-450 font-bold">₦{br.profit.toFixed(2)}</td>
                                 <td className="py-3 pl-4 text-right font-mono">{br.staffCount} staff</td>
                               </tr>
                             ))}
@@ -1812,7 +1812,7 @@ export default function OwnerDashboard() {
                             <div className="text-right text-xs">
                               <p className="font-bold text-slate-300">{tp.quantitySold} sold</p>
                               <p className="text-[10px] text-slate-450">
-                                Rev: <strong className="text-indigo-400">${tp.revenue.toFixed(2)}</strong> | Prof: <strong className="text-emerald-400">${tp.profit.toFixed(2)}</strong>
+                                Rev: <strong className="text-indigo-400">₦{tp.revenue.toFixed(2)}</strong> | Prof: <strong className="text-emerald-400">₦{tp.profit.toFixed(2)}</strong>
                               </p>
                             </div>
                           </div>
@@ -1839,7 +1839,7 @@ export default function OwnerDashboard() {
                               <p className="text-[10px] text-slate-505">Branch: {tc.branchName}</p>
                             </div>
                             <div className="text-right text-xs">
-                              <p className="font-bold text-indigo-400">${tc.revenue.toFixed(2)}</p>
+                              <p className="font-bold text-indigo-400">₦{tc.revenue.toFixed(2)}</p>
                               <p className="text-[10px] text-slate-505">{tc.salesCount} sales</p>
                             </div>
                           </div>
@@ -2355,7 +2355,7 @@ export default function OwnerDashboard() {
                     setCouponErrorForm("");
                     setShowAddCouponModal(true);
                   }}
-                  className="px-4 py-2 rounded-lg bg-purple-650 hover:bg-purple-750 text-white font-semibold text-xs transition-colors shadow-md shadow-purple-600/20"
+                  className="px-4 py-2 rounded-lg bg-primary hover:bg-primary-hover text-white font-semibold text-xs transition-colors shadow-md shadow-primary/20"
                 >
                   + Create Coupon Code
                 </button>
@@ -2388,10 +2388,10 @@ export default function OwnerDashboard() {
                         <tr key={c.id} className="hover:bg-slate-900/5">
                           <td className="py-3 pr-4 font-mono font-bold text-indigo-400">{c.code}</td>
                           <td className="py-3 px-4 font-medium text-slate-200">
-                            {c.type === "Percentage" ? `${c.value}%` : `$${c.value.toFixed(2)}`}
+                            {c.type === "Percentage" ? `${c.value}%` : `₦${c.value.toFixed(2)}`}
                           </td>
                           <td className="py-3 px-4">
-                            {c.minCartAmount ? `$${c.minCartAmount.toFixed(2)}` : "None"}
+                            {c.minCartAmount ? `₦${c.minCartAmount.toFixed(2)}` : "None"}
                           </td>
                           <td className="py-3 px-4">
                             {c.usageCount} / {c.usageLimit !== null ? c.usageLimit : "∞"}
@@ -2461,11 +2461,11 @@ export default function OwnerDashboard() {
                             </span>
                           </td>
                           <td className="py-3 px-4 font-medium text-slate-200">
-                            {d.type === "Percentage" ? `${d.value}%` : `$${d.value.toFixed(2)}`}
+                            {d.type === "Percentage" ? `${d.value}%` : `₦${d.value.toFixed(2)}`}
                           </td>
                           <td className="py-3 px-4">
                             {d.target === "Cart" ? (
-                              d.minCartAmount ? `Min Spend: $${d.minCartAmount.toFixed(2)}` : "No Min Spend"
+                              d.minCartAmount ? `Min Spend: ₦${d.minCartAmount.toFixed(2)}` : "No Min Spend"
                             ) : (
                               products.find(p => p.id === d.productId)?.name || d.productId || "Product"
                             )}
@@ -2708,7 +2708,7 @@ export default function OwnerDashboard() {
 
                   <button
                     type="submit"
-                    className="w-full py-3 bg-gradient-to-r from-indigo-500 to-purple-650 hover:from-indigo-600 hover:to-purple-750 text-white font-bold text-xs rounded-xl transition-all shadow-md shadow-indigo-650/15"
+                    className="w-full py-3 bg-gradient-to-r from-primary to-accent hover:from-primary-hover hover:to-accent/90 text-white font-bold text-xs rounded-xl transition-all shadow-md shadow-primary/15"
                   >
                     Save Configuration
                   </button>
@@ -2970,7 +2970,7 @@ export default function OwnerDashboard() {
                         <h4 className="text-2xl font-black text-slate-100">{billingStatus.subscriptionTier} Edition</h4>
                         <p className="text-xs text-slate-400">
                           {billingStatus.subscriptionPrice > 0 
-                            ? `$${billingStatus.subscriptionPrice.toLocaleString()}/period`
+                            ? `₦${billingStatus.subscriptionPrice.toLocaleString()}/period`
                             : "Free / Trial"}
                           {billingStatus.subscriptionExpiresAt && (
                             <span className="text-slate-500">
@@ -3402,7 +3402,7 @@ export default function OwnerDashboard() {
               </div>
               <div className="flex space-x-3 pt-4 border-t border-slate-850">
                 <button type="button" onClick={() => setShowAddBranchModal(false)} className="flex-1 py-2.5 bg-slate-800 text-slate-350 text-xs font-bold rounded-lg">Cancel</button>
-                <button type="submit" disabled={branchSubmitting} className="flex-1 py-2.5 bg-purple-650 text-white text-xs font-bold rounded-lg">Create Branch</button>
+                <button type="submit" disabled={branchSubmitting} className="flex-1 py-2.5 bg-primary hover:bg-primary-hover text-white text-xs font-bold rounded-lg transition-colors">Create Branch</button>
               </div>
             </form>
           </div>
@@ -4231,7 +4231,7 @@ export default function OwnerDashboard() {
           <div className="w-full max-w-sm p-6 bg-white text-slate-900 border border-slate-200 rounded-2xl shadow-2xl flex flex-col font-mono text-xs">
             {/* Store details */}
             <div className="text-center space-y-1 pb-4 border-b border-dashed border-slate-300">
-              <h3 className="text-sm font-bold tracking-wider">VENDORA POS PRO</h3>
+              <h3 className="text-sm font-bold tracking-wider">VENDORA INVENTORY MANAGEMENT SYSTEM</h3>
               <p className="text-[10px] text-slate-500">{selectedSale.branchName}</p>
               <p className="text-[9px] text-slate-450">Date: {new Date(selectedSale.createdAt).toLocaleString()}</p>
               <p className="text-[9px] text-slate-450">Receipt ID: {selectedSale.id.substring(0, 8).toUpperCase()}</p>
@@ -4563,7 +4563,7 @@ export default function OwnerDashboard() {
 
               <div className="flex space-x-3 pt-4 border-t border-slate-850">
                 <button type="button" onClick={() => setShowAddCouponModal(false)} className="flex-1 py-2.5 bg-slate-800 text-slate-350 text-xs font-bold rounded-lg">Cancel</button>
-                <button type="submit" disabled={couponSubmittingForm} className="flex-1 py-2.5 bg-purple-650 text-white text-xs font-bold rounded-lg">{couponSubmittingForm ? "Creating..." : "Create Coupon"}</button>
+                <button type="submit" disabled={couponSubmittingForm} className="flex-1 py-2.5 bg-primary hover:bg-primary-hover text-white text-xs font-bold rounded-lg transition-colors">{couponSubmittingForm ? "Creating..." : "Create Coupon"}</button>
               </div>
             </form>
           </div>

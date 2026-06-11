@@ -354,7 +354,7 @@ export default function Home() {
       {/* Footer Section */}
       <footer className="border-t border-border bg-card px-6 lg:px-16 py-12 flex flex-col sm:flex-row items-center justify-between gap-6 transition-colors duration-300">
         <span className="text-sm text-muted-foreground">
-          © {new Date().getFullYear()} Vendora POS Pro. All rights reserved.
+          © {new Date().getFullYear()} Vendora Inventory Management System. All rights reserved.
         </span>
         <div className="flex gap-6 text-sm text-muted-foreground">
           <a href="#" className="hover:text-foreground transition-colors">Privacy Policy</a>

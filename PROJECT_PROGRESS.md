@@ -1,6 +1,6 @@
-# Project Progress Tracker - Vendora POS Pro
+# Project Progress Tracker - Vendora Inventory Management System
 
-This document tracks the implementation progress of the **Vendora POS Pro** SaaS Platform.
+This document tracks the implementation progress of the **Vendora Inventory Management System** SaaS Platform.
 
 ## Phases Roadmap
 

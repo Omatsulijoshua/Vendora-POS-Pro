@@ -555,9 +555,9 @@ export default function CashierDashboard() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-full flex items-center justify-between">
           <div className="flex items-center space-x-3">
             <Logo size={32} />
-            <span className="font-bold text-lg flex items-center">
+            <span className="font-bold text-lg flex flex-wrap items-center gap-x-1">
               <span className="text-foreground font-black">Vendora</span>
-              <span className="text-[#10B981] font-medium ml-1">POS Pro</span>
+              <span className="text-[#10B981] font-medium ml-1">Inventory Management System</span>
             </span>
             <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
               POS Terminal
@@ -697,7 +697,7 @@ export default function CashierDashboard() {
                     </div>
                     <div className="flex items-center space-x-4">
                       <span className="font-bold text-sm text-slate-350">
-                        ${(item.price * item.quantity).toFixed(2)}
+                        ₦{(item.price * item.quantity).toFixed(2)}
                       </span>
                       <button
                         onClick={() => removeFromCart(item.id)}
@@ -763,7 +763,7 @@ export default function CashierDashboard() {
                   )}
                   {appliedCoupon && (
                     <div className="flex justify-between items-center text-[10px] text-indigo-400 bg-indigo-950/20 px-2 py-1 rounded border border-indigo-900/30">
-                      <span>Active: <strong>{appliedCoupon.code}</strong> ({appliedCoupon.type === "Percentage" ? `${appliedCoupon.value}%` : `$${appliedCoupon.value}`})</span>
+                      <span>Active: <strong>{appliedCoupon.code}</strong> ({appliedCoupon.type === "Percentage" ? `${appliedCoupon.value}%` : `₦${appliedCoupon.value}`})</span>
                       <button
                         type="button"
                         onClick={() => {
@@ -782,7 +782,7 @@ export default function CashierDashboard() {
                 {/* Cashier limit warning */}
                 {user?.role === "Cashier" && (discountAmount > 50 || (subtotal > 0 && discountAmount / subtotal > 0.15)) && (
                   <div className="p-2 bg-red-950/40 border border-red-900/50 rounded text-[10px] text-red-400 font-bold">
-                    ⚠️ Limit Exceeded: Cashiers cannot apply discounts &gt; 15% (${(subtotal * 0.15).toFixed(2)}) or ₦50,000.00.
+                    ⚠️ Limit Exceeded: Cashiers cannot apply discounts &gt; 15% (₦{(subtotal * 0.15).toFixed(2)}) or ₦50,000.00.
                   </div>
                 )}
               </div>
@@ -809,7 +809,7 @@ export default function CashierDashboard() {
               <button
                 onClick={handleCheckoutInit}
                 disabled={cart.length === 0 || (user?.role === "Cashier" && (discountAmount > 50 || (subtotal > 0 && discountAmount / subtotal > 0.15)))}
-                className="w-full mt-2 py-3 bg-gradient-to-r from-indigo-500 to-purple-650 hover:from-indigo-600 hover:to-purple-750 disabled:opacity-50 disabled:pointer-events-none text-white font-bold rounded-xl shadow-lg shadow-indigo-500/10 active:scale-[0.98] transition-all"
+                className="w-full mt-2 py-3 bg-gradient-to-r from-primary to-accent hover:from-primary-hover hover:to-accent/90 disabled:opacity-50 disabled:pointer-events-none text-white font-bold rounded-xl shadow-lg shadow-primary/10 active:scale-[0.98] transition-all"
               >
                 Collect Payment
               </button>
@@ -965,7 +965,7 @@ export default function CashierDashboard() {
                             ₦{trend.amount.toFixed(2)} ({trend.count} sales)
                           </div>
                           <div 
-                            className="w-10 sm:w-14 bg-gradient-to-t from-indigo-600 to-purple-650 rounded-t group-hover:from-indigo-550 group-hover:to-purple-550 transition-all cursor-pointer shadow-lg shadow-indigo-500/10"
+                            className="w-10 sm:w-14 bg-gradient-to-t from-primary to-accent rounded-t group-hover:from-primary-hover group-hover:to-accent/90 transition-all cursor-pointer shadow-lg shadow-primary/10"
                             style={{ height: `${Math.max(6, heightPct)}%` }}
                           ></div>
                           <span className="text-[9px] text-slate-550 mt-2 font-mono font-semibold">
@@ -998,7 +998,7 @@ export default function CashierDashboard() {
                             </div>
                             <div className="w-full bg-slate-950 rounded-full h-1.5 border border-slate-850">
                               <div 
-                                className="bg-gradient-to-r from-indigo-500 to-purple-600 h-full rounded-full" 
+                                className="bg-gradient-to-r from-primary to-accent h-full rounded-full" 
                                 style={{ width: `${Math.min(100, (tp.quantitySold / Math.max(1, stats.topProducts[0]?.quantitySold)) * 100)}%` }}
                               ></div>
                             </div>
@@ -1213,7 +1213,7 @@ export default function CashierDashboard() {
                         ) : remaining > 0 ? (
                           <span className="text-yellow-450 font-semibold">Remaining: <span className="font-bold">₦{remaining.toFixed(2)}</span></span>
                         ) : (
-                          <span className="text-red-400 font-semibold">Overallocated: <span className="font-bold">${Math.abs(remaining).toFixed(2)}</span></span>
+                          <span className="text-red-400 font-semibold">Overallocated: <span className="font-bold">₦{Math.abs(remaining).toFixed(2)}</span></span>
                         )}
                       </div>
                     );
@@ -1271,7 +1271,7 @@ export default function CashierDashboard() {
                       ) : (
                         <div className="h-10 w-10 bg-slate-200 rounded flex items-center justify-center font-bold text-slate-600 mb-2">Logo</div>
                       )}
-                      <h2 className="text-base font-black tracking-tight">{receiptSetting?.businessName || "VENDORA POS PRO"}</h2>
+                      <h2 className="text-base font-black tracking-tight">{receiptSetting?.businessName || "VENDORA INVENTORY MANAGEMENT SYSTEM"}</h2>
                       {receiptSetting?.showBranchDetails && (
                         <div className="text-[10px] text-slate-500 mt-1 leading-relaxed">
                           <p className="font-semibold text-slate-700">{completedSale.branchName}</p>
@@ -1302,7 +1302,7 @@ export default function CashierDashboard() {
                           const parsed = JSON.parse(completedSale.paymentDetails);
                           return (
                             <p className="text-[10px] text-slate-500">
-                              (Cash: ${parsed.cash.toFixed(2)} | Transfer: ${parsed.transfer.toFixed(2)} | Card: ${parsed.pos.toFixed(2)})
+                              (Cash: ₦{parsed.cash.toFixed(2)} | Transfer: ₦{parsed.transfer.toFixed(2)} | Card: ₦{parsed.pos.toFixed(2)})
                             </p>
                           );
                         } catch (e) { return null; }
@@ -1394,7 +1394,7 @@ export default function CashierDashboard() {
                         <img src={receiptSetting.logoUrl} alt="Logo" className="max-h-10 max-w-[120px] object-contain" />
                       </div>
                     )}
-                    <h3 className="text-xs font-black tracking-wider">{receiptSetting?.businessName || "VENDORA POS PRO"}</h3>
+                    <h3 className="text-xs font-black tracking-wider">{receiptSetting?.businessName || "VENDORA INVENTORY MANAGEMENT SYSTEM"}</h3>
                     {receiptSetting?.showBranchDetails && (
                       <div className="text-[10px] text-slate-500">
                         <p className="font-bold">{completedSale.branchName}</p>
@@ -1466,9 +1466,9 @@ export default function CashierDashboard() {
                           const parsed = JSON.parse(completedSale.paymentDetails);
                           return (
                             <div className="pl-2 border-l space-y-0.5 mt-1 font-bold">
-                              {parsed.cash > 0 && <div className="flex justify-between"><span>• Cash:</span><span>${parsed.cash.toFixed(2)}</span></div>}
-                              {parsed.transfer > 0 && <div className="flex justify-between"><span>• Transfer:</span><span>${parsed.transfer.toFixed(2)}</span></div>}
-                              {parsed.pos > 0 && <div className="flex justify-between"><span>• Card:</span><span>${parsed.pos.toFixed(2)}</span></div>}
+                              {parsed.cash > 0 && <div className="flex justify-between"><span>• Cash:</span><span>₦{parsed.cash.toFixed(2)}</span></div>}
+                              {parsed.transfer > 0 && <div className="flex justify-between"><span>• Transfer:</span><span>₦{parsed.transfer.toFixed(2)}</span></div>}
+                              {parsed.pos > 0 && <div className="flex justify-between"><span>• Card:</span><span>₦{parsed.pos.toFixed(2)}</span></div>}
                             </div>
                           );
                         } catch (e) { return null; }
@@ -1557,7 +1557,7 @@ export default function CashierDashboard() {
                   {receiptSetting?.showLogo && receiptSetting?.logoUrl && (
                     <img src={receiptSetting.logoUrl} alt="Logo" className="max-h-16 max-w-[200px] mb-3 object-contain" />
                   )}
-                  <h1 className="text-xl font-black tracking-tight">{receiptSetting?.businessName || "VENDORA POS PRO"}</h1>
+                  <h1 className="text-xl font-black tracking-tight">{receiptSetting?.businessName || "VENDORA INVENTORY MANAGEMENT SYSTEM"}</h1>
                   {receiptSetting?.showBranchDetails && (
                     <div className="text-[11px] text-slate-500 mt-2 leading-relaxed">
                       <p className="font-bold text-slate-700">{completedSale.branchName}</p>
@@ -1589,9 +1589,9 @@ export default function CashierDashboard() {
                         const parsed = JSON.parse(completedSale.paymentDetails);
                         return (
                           <div className="text-xs text-slate-500 space-y-0.5 mt-1">
-                            {parsed.cash > 0 && <p>Cash: ${parsed.cash.toFixed(2)}</p>}
-                            {parsed.transfer > 0 && <p>Transfer: ${parsed.transfer.toFixed(2)}</p>}
-                            {parsed.pos > 0 && <p>Card POS: ${parsed.pos.toFixed(2)}</p>}
+                            {parsed.cash > 0 && <p>Cash: ₦{parsed.cash.toFixed(2)}</p>}
+                            {parsed.transfer > 0 && <p>Transfer: ₦{parsed.transfer.toFixed(2)}</p>}
+                            {parsed.pos > 0 && <p>Card POS: ₦{parsed.pos.toFixed(2)}</p>}
                           </div>
                         );
                       } catch (e) { return null; }
@@ -1684,7 +1684,7 @@ export default function CashierDashboard() {
                     <img src={receiptSetting.logoUrl} alt="Logo" className="max-h-12 max-w-[150px] object-contain" />
                   </div>
                 )}
-                <h3 className="text-xs font-black tracking-widest">{receiptSetting?.businessName || "VENDORA POS PRO"}</h3>
+                <h3 className="text-xs font-black tracking-widest">{receiptSetting?.businessName || "VENDORA INVENTORY MANAGEMENT SYSTEM"}</h3>
                 {receiptSetting?.showBranchDetails && (
                   <div className="text-[10px] text-slate-600">
                     <p className="font-bold">{completedSale.branchName}</p>
@@ -1756,9 +1756,9 @@ export default function CashierDashboard() {
                       const parsed = JSON.parse(completedSale.paymentDetails);
                       return (
                         <div className="pl-2 border-l border-slate-300 space-y-0.5 mt-1">
-                          {parsed.cash > 0 && <div className="flex justify-between"><span>• Cash:</span><span>${parsed.cash.toFixed(2)}</span></div>}
-                          {parsed.transfer > 0 && <div className="flex justify-between"><span>• Transfer:</span><span>${parsed.transfer.toFixed(2)}</span></div>}
-                          {parsed.pos > 0 && <div className="flex justify-between"><span>• Card POS:</span><span>${parsed.pos.toFixed(2)}</span></div>}
+                          {parsed.cash > 0 && <div className="flex justify-between"><span>• Cash:</span><span>₦{parsed.cash.toFixed(2)}</span></div>}
+                          {parsed.transfer > 0 && <div className="flex justify-between"><span>• Transfer:</span><span>₦{parsed.transfer.toFixed(2)}</span></div>}
+                          {parsed.pos > 0 && <div className="flex justify-between"><span>• Card POS:</span><span>₦{parsed.pos.toFixed(2)}</span></div>}
                         </div>
                       );
                     } catch (e) { return null; }

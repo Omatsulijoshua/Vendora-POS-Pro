@@ -115,7 +115,7 @@ export default function SuperAdminDashboard() {
     setLoading(true);
     await Promise.all([fetchStats(), fetchBusinesses(), fetchAuditLogs()]);
     setLoading(false);
-  }, [fetchStats(), fetchBusinesses(), fetchAuditLogs()]);
+  }, [fetchStats, fetchBusinesses, fetchAuditLogs]);
 
   useEffect(() => {
     if (token) {
@@ -261,9 +261,9 @@ export default function SuperAdminDashboard() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <div className="flex items-center space-x-3">
             <Logo size={32} />
-            <span className="font-bold text-lg flex items-center">
+            <span className="font-bold text-lg flex flex-wrap items-center gap-x-1">
               <span className="text-foreground font-black">Vendora</span>
-              <span className="text-[#10B981] font-medium ml-1">POS Pro</span>
+              <span className="text-[#10B981] font-medium ml-1">Inventory Management System</span>
             </span>
             <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
               Platform Admin
@@ -348,9 +348,9 @@ export default function SuperAdminDashboard() {
 
           <div className="border border-slate-900 bg-slate-900/20 backdrop-blur-md rounded-2xl p-5 hover:border-slate-800 transition-all">
             <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Annual SaaS Revenue</span>
-            <p className="text-4xl font-extrabold mt-3 text-indigo-400">${stats?.totalSaaSRevenue?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) ?? "0.00"}</p>
+            <p className="text-4xl font-extrabold mt-3 text-indigo-400">₦{stats?.totalSaaSRevenue?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) ?? "0.00"}</p>
             <p className="text-xs text-slate-500 mt-2">
-              Est. Monthly: ${stats?.monthlySaaSRevenue?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) ?? "0.00"}
+              Est. Monthly: ₦{stats?.monthlySaaSRevenue?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) ?? "0.00"}
             </p>
           </div>
 

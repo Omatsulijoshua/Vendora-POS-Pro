@@ -48,12 +48,16 @@
   --radius-4xl: calc(var(--radius) * 2.6);
 
   /* Overrides for default Tailwind colors to match theme */
+  --color-primary-hover: var(--primary-hover);
   --color-indigo-650: var(--primary);
   --color-indigo-600: var(--primary);
   --color-indigo-500: var(--primary);
   --color-indigo-400: var(--accent);
+  --color-purple-650: var(--primary);
+  --color-purple-655: var(--primary);
   --color-purple-600: var(--primary);
   --color-purple-700: var(--primary-hover);
+  --color-purple-750: var(--primary-hover);
   --color-purple-500: var(--accent);
   --color-violet-400: var(--accent);
   

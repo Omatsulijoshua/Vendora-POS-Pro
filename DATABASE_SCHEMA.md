@@ -1,6 +1,6 @@
-# Database Schema - Vendora POS Pro
+# Database Schema - Vendora Inventory Management System
 
-This document maps out the database tables, relationships, and configurations for **Vendora POS Pro**.
+This document maps out the database tables, relationships, and configurations for **Vendora Inventory Management System**.
 
 ---
 

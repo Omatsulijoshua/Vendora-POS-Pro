@@ -181,8 +181,8 @@ export default function VerifyReceiptPage() {
 
         {/* Certified Footer */}
         <div className="mt-8 text-center text-[10px] text-slate-600">
-          <p className="font-medium tracking-wide">VENDORA POS PRO SECURE RECEIPT VERIFIER</p>
-          <p className="mt-0.5">© 2026 Vendora POS. All rights reserved.</p>
+          <p className="font-medium tracking-wide">VENDORA INVENTORY MANAGEMENT SYSTEM SECURE RECEIPT VERIFIER</p>
+          <p className="mt-0.5">© 2026 Vendora Inventory Management System. All rights reserved.</p>
         </div>
       </div>
     </div>

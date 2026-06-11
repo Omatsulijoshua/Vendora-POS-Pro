@@ -674,7 +674,7 @@ export default function ManagerDashboard() {
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const [receiptSaveSuccess, setReceiptSaveSuccess] = useState("");
   const [receiptSaveError, setReceiptSaveError] = useState("");
-  const [receiptConfigName, setReceiptConfigName] = useState("Vendora POS Pro");
+  const [receiptConfigName, setReceiptConfigName] = useState("Vendora Inventory Management System");
 
   const fetchReceiptSettingsForManager = async () => {
     if (!token || !user?.branchId) return;
@@ -693,7 +693,7 @@ export default function ManagerDashboard() {
         setReceiptLayout(data.receiptLayout || "Thermal");
         setReceiptCustomBrandingColor(data.customBrandingColor || "#6366F1");
         setReceiptLogoUrl(data.logoUrl);
-        setReceiptConfigName(data.businessName || "Vendora POS Pro");
+        setReceiptConfigName(data.businessName || "Vendora Inventory Management System");
       }
     } catch (err) {
       console.error(err);
@@ -794,9 +794,9 @@ export default function ManagerDashboard() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <div className="flex items-center space-x-3">
             <Logo size={32} />
-            <span className="font-bold text-lg flex items-center">
+            <span className="font-bold text-lg flex flex-wrap items-center gap-x-1">
               <span className="text-foreground font-black">Vendora</span>
-              <span className="text-[#10B981] font-medium ml-1">POS Pro</span>
+              <span className="text-[#10B981] font-medium ml-1">Inventory Management System</span>
             </span>
             <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-450 border border-emerald-500/20">
               Manager Panel
@@ -902,7 +902,7 @@ export default function ManagerDashboard() {
             {/* Stats */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               {[
-                { label: "Branch Daily Sales", value: `$${sales.reduce((acc, s) => acc + s.total, 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, desc: "Total branch checkout value" },
+                { label: "Branch Daily Sales", value: `₦${sales.reduce((acc, s) => acc + s.total, 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, desc: "Total branch checkout value" },
                 { label: "Total Transactions", value: sales.length.toString(), desc: "Completed receipts" },
                 { label: "Low Stock Alerts", value: `${lowStockItems.length} Items`, desc: "Requires reorder" },
                 { label: "Branch Total Inventory", value: `${totalStockCount} units`, desc: "Total stock pieces" },
@@ -1250,7 +1250,7 @@ export default function ManagerDashboard() {
                     setCouponErrorForm("");
                     setShowAddCouponModal(true);
                   }}
-                  className="px-4 py-2 rounded-lg bg-purple-650 hover:bg-purple-750 text-white font-semibold text-xs transition-colors shadow-md shadow-purple-600/20"
+                  className="px-4 py-2 rounded-lg bg-primary hover:bg-primary-hover text-white font-semibold text-xs transition-colors shadow-md shadow-primary/20"
                 >
                   + Create Coupon Code
                 </button>
@@ -1283,10 +1283,10 @@ export default function ManagerDashboard() {
                         <tr key={c.id} className="hover:bg-slate-900/5">
                           <td className="py-3 pr-4 font-mono font-bold text-indigo-400">{c.code}</td>
                           <td className="py-3 px-4 font-medium text-slate-200">
-                            {c.type === "Percentage" ? `${c.value}%` : `$${c.value.toFixed(2)}`}
+                            {c.type === "Percentage" ? `${c.value}%` : `₦${c.value.toFixed(2)}`}
                           </td>
                           <td className="py-3 px-4">
-                            {c.minCartAmount ? `$${c.minCartAmount.toFixed(2)}` : "None"}
+                            {c.minCartAmount ? `₦${c.minCartAmount.toFixed(2)}` : "None"}
                           </td>
                           <td className="py-3 px-4">
                             {c.usageCount} / {c.usageLimit !== null ? c.usageLimit : "∞"}
@@ -1356,11 +1356,11 @@ export default function ManagerDashboard() {
                             </span>
                           </td>
                           <td className="py-3 px-4 font-medium text-slate-200">
-                            {d.type === "Percentage" ? `${d.value}%` : `$${d.value.toFixed(2)}`}
+                            {d.type === "Percentage" ? `${d.value}%` : `₦${d.value.toFixed(2)}`}
                           </td>
                           <td className="py-3 px-4">
                             {d.target === "Cart" ? (
-                              d.minCartAmount ? `Min Spend: $${d.minCartAmount.toFixed(2)}` : "No Min Spend"
+                              d.minCartAmount ? `Min Spend: ₦${d.minCartAmount.toFixed(2)}` : "No Min Spend"
                             ) : (
                               products.find(p => p.id === d.productId)?.name || d.productId || "Product"
                             )}
@@ -1593,7 +1593,7 @@ export default function ManagerDashboard() {
 
                   <button
                     type="submit"
-                    className="w-full py-3 bg-gradient-to-r from-indigo-500 to-purple-655 hover:from-indigo-600 hover:to-purple-750 text-white font-bold text-xs rounded-xl transition-all shadow-md shadow-indigo-650/15"
+                    className="w-full py-3 bg-gradient-to-r from-primary to-accent hover:from-primary-hover hover:to-accent/90 text-white font-bold text-xs rounded-xl transition-all shadow-md shadow-primary/15"
                   >
                     Save Configuration
                   </button>
@@ -2141,7 +2141,7 @@ export default function ManagerDashboard() {
           <div className="w-full max-w-sm p-6 bg-white text-slate-900 border border-slate-200 rounded-2xl shadow-2xl flex flex-col font-mono text-xs">
             {/* Store details */}
             <div className="text-center space-y-1 pb-4 border-b border-dashed border-slate-300">
-              <h3 className="text-sm font-bold tracking-wider">VENDORA POS PRO</h3>
+              <h3 className="text-sm font-bold tracking-wider">VENDORA INVENTORY MANAGEMENT SYSTEM</h3>
               <p className="text-[10px] text-slate-500">{selectedSale.branchName}</p>
               <p className="text-[9px] text-slate-455">Date: {new Date(selectedSale.createdAt).toLocaleString()}</p>
               <p className="text-[9px] text-slate-455">Receipt ID: {selectedSale.id.substring(0, 8).toUpperCase()}</p>
@@ -2473,7 +2473,7 @@ export default function ManagerDashboard() {
 
               <div className="flex space-x-3 pt-4 border-t border-slate-850">
                 <button type="button" onClick={() => setShowAddCouponModal(false)} className="flex-1 py-2.5 bg-slate-800 text-slate-350 text-xs font-bold rounded-lg">Cancel</button>
-                <button type="submit" disabled={couponSubmittingForm} className="flex-1 py-2.5 bg-purple-650 text-white text-xs font-bold rounded-lg">{couponSubmittingForm ? "Creating..." : "Create Coupon"}</button>
+                <button type="submit" disabled={couponSubmittingForm} className="flex-1 py-2.5 bg-primary hover:bg-primary-hover text-white text-xs font-bold rounded-lg transition-colors">{couponSubmittingForm ? "Creating..." : "Create Coupon"}</button>
               </div>
             </form>
           </div>

@@ -1,8 +1,8 @@
-# Architecture Documentation - Vendora POS Pro
-This document describes the architectural layout, patterns, and structure of the Vendora POS Pro SaaS Platform.
+# Architecture Documentation - Vendora Inventory Management System
+This document describes the architectural layout, patterns, and structure of the Vendora Inventory Management System SaaS Platform.
 
 1. Hierarchical Multi-Tenant Structure
-Vendora POS Pro uses a hierarchical multi-tenant structure:
+Vendora Inventory Management System uses a hierarchical multi-tenant structure:
 
 
 SuperAdmin (Platform Owner)

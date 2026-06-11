@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Vendora POS Pro - SaaS Platform",
+  title: "Vendora Inventory Management System - SaaS Platform",
   description: "Modern Point of Sale, Inventory, and Multi-Branch Management SaaS Platform",
 };
 

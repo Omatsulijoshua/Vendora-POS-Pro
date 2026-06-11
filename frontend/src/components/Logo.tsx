@@ -56,7 +56,7 @@ export function LogoWithText({ className = "", size = 38, showTagline = true }: 
       <div className="flex flex-col">
         <span className="text-lg font-bold tracking-tight text-foreground flex items-center leading-none">
           <span className="text-foreground font-black">Vendora</span>
-          <span className="text-[#10B981] font-medium ml-1">POS Pro</span>
+          <span className="text-[#10B981] font-medium ml-1">Inventory Management System</span>
         </span>
         {showTagline && (
           <span className="text-[8px] font-bold text-muted-foreground tracking-wider uppercase mt-1">
