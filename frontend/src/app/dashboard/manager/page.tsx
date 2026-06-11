@@ -945,7 +945,7 @@ export default function ManagerDashboard() {
         {activeTab === "overview" && (
           <div className="space-y-8 animate-in fade-in duration-300">
             {/* Stats */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 scroll-reveal">
               {[
                 { label: "Branch Daily Sales", value: `₦${sales.reduce((acc, s) => acc + s.total, 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, desc: "Total branch checkout value" },
                 { label: "Total Transactions", value: sales.length.toString(), desc: "Completed receipts" },
@@ -960,7 +960,7 @@ export default function ManagerDashboard() {
               ))}
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 scroll-reveal">
               {/* Inventory warning card */}
               <div className="lg:col-span-2 border border-slate-900 bg-slate-900/20 rounded-xl p-6 space-y-4">
                 <h3 className="font-bold text-lg text-slate-100">Low Stock Inventory Alerts</h3>

@@ -1788,7 +1788,7 @@ export default function OwnerDashboard() {
             ) : (
               <>
                 {/* Stats Grid */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 scroll-reveal">
                   {[
                     { label: "Total Revenue", value: `₦${stats.totalRevenue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, sub: activeBranch?.name ? `Branch: ${activeBranch.name}` : "Consolidated revenue" },
                     { label: "Gross Profit", value: `₦${stats.totalProfit.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, sub: `Margin: ${stats.profitMargin.toFixed(1)}%`, highlight: true },
@@ -1804,7 +1804,7 @@ export default function OwnerDashboard() {
                 </div>
 
                 {/* 7-Day Performance Trend Chart */}
-                <div className="border border-slate-900 bg-slate-900/20 rounded-xl p-6 flex flex-col min-h-[320px]">
+                <div className="border border-slate-900 bg-slate-900/20 rounded-xl p-6 flex flex-col min-h-[320px] scroll-reveal">
                   <div>
                     <h3 className="font-bold text-lg text-slate-100">Consolidated Daily Trend</h3>
                     <p className="text-xs text-slate-500 mb-6">Daily revenue and gross profit over the last 7 days</p>
@@ -1854,7 +1854,7 @@ export default function OwnerDashboard() {
                 </div>
 
                 {/* Comparative Panels (Cross-Business vs Branch Comparison) */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 scroll-reveal">
                   {/* Cross-Business Metrics */}
                   <div className="border border-slate-900 bg-slate-900/20 rounded-xl p-6 space-y-6">
                     <div>

@@ -455,7 +455,7 @@ export default function SuperAdminDashboard() {
               </div>
 
               {/* Stats Grid */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 scroll-reveal">
                 <div className="border border-slate-900 bg-slate-900/20 backdrop-blur-md rounded-2xl p-5 hover:border-slate-800 transition-all">
                   <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Total Businesses</span>
                   <p className="text-4xl font-extrabold mt-3 text-slate-100">{stats?.totalBusinesses ?? 0}</p>
@@ -859,7 +859,7 @@ export default function SuperAdminDashboard() {
               </div>
 
               {/* Financial Stats Overview */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 scroll-reveal">
                 <div className="border border-slate-900 bg-slate-900/20 backdrop-blur-md rounded-2xl p-5 hover:border-slate-800 transition-all">
                   <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Active Subscriptions</span>
                   <p className="text-4xl font-extrabold mt-3 text-slate-100">{stats?.activeSubscriptions ?? 0}</p>

@@ -89,7 +89,7 @@
   --slate-100: #0f172a;
 
   /* Semantic palette */
-  --background: #ffffff; /* White background */
+  --background: #f8fafc; /* Beautiful soft slate-50 background instead of plain white */
   --foreground: #0f172a; /* Slate 900 text */
   --card: #ffffff; /* White card */
   --card-foreground: #0f172a;
@@ -191,9 +191,125 @@
     @apply border-border outline-ring/50;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground transition-colors duration-300;
+    background-image: radial-gradient(at 0% 0%, rgba(30, 58, 138, 0.03) 0px, transparent 50%), 
+                      radial-gradient(at 100% 100%, rgba(16, 185, 129, 0.02) 0px, transparent 50%);
+    background-attachment: fixed;
+  }
+  .dark body {
+    background-image: radial-gradient(at 0% 0%, rgba(30, 58, 138, 0.15) 0px, transparent 50%), 
+                      radial-gradient(at 100% 100%, rgba(16, 185, 129, 0.08) 0px, transparent 50%);
   }
   html {
-    @apply font-sans;
+    @apply font-sans scroll-smooth;
   }
+}
+
+/* ==========================================================================
+   Entrance & Scroll Reveal Animations
+   ========================================================================== */
+.scroll-reveal {
+  animation: reveal-on-load 0.8s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes reveal-on-load {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@supports (animation-timeline: view()) {
+  .scroll-reveal {
+    animation: reveal-on-scroll linear both;
+    animation-timeline: view();
+    animation-range: entry 5% cover 25%;
+  }
+}
+
+@keyframes reveal-on-scroll {
+  from {
+    opacity: 0;
+    transform: translateY(24px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* ==========================================================================
+   Premium Light Mode Component Styling Overrides
+   ========================================================================== */
+html:not(.dark) .bg-slate-900\/10,
+html:not(.dark) .bg-slate-900\/20,
+html:not(.dark) .bg-slate-900\/30,
+html:not(.dark) .bg-slate-900\/40,
+html:not(.dark) .bg-slate-950\/20,
+html:not(.dark) .bg-slate-950\/40 {
+  background-color: rgba(255, 255, 255, 0.85) !important;
+  backdrop-filter: blur(16px);
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.02), 
+              0 8px 10px -6px rgba(0, 0, 0, 0.02), 
+              inset 0 1px 0 0 rgba(255, 255, 255, 0.6) !important;
+}
+
+/* Light Mode Borders */
+html:not(.dark) .border-slate-900,
+html:not(.dark) .border-slate-850,
+html:not(.dark) .border-slate-800 {
+  border-color: rgba(226, 232, 240, 0.9) !important;
+}
+
+/* Light Mode Hover States */
+html:not(.dark) .hover\:bg-slate-900\/5:hover {
+  background-color: rgba(15, 23, 42, 0.03) !important;
+}
+html:not(.dark) .hover\:bg-slate-900\/10:hover {
+  background-color: rgba(15, 23, 42, 0.05) !important;
+}
+html:not(.dark) .hover\:bg-slate-800:hover {
+  background-color: #f1f5f9 !important;
+}
+html:not(.dark) .hover\:bg-slate-850:hover {
+  background-color: #f8fafc !important;
+}
+
+/* Input Fields and Selects in Light Mode */
+html:not(.dark) input.bg-slate-900,
+html:not(.dark) select.bg-slate-900,
+html:not(.dark) textarea.bg-slate-900 {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+  border-color: #cbd5e1 !important;
+}
+html:not(.dark) input.bg-slate-900:focus,
+html:not(.dark) select.bg-slate-900:focus {
+  border-color: var(--primary) !important;
+  box-shadow: 0 0 0 2px rgba(30, 58, 138, 0.1) !important;
+}
+
+/* Proper contrast for text slates in Light Mode */
+html:not(.dark) .text-slate-100 {
+  color: #0f172a !important;
+}
+html:not(.dark) .text-slate-200 {
+  color: #1e293b !important;
+}
+html:not(.dark) .text-slate-300 {
+  color: #334155 !important;
+}
+html:not(.dark) .text-slate-350,
+html:not(.dark) .text-slate-400 {
+  color: #475569 !important;
+}
+html:not(.dark) .text-slate-500 {
+  color: #64748b !important;
+}
+html:not(.dark) .text-slate-550 {
+  color: #4b5563 !important;
 }

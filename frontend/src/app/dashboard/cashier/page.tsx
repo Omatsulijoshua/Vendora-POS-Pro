@@ -668,7 +668,7 @@ export default function CashierDashboard() {
       {activeTab === "register" ? (
         <div className="flex-1 flex overflow-hidden max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 gap-6 relative">
           {/* Left Hand Side: Receipt / Register (40% width) */}
-          <div className={`${mobileActiveTab === "cart" ? "flex" : "hidden"} lg:flex w-full lg:w-[400px] border border-slate-800 bg-slate-900/20 rounded-2xl flex-col overflow-hidden shrink-0`}>
+          <div className={`${mobileActiveTab === "cart" ? "flex" : "hidden"} lg:flex w-full lg:w-[400px] border border-slate-800 bg-slate-900/20 rounded-2xl flex-col overflow-hidden shrink-0 scroll-reveal`}>
             <div className="p-4 border-b border-slate-900 bg-slate-950/40 flex justify-between items-center shrink-0">
               <h3 className="font-bold text-slate-200">Current Receipt</h3>
               <button
@@ -827,7 +827,7 @@ export default function CashierDashboard() {
           </div>
 
           {/* Right Hand Side: Catalog Grid (60% width) */}
-          <div className={`${mobileActiveTab === "catalog" ? "flex" : "hidden"} lg:flex flex-1 flex flex-col space-y-4 overflow-hidden`}>
+          <div className={`${mobileActiveTab === "catalog" ? "flex" : "hidden"} lg:flex flex-1 flex flex-col space-y-4 overflow-hidden scroll-reveal`}>
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 shrink-0">
               <div>
                 <h3 className="font-bold text-lg text-slate-200">Product Directory</h3>
@@ -915,7 +915,7 @@ export default function CashierDashboard() {
           ) : (
             <>
               {/* Stats Summary KPIs */}
-              <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+              <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 scroll-reveal">
                 <div className="bg-slate-900/30 border border-slate-900 p-4 rounded-xl flex flex-col justify-between space-y-2">
                   <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Today's Sales</span>
                   <div>
@@ -960,7 +960,7 @@ export default function CashierDashboard() {
               {/* Charts & Top lists */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 {/* Trend Chart (2/3 width) */}
-                <div className="md:col-span-2 bg-slate-900/20 border border-slate-900 p-5 rounded-2xl flex flex-col justify-between min-h-[300px]">
+                <div className="md:col-span-2 bg-slate-900/20 border border-slate-900 p-5 rounded-2xl flex flex-col justify-between min-h-[300px] scroll-reveal">
                   <div>
                     <h3 className="font-bold text-slate-200">Personal Daily Trend</h3>
                     <p className="text-xs text-slate-500 mb-4">Past 7 days performance metrics</p>
@@ -992,7 +992,7 @@ export default function CashierDashboard() {
                 {/* Top selling & Payments (1/3 width) */}
                 <div className="space-y-6">
                   {/* Top Products */}
-                  <div className="bg-slate-900/20 border border-slate-900 p-5 rounded-2xl">
+                  <div className="bg-slate-900/20 border border-slate-900 p-5 rounded-2xl scroll-reveal">
                     <h3 className="font-bold text-slate-200 mb-1">Top Products Sold</h3>
                     <p className="text-xs text-slate-500 mb-4">Your personal highest volume catalog items</p>
                     
@@ -1046,7 +1046,7 @@ export default function CashierDashboard() {
               </div>
 
               {/* Personal Sales History Table */}
-              <div className="bg-slate-900/20 border border-slate-900 rounded-2xl overflow-hidden">
+              <div className="bg-slate-900/20 border border-slate-900 rounded-2xl overflow-hidden scroll-reveal">
                 <div className="p-5 border-b border-slate-900">
                   <h3 className="font-bold text-slate-200">Personal Sales History</h3>
                   <p className="text-xs text-slate-500">All checkout transactions processed by you</p>
