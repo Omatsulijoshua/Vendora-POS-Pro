@@ -44,11 +44,13 @@ public class ProductsController : ControllerBase
         // Fetch business settings to know the stock mode
         var business = await _context.Businesses
             .IgnoreQueryFilters()
+            .AsNoTracking()
             .FirstOrDefaultAsync(b => b.Id == tenantId.Value);
 
         if (business == null) return BadRequest("Business context not found.");
 
         var query = _context.Products
+            .AsNoTracking()
             .Include(p => p.Category)
             .Include(p => p.ProductStocks)
             .Where(p => p.IsActive);
@@ -158,11 +160,13 @@ public class ProductsController : ControllerBase
 
         var business = await _context.Businesses
             .IgnoreQueryFilters()
+            .AsNoTracking()
             .FirstOrDefaultAsync(b => b.Id == tenantId.Value);
 
         if (business == null) return BadRequest("Business context not found.");
 
         var product = await _context.Products
+            .AsNoTracking()
             .Include(p => p.Category)
             .Include(p => p.ProductStocks)
             .FirstOrDefaultAsync(p => p.Id == id);
@@ -231,11 +235,13 @@ public class ProductsController : ControllerBase
 
         var business = await _context.Businesses
             .IgnoreQueryFilters()
+            .AsNoTracking()
             .FirstOrDefaultAsync(b => b.Id == tenantId.Value);
 
         if (business == null) return BadRequest("Business context not found.");
 
         var product = await _context.Products
+            .AsNoTracking()
             .Include(p => p.Category)
             .Include(p => p.ProductStocks)
             .FirstOrDefaultAsync(p => p.Barcode != null && p.Barcode.ToLower() == barcode.ToLower());
@@ -569,13 +575,14 @@ public class ProductsController : ControllerBase
         if (!tenantId.HasValue) return BadRequest("Tenant context not found.");
 
         // Verify product exists in tenant context
-        var product = await _context.Products.FirstOrDefaultAsync(p => p.Id == id);
+        var product = await _context.Products.AsNoTracking().FirstOrDefaultAsync(p => p.Id == id);
         if (product == null) return NotFound();
 
         var activeBranchId = _tenantProvider.BranchId;
 
         var query = _context.StockAdjustmentLogs
             .IgnoreQueryFilters()
+            .AsNoTracking()
             .Include(sal => sal.AdjustedByUser)
             .Include(sal => sal.Branch)
             .Where(sal => sal.ProductId == id && sal.Product.BusinessId == tenantId.Value);

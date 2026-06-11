@@ -82,6 +82,8 @@ public class ApplicationDbContext : IdentityDbContext<User, IdentityRole<Guid>, 
                 .HasForeignKey(b => b.BusinessId)
                 .OnDelete(DeleteBehavior.Cascade);
 
+            entity.HasIndex(b => b.BusinessId);
+
             // Tenant & Branch Query Filter
             entity.HasQueryFilter(b => (!_tenantProvider.TenantId.HasValue || b.BusinessId == _tenantProvider.TenantId) && 
                                        (!_tenantProvider.BranchId.HasValue || b.Id == _tenantProvider.BranchId));
@@ -104,6 +106,9 @@ public class ApplicationDbContext : IdentityDbContext<User, IdentityRole<Guid>, 
                 .WithMany(b => b.Users)
                 .HasForeignKey(u => u.BranchId)
                 .OnDelete(DeleteBehavior.SetNull);
+
+            entity.HasIndex(u => u.BusinessId);
+            entity.HasIndex(u => u.BranchId);
 
             // Tenant & Branch Query Filter
             entity.HasQueryFilter(u => (!_tenantProvider.TenantId.HasValue || u.BusinessId == _tenantProvider.TenantId) && 
@@ -159,6 +164,8 @@ public class ApplicationDbContext : IdentityDbContext<User, IdentityRole<Guid>, 
                 .HasForeignKey(p => p.CategoryId)
                 .OnDelete(DeleteBehavior.SetNull);
 
+            entity.HasIndex(p => p.CategoryId);
+
             // Tenant Query Filter
             entity.HasQueryFilter(p => !_tenantProvider.TenantId.HasValue || p.BusinessId == _tenantProvider.TenantId);
         });
@@ -182,6 +189,7 @@ public class ApplicationDbContext : IdentityDbContext<User, IdentityRole<Guid>, 
 
             // Unique index on ProductId and BranchId (handles nullable BranchId correctly)
             entity.HasIndex(ps => new { ps.ProductId, ps.BranchId }).IsUnique();
+            entity.HasIndex(ps => ps.BranchId);
 
             // Tenant & Branch Query Filter:
             // Filters based on current tenant/business, and if a branch context is active,
@@ -215,6 +223,10 @@ public class ApplicationDbContext : IdentityDbContext<User, IdentityRole<Guid>, 
                 .WithMany()
                 .HasForeignKey(sal => sal.AdjustedByUserId)
                 .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasIndex(sal => sal.ProductId);
+            entity.HasIndex(sal => sal.BranchId);
+            entity.HasIndex(sal => sal.AdjustedByUserId);
 
             // Tenant & Branch Query Filter
             entity.HasQueryFilter(sal => 
@@ -266,6 +278,11 @@ public class ApplicationDbContext : IdentityDbContext<User, IdentityRole<Guid>, 
                 .HasForeignKey(st => st.ResolvedByUserId)
                 .OnDelete(DeleteBehavior.Restrict);
 
+            entity.HasIndex(st => st.BusinessId);
+            entity.HasIndex(st => st.ProductId);
+            entity.HasIndex(st => st.SourceBranchId);
+            entity.HasIndex(st => st.TargetBranchId);
+
             // Tenant & Branch Query Filter:
             // Filters based on current tenant/business.
             // If branch context is active, only show transfers where the branch is either source or target.
@@ -304,6 +321,11 @@ public class ApplicationDbContext : IdentityDbContext<User, IdentityRole<Guid>, 
                 .HasForeignKey(s => s.UserId)
                 .OnDelete(DeleteBehavior.Restrict);
 
+            entity.HasIndex(s => s.BusinessId);
+            entity.HasIndex(s => s.BranchId);
+            entity.HasIndex(s => s.UserId);
+            entity.HasIndex(s => s.CreatedAt);
+
             // Tenant & Branch Query Filter
             entity.HasQueryFilter(s => 
                 (!_tenantProvider.TenantId.HasValue || s.BusinessId == _tenantProvider.TenantId) &&
@@ -331,6 +353,9 @@ public class ApplicationDbContext : IdentityDbContext<User, IdentityRole<Guid>, 
                 .WithMany()
                 .HasForeignKey(si => si.ProductId)
                 .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasIndex(si => si.SaleId);
+            entity.HasIndex(si => si.ProductId);
         });
 
         // Configure Discount entity
@@ -353,6 +378,9 @@ public class ApplicationDbContext : IdentityDbContext<User, IdentityRole<Guid>, 
                 .WithMany()
                 .HasForeignKey(d => d.ProductId)
                 .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasIndex(d => d.BusinessId);
+            entity.HasIndex(d => d.ProductId);
 
             // Tenant Filter
             entity.HasQueryFilter(d => !_tenantProvider.TenantId.HasValue || d.BusinessId == _tenantProvider.TenantId);
@@ -422,6 +450,9 @@ public class ApplicationDbContext : IdentityDbContext<User, IdentityRole<Guid>, 
             entity.Property(al => al.UserEmail).IsRequired().HasMaxLength(256);
             entity.Property(al => al.IpAddress).HasMaxLength(45);
 
+            entity.HasIndex(al => al.BusinessId);
+            entity.HasIndex(al => al.CreatedAt);
+
             // Global Query Filter: isolate logs by tenant (SuperAdmin sees all, Owners see their own)
             entity.HasQueryFilter(al => !_tenantProvider.TenantId.HasValue || al.BusinessId == _tenantProvider.TenantId);
         });
@@ -445,6 +476,10 @@ public class ApplicationDbContext : IdentityDbContext<User, IdentityRole<Guid>, 
                 .WithMany()
                 .HasForeignKey(n => n.BranchId)
                 .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasIndex(n => n.BusinessId);
+            entity.HasIndex(n => n.BranchId);
+            entity.HasIndex(n => n.SentAt);
 
             // Logical multi-tenant query filter
             entity.HasQueryFilter(n => !_tenantProvider.TenantId.HasValue || n.BusinessId == _tenantProvider.TenantId);

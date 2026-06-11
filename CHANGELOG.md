@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.17.0] - 2026-06-11
+
+### Added
+- **Final System Hardening (Phase 18):**
+  - **Database Indexing**: Configured explicit PostgreSQL database indexes inside `ApplicationDbContext.cs` on logical multi-tenant foreign keys, date columns, and search columns for entities: `Branch`, `User`, `Product`, `ProductStock`, `StockAdjustmentLog`, `StockTransfer`, `Sale`, `SaleItem`, `Discount`, `AuditLog`, and `Notification`.
+  - **EF Core API Optimizations**: Injected `.AsNoTracking()` on read-only queries across controllers (`AuditLogsController`, `NotificationsController`, `SuperAdminController`, `SalesController`, and `ProductsController`) to disable entity-tracking overhead, reducing memory footprint and presentation layer latency.
+  - **Role Security Audit & Verification**: Created a PowerShell integration test suite (`verify_phase18_hardening.ps1`) validating RBAC access boundaries:
+    - Cashiers are forbidden from accessing audit logs, SuperAdmin endpoints, creating/updating/deleting products, and manual stock adjustments.
+    - Managers are forbidden from accessing SuperAdmin endpoints, and creating/updating/deleting products.
+    - Authorized roles (Owners/Managers for audit logs, Cashiers for personal stats, Managers for products catalog listing and assigned branch stock adjustments) succeed as expected.
+    - Verified that all hardened query endpoints respond successfully under 400ms.
+
 ## [0.16.0] - 2026-06-11
 
 ### Added

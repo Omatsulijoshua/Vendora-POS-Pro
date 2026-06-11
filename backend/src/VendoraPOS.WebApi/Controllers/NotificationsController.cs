@@ -45,6 +45,7 @@ public class NotificationsController : ControllerBase
         // If a branch is selected in user context (like for managers/cashiers),
         // only show global notifications (BranchId is null) or notifications matching their branch.
         var query = _context.Notifications
+            .AsNoTracking()
             .Where(n => n.BusinessId == tenantId.Value);
 
         if (activeBranchId.HasValue)

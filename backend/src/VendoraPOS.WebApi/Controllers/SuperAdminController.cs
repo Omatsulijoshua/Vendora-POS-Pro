@@ -37,7 +37,7 @@ public class SuperAdminController : ControllerBase
     [HttpGet("stats")]
     public async Task<IActionResult> GetStats()
     {
-        var businesses = await _context.Businesses.IgnoreQueryFilters().ToListAsync();
+        var businesses = await _context.Businesses.IgnoreQueryFilters().AsNoTracking().ToListAsync();
         var branchesCount = await _context.Branches.IgnoreQueryFilters().CountAsync();
         var usersCount = await _context.Users.IgnoreQueryFilters().CountAsync();
 
@@ -86,13 +86,14 @@ public class SuperAdminController : ControllerBase
     {
         var businesses = await _context.Businesses
             .IgnoreQueryFilters()
+            .AsNoTracking()
             .Include(b => b.Owner)
             .OrderByDescending(b => b.CreatedAt)
             .ToListAsync();
 
-        var branches = await _context.Branches.IgnoreQueryFilters().ToListAsync();
-        var staff = await _context.Users.IgnoreQueryFilters().ToListAsync();
-        var sales = await _context.Sales.IgnoreQueryFilters().ToListAsync();
+        var branches = await _context.Branches.IgnoreQueryFilters().AsNoTracking().ToListAsync();
+        var staff = await _context.Users.IgnoreQueryFilters().AsNoTracking().ToListAsync();
+        var sales = await _context.Sales.IgnoreQueryFilters().AsNoTracking().ToListAsync();
 
         var list = new List<SuperAdminBusinessDto>();
         foreach (var b in businesses)
@@ -222,10 +223,11 @@ public class SuperAdminController : ControllerBase
     {
         var logs = await _context.AuditLogs
             .IgnoreQueryFilters()
+            .AsNoTracking()
             .OrderByDescending(al => al.CreatedAt)
             .ToListAsync();
 
-        var businesses = await _context.Businesses.IgnoreQueryFilters().ToListAsync();
+        var businesses = await _context.Businesses.IgnoreQueryFilters().AsNoTracking().ToListAsync();
 
         var dtoList = logs.Select(al => new SuperAdminAuditLogDto
         {

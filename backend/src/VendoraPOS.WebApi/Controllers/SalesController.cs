@@ -324,6 +324,7 @@ public class SalesController : ControllerBase
 
         var query = _context.Sales
             .IgnoreQueryFilters()
+            .AsNoTracking()
             .Include(s => s.User)
             .Include(s => s.Branch)
             .Include(s => s.SaleItems)
@@ -392,6 +393,7 @@ public class SalesController : ControllerBase
 
         var cashierSales = await _context.Sales
             .IgnoreQueryFilters()
+            .AsNoTracking()
             .Include(s => s.SaleItems)
                 .ThenInclude(si => si.Product)
             .Where(s => s.BusinessId == tenantId.Value && s.UserId == currentUserId)
@@ -498,6 +500,7 @@ public class SalesController : ControllerBase
 
         var sale = await _context.Sales
             .IgnoreQueryFilters()
+            .AsNoTracking()
             .Include(s => s.User)
             .Include(s => s.Branch)
             .Include(s => s.SaleItems)
@@ -560,6 +563,7 @@ public class SalesController : ControllerBase
     {
         var sale = await _context.Sales
             .IgnoreQueryFilters()
+            .AsNoTracking()
             .Include(s => s.Business)
             .Include(s => s.Branch)
             .Include(s => s.User)

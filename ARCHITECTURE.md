@@ -316,3 +316,25 @@ To support seamless checkout operations across different devices and in environm
   - Displays a warning badge (`Sync Pending: X`) if offline sales are queued.
   - Clicking the badge triggers sequential asynchronous HTTP uploads of queued payloads to `/api/sales`. Once a queued sale is successfully stored on the server, it is removed from the client queue.
 
+---
+
+## 14. Performance Optimizations & System Hardening Architecture (Phase 18)
+
+To ensure the multi-tenant hierarchical system scales efficiently as tenant data grows, the following hardening and optimization patterns are implemented:
+
+### 1. Database Indexing Scheme
+Explicit PostgreSQL indexes are configured in `ApplicationDbContext.OnModelCreating` to optimize query performance and join operations:
+* **Foreign Key Indexes**: Placed on logical tenant lookup relations (e.g., `Branch.BusinessId`, `User.BusinessId`, `Product.CategoryId`, etc.) to speed up multi-tenant logical filtering and cascading sweeps.
+* **Chronological & Status Search Indexes**: Configured on tables like `Sales.CreatedAt`, `AuditLogs.CreatedAt`, and `Notifications.SentAt` to accelerate date-range filters and timeline rendering.
+
+### 2. Read-Only Query Optimization (`AsNoTracking`)
+To eliminate Entity Framework Core change tracker overhead, all read-only GET listing and detail actions across Controllers are optimized with `.AsNoTracking()`:
+* **Tracking Overhead Elimination**: Prevents EF Core from maintaining duplicate entity instances in memory and tracking state modifications, reducing memory allocation and garbage collection pauses.
+* **Endpoints Configured**: `AuditLogsController` queries, `NotificationsController` list retrievals, `SuperAdminController` status reports, `SalesController` stats and histories, and `ProductsController` catalogs are updated with `.AsNoTracking()` to improve throughput.
+
+### 3. Role Security Boundaries (RBAC Auditing)
+To ensure isolation and tenant data confidentiality, access is gated through strict ASP.NET Core identity policies:
+* **Cashier Restrictions**: Fully blocked from administrative and platform operations (e.g., Audit Logs, Products CRUD, SuperAdmin controls, and manual stock adjustments).
+* **Manager Boundaries**: Restricted from cross-branch adjustments, product definitions CRUD, and SuperAdmin endpoints.
+* **Owner Permissions**: Authorized to access business-wide audit logs, manage product properties, and configure receipt customization.
+

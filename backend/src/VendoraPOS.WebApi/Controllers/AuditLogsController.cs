@@ -34,6 +34,7 @@ public class AuditLogsController : ControllerBase
         }
 
         var logs = await _context.AuditLogs
+            .AsNoTracking()
             .Where(al => al.BusinessId == businessId.Value)
             .OrderByDescending(al => al.CreatedAt)
             .Take(100)

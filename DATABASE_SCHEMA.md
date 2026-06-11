@@ -514,5 +514,25 @@ Stored Fields:
 - `paymentDetails` (string, JSON payload representing mixed collections)
 - `items` (Array of item details: `productId`, `productName`, `sku`, `quantity`, `unitPrice`, `total`)
 
+---
+
+## 9. Database Performance Indexes (Phase 18 Hardening)
+
+To optimize query joins, hierarchical multi-tenant filters, and chronological dashboard sweeps, the following explicit indexes have been configured in PostgreSQL via EF Core:
+
+| Entity / Table | Index Name | Columns | Purpose |
+| :--- | :--- | :--- | :--- |
+| **Branches** | `IX_Branches_BusinessId` | `BusinessId` | Optimizes business-to-branch parent lookup joins |
+| **Users** | `IX_Users_BusinessId`<br>`IX_Users_BranchId` | `BusinessId`<br>`BranchId` | Speeds up staff lookup and login validation checks |
+| **Products** | `IX_Products_CategoryId` | `CategoryId` | Accelerates category filter catalogs |
+| **ProductStocks** | `IX_ProductStocks_BranchId` | `BranchId` | Speeds up branch stock level and low stock scans |
+| **StockAdjustmentLogs** | `IX_StockAdjustmentLogs_ProductId`<br>`IX_StockAdjustmentLogs_BranchId`<br>`IX_StockAdjustmentLogs_AdjustedByUserId` | `ProductId`<br>`BranchId`<br>`AdjustedByUserId` | Optimizes inventory audit trails and cashier action filters |
+| **StockTransfers** | `IX_StockTransfers_BusinessId`<br>`IX_StockTransfers_ProductId`<br>`IX_StockTransfers_SourceBranchId`<br>`IX_StockTransfers_TargetBranchId` | `BusinessId`<br>`ProductId`<br>`SourceBranchId`<br>`TargetBranchId` | Speeds up multi-branch inventory transfer tracking queries |
+| **Sales** | `IX_Sales_BusinessId`<br>`IX_Sales_BranchId`<br>`IX_Sales_UserId`<br>`IX_Sales_CreatedAt` | `BusinessId`<br>`BranchId`<br>`UserId`<br>`CreatedAt` | Accelerates multi-tenant checks, cashier daily stats sweeps, and chronological lookups |
+| **SaleItems** | `IX_SaleItems_SaleId`<br>`IX_SaleItems_ProductId` | `SaleId`<br>`ProductId` | Speeds up receipt line-item queries and top-selling product checks |
+| **Discounts** | `IX_Discounts_BusinessId`<br>`IX_Discounts_ProductId` | `BusinessId`<br>`ProductId` | Optimizes discount catalog validation checks |
+| **AuditLogs** | `IX_AuditLogs_BusinessId`<br>`IX_AuditLogs_CreatedAt` | `BusinessId`<br>`CreatedAt` | Speeds up chronological tenant auditing timeline loads |
+| **Notifications** | `IX_Notifications_BusinessId`<br>`IX_Notifications_BranchId`<br>`IX_Notifications_SentAt` | `BusinessId`<br>`BranchId`<br>`SentAt` | Speeds up low-stock and subscription reminder scans |
+
 
 
