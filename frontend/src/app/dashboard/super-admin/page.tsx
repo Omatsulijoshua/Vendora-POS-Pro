@@ -53,6 +53,7 @@ export default function SuperAdminDashboard() {
   
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTab, setActiveTab] = useState<"businesses" | "auditLogs" | "sale-records">("businesses");
+  const [sidebarTab, setSidebarTab] = useState<"home" | "billing">("home");
   
   // Sales records states
   const [sales, setSales] = useState<any[]>([]);
@@ -363,177 +364,556 @@ export default function SuperAdminDashboard() {
         </div>
       </header>
 
-      {/* Main Container */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+      {/* Main Container with Left Sidebar */}
+      <div className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 flex flex-col md:flex-row gap-8">
         
-        {/* Flash Messages */}
-        {successMessage && (
-          <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-sm font-medium animate-fadeIn">
-            ✓ {successMessage}
-          </div>
-        )}
-        {errorMessage && (
-          <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm font-medium animate-fadeIn">
-            ⚠ {errorMessage}
-          </div>
-        )}
-
-        {/* Welcome Hero */}
-        <div className="relative overflow-hidden rounded-2xl border border-slate-900 bg-slate-900/10 p-6 sm:p-8">
-          <div className="absolute top-[-30%] right-[-10%] w-[350px] h-[350px] bg-indigo-600/10 rounded-full blur-[90px]" />
-          <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div>
-              <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-100 tracking-tight">
-                Platform Control Centre
-              </h2>
-              <p className="text-slate-400 mt-1 sm:mt-2 text-sm sm:text-base">
-                Suspend or activate tenants, monitor subscription plans, track global billing metrics, and review audit logs.
-              </p>
-            </div>
-            <div className="flex space-x-3">
-              <button 
-                onClick={loadAllData}
-                disabled={actionLoading}
-                className="px-4 py-2.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-sm transition-all shadow-md shadow-indigo-600/20 hover:shadow-indigo-600/30 active:scale-[0.98]"
+        {/* Left Sidebar Navigation */}
+        <aside className="w-full md:w-64 shrink-0">
+          <div className="sticky top-24 space-y-2 bg-card/30 border border-slate-900 rounded-2xl p-4">
+            <h4 className="px-4 py-2 text-[10px] font-bold text-slate-500 uppercase tracking-widest">
+              Navigation
+            </h4>
+            <nav className="space-y-1">
+              <button
+                onClick={() => setSidebarTab("home")}
+                className={`w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-xs font-bold transition-all duration-200 ${
+                  sidebarTab === "home"
+                    ? "bg-indigo-600/10 text-indigo-400 border-l-4 border-indigo-500 font-extrabold shadow-sm"
+                    : "text-slate-400 hover:text-slate-200 hover:bg-slate-900/40"
+                }`}
               >
-                Refresh Data
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                </svg>
+                <span>Home</span>
               </button>
+
+              <button
+                onClick={() => setSidebarTab("billing")}
+                className={`w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-xs font-bold transition-all duration-200 ${
+                  sidebarTab === "billing"
+                    ? "bg-indigo-600/10 text-indigo-400 border-l-4 border-indigo-500 font-extrabold shadow-sm"
+                    : "text-slate-400 hover:text-slate-200 hover:bg-slate-900/40"
+                }`}
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                </svg>
+                <span>Payment & Subscription</span>
+              </button>
+            </nav>
+          </div>
+        </aside>
+
+        {/* Content Pane */}
+        <main className="flex-1 space-y-8 min-w-0">
+          
+          {/* Flash Messages */}
+          {successMessage && (
+            <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-sm font-medium animate-fadeIn">
+              ✓ {successMessage}
             </div>
-          </div>
-        </div>
-
-        {/* Stats Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <div className="border border-slate-900 bg-slate-900/20 backdrop-blur-md rounded-2xl p-5 hover:border-slate-800 transition-all">
-            <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Total Businesses</span>
-            <p className="text-4xl font-extrabold mt-3 text-slate-100">{stats?.totalBusinesses ?? 0}</p>
-            <div className="flex justify-between items-center text-xs text-slate-500 mt-2">
-              <span>Active: {stats?.activeBusinesses ?? 0}</span>
-              <span>Suspended: {stats?.suspendedBusinesses ?? 0}</span>
+          )}
+          {errorMessage && (
+            <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm font-medium animate-fadeIn">
+              ⚠ {errorMessage}
             </div>
-          </div>
+          )}
 
-          <div className="border border-slate-900 bg-slate-900/20 backdrop-blur-md rounded-2xl p-5 hover:border-slate-800 transition-all">
-            <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Active Subscriptions</span>
-            <p className="text-4xl font-extrabold mt-3 text-slate-100">{stats?.activeSubscriptions ?? 0}</p>
-            <p className="text-xs text-slate-500 mt-2">
-              {stats?.totalBusinesses ? Math.round(((stats.activeSubscriptions) / stats.totalBusinesses) * 100) : 0}% tier coverage
-            </p>
-          </div>
-
-          <div className="border border-slate-900 bg-slate-900/20 backdrop-blur-md rounded-2xl p-5 hover:border-slate-800 transition-all">
-            <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Annual SaaS Revenue</span>
-            <p className="text-4xl font-extrabold mt-3 text-indigo-400">₦{stats?.totalSaaSRevenue?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) ?? "0.00"}</p>
-            <p className="text-xs text-slate-500 mt-2">
-              Est. Monthly: ₦{stats?.monthlySaaSRevenue?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) ?? "0.00"}
-            </p>
-          </div>
-
-          <div className="border border-slate-900 bg-slate-900/20 backdrop-blur-md rounded-2xl p-5 hover:border-slate-800 transition-all">
-            <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">System-Wide Usage</span>
-            <div className="grid grid-cols-2 gap-2 mt-3">
-              <div>
-                <p className="text-2xl font-bold text-slate-200">{stats?.totalBranches ?? 0}</p>
-                <span className="text-[10px] text-slate-500 uppercase font-semibold">Branches</span>
+          {sidebarTab === "home" ? (
+            <>
+              {/* Welcome Hero */}
+              <div className="relative overflow-hidden rounded-2xl border border-slate-900 bg-slate-900/10 p-6 sm:p-8">
+                <div className="absolute top-[-30%] right-[-10%] w-[350px] h-[350px] bg-indigo-600/10 rounded-full blur-[90px]" />
+                <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                  <div>
+                    <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-100 tracking-tight">
+                      Platform Control Centre
+                    </h2>
+                    <p className="text-slate-400 mt-1 sm:mt-2 text-sm sm:text-base">
+                      Suspend or activate tenants, monitor subscription plans, track global billing metrics, and review audit logs.
+                    </p>
+                  </div>
+                  <div className="flex space-x-3">
+                    <button 
+                      onClick={loadAllData}
+                      disabled={actionLoading}
+                      className="px-4 py-2.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-sm transition-all shadow-md shadow-indigo-600/20 hover:shadow-indigo-600/30 active:scale-[0.98]"
+                    >
+                      Refresh Data
+                    </button>
+                  </div>
+                </div>
               </div>
-              <div>
-                <p className="text-2xl font-bold text-slate-200">{stats?.totalUsers ?? 0}</p>
-                <span className="text-[10px] text-slate-500 uppercase font-semibold">Staff Users</span>
+
+              {/* Stats Grid */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="border border-slate-900 bg-slate-900/20 backdrop-blur-md rounded-2xl p-5 hover:border-slate-800 transition-all">
+                  <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Total Businesses</span>
+                  <p className="text-4xl font-extrabold mt-3 text-slate-100">{stats?.totalBusinesses ?? 0}</p>
+                  <div className="flex justify-between items-center text-xs text-slate-500 mt-2">
+                    <span>Active: {stats?.activeBusinesses ?? 0}</span>
+                    <span>Suspended: {stats?.suspendedBusinesses ?? 0}</span>
+                  </div>
+                </div>
+
+                <div className="border border-slate-900 bg-slate-900/20 backdrop-blur-md rounded-2xl p-5 hover:border-slate-800 transition-all">
+                  <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Active Subscriptions</span>
+                  <p className="text-4xl font-extrabold mt-3 text-slate-100">{stats?.activeSubscriptions ?? 0}</p>
+                  <p className="text-xs text-slate-500 mt-2">
+                    {stats?.totalBusinesses ? Math.round(((stats.activeSubscriptions) / stats.totalBusinesses) * 100) : 0}% tier coverage
+                  </p>
+                </div>
+
+                <div className="border border-slate-900 bg-slate-900/20 backdrop-blur-md rounded-2xl p-5 hover:border-slate-800 transition-all">
+                  <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Annual SaaS Revenue</span>
+                  <p className="text-4xl font-extrabold mt-3 text-indigo-400">₦{stats?.totalSaaSRevenue?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) ?? "0.00"}</p>
+                  <p className="text-xs text-slate-500 mt-2">
+                    Est. Monthly: ₦{stats?.monthlySaaSRevenue?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) ?? "0.00"}
+                  </p>
+                </div>
+
+                <div className="border border-slate-900 bg-slate-900/20 backdrop-blur-md rounded-2xl p-5 hover:border-slate-800 transition-all">
+                  <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">System-Wide Usage</span>
+                  <div className="grid grid-cols-2 gap-2 mt-3">
+                    <div>
+                      <p className="text-2xl font-bold text-slate-200">{stats?.totalBranches ?? 0}</p>
+                      <span className="text-[10px] text-slate-500 uppercase font-semibold">Branches</span>
+                    </div>
+                    <div>
+                      <p className="text-2xl font-bold text-slate-200">{stats?.totalUsers ?? 0}</p>
+                      <span className="text-[10px] text-slate-500 uppercase font-semibold">Staff Users</span>
+                    </div>
+                  </div>
+                  <p className="text-[10px] text-slate-500 mt-2">Across all tenant environments</p>
+                </div>
               </div>
-            </div>
-            <p className="text-[10px] text-slate-500 mt-2">Across all tenant environments</p>
-          </div>
-        </div>
 
-        {/* Tab Selection */}
-        <div className="flex border-b border-slate-900">
-          <button
-            onClick={() => setActiveTab("businesses")}
-            className={`py-3 px-6 text-sm font-semibold border-b-2 transition-all ${
-              activeTab === "businesses"
-                ? "border-indigo-500 text-indigo-400"
-                : "border-transparent text-slate-400 hover:text-slate-200"
-            }`}
-          >
-            Business Tenants ({filteredBusinesses.length})
-          </button>
-          <button
-            onClick={() => setActiveTab("auditLogs")}
-            className={`py-3 px-6 text-sm font-semibold border-b-2 transition-all ${
-              activeTab === "auditLogs"
-                ? "border-indigo-500 text-indigo-400"
-                : "border-transparent text-slate-400 hover:text-slate-200"
-            }`}
-          >
-            System Audit Trail ({auditLogs.length})
-          </button>
-          <button
-            onClick={() => {
-              setActiveTab("sale-records");
-              fetchSales(filterBusinessId, filterBranchId, filterCashierId);
-            }}
-            className={`py-3 px-6 text-sm font-semibold border-b-2 transition-all ${
-              activeTab === "sale-records"
-                ? "border-indigo-500 text-indigo-400"
-                : "border-transparent text-slate-400 hover:text-slate-200"
-            }`}
-          >
-            Sale Records
-          </button>
-        </div>
-
-        {/* Tab Panels */}
-        {activeTab === "businesses" && (
-          <div className="space-y-6 animate-in fade-in duration-300">
-            {/* Business Control Panel Header */}
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-              <div className="w-full sm:max-w-md relative">
-                <input
-                  type="text"
-                  placeholder="Search by business, subdomain, or owner..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-4 pr-10 py-2.5 rounded-xl bg-slate-900/60 border border-slate-800 text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition-colors"
-                />
+              {/* Tab Selection */}
+              <div className="flex border-b border-slate-900">
+                <button
+                  onClick={() => setActiveTab("businesses")}
+                  className={`py-3 px-6 text-sm font-semibold border-b-2 transition-all ${
+                    activeTab === "businesses"
+                      ? "border-indigo-500 text-indigo-400"
+                      : "border-transparent text-slate-400 hover:text-slate-200"
+                  }`}
+                >
+                  Business Tenants ({filteredBusinesses.length})
+                </button>
+                <button
+                  onClick={() => setActiveTab("auditLogs")}
+                  className={`py-3 px-6 text-sm font-semibold border-b-2 transition-all ${
+                    activeTab === "auditLogs"
+                      ? "border-indigo-500 text-indigo-400"
+                      : "border-transparent text-slate-400 hover:text-slate-200"
+                  }`}
+                >
+                  System Audit Trail ({auditLogs.length})
+                </button>
+                <button
+                  onClick={() => {
+                    setActiveTab("sale-records");
+                    fetchSales(filterBusinessId, filterBranchId, filterCashierId);
+                  }}
+                  className={`py-3 px-6 text-sm font-semibold border-b-2 transition-all ${
+                    activeTab === "sale-records"
+                      ? "border-indigo-500 text-indigo-400"
+                      : "border-transparent text-slate-400 hover:text-slate-200"
+                  }`}
+                >
+                  Sale Records
+                </button>
               </div>
-            </div>
 
-            {/* Businesses Table */}
-            <div className="border border-slate-900 bg-slate-900/10 rounded-2xl p-6 space-y-4">
-              <div className="overflow-x-auto border border-slate-900 rounded-xl">
-                <table className="w-full text-left border-collapse text-xs">
-                  <thead>
-                    <tr className="border-b border-slate-900 bg-slate-950/30 text-slate-400 font-semibold">
-                      <th className="py-4 px-6">Business Name</th>
-                      <th className="py-4 px-6">Domain URL</th>
-                      <th className="py-4 px-6">Registered Owner</th>
-                      <th className="py-4 px-6 text-center">Branches</th>
-                      <th className="py-4 px-6 text-center">Staff Users</th>
-                      <th className="py-4 px-6 text-center">Subscription Tier</th>
-                      <th className="py-4 px-6 text-center">Status</th>
-                      <th className="py-4 px-6 text-right">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-900 text-slate-350 bg-slate-950/5">
-                    {filteredBusinesses.map((b) => (
-                      <tr key={b.id} className="hover:bg-slate-900/10 transition-colors">
-                        <td className="py-4 px-6 font-bold text-slate-200">{b.name}</td>
-                        <td className="py-4 px-6 text-slate-400 font-mono">{b.subdomain}.vendorapos.com</td>
-                        <td className="py-4 px-6">
-                          <p className="font-semibold text-slate-300">{b.ownerName}</p>
-                          <p className="text-[10px] text-slate-500">{b.ownerEmail}</p>
-                        </td>
-                        <td className="py-4 px-6 text-center font-bold text-slate-300">{b.branchesCount}</td>
-                        <td className="py-4 px-6 text-center font-bold text-slate-300">{b.usersCount}</td>
-                        <td className="py-4 px-6 text-center">
-                          <div>
-                            <span className="px-2 py-0.5 rounded text-xs font-bold bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
+              {/* Tab Panels */}
+              {activeTab === "businesses" && (
+                <div className="space-y-6 animate-in fade-in duration-300">
+                  {/* Business Control Panel Header */}
+                  <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+                    <div className="w-full sm:max-w-md relative">
+                      <input
+                        type="text"
+                        placeholder="Search by business, subdomain, or owner..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="w-full pl-4 pr-10 py-2.5 rounded-xl bg-slate-900/60 border border-slate-800 text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition-colors"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Businesses Table */}
+                  <div className="border border-slate-900 bg-slate-900/10 rounded-2xl p-6 space-y-4">
+                    <div className="overflow-x-auto border border-slate-900 rounded-xl">
+                      <table className="w-full text-left border-collapse text-xs">
+                        <thead>
+                          <tr className="border-b border-slate-900 bg-slate-950/30 text-slate-400 font-semibold">
+                            <th className="py-4 px-6">Business Name</th>
+                            <th className="py-4 px-6">Domain URL</th>
+                            <th className="py-4 px-6">Registered Owner</th>
+                            <th className="py-4 px-6 text-center">Branches</th>
+                            <th className="py-4 px-6 text-center">Staff Users</th>
+                            <th className="py-4 px-6 text-center">Subscription Tier</th>
+                            <th className="py-4 px-6 text-center">Status</th>
+                            <th className="py-4 px-6 text-right">Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-900 text-slate-350 bg-slate-950/5">
+                          {filteredBusinesses.map((b) => (
+                            <tr key={b.id} className="hover:bg-slate-900/10 transition-colors">
+                              <td className="py-4 px-6 font-bold text-slate-200">{b.name}</td>
+                              <td className="py-4 px-6 text-slate-400 font-mono">{b.subdomain}.vendorapos.com</td>
+                              <td className="py-4 px-6">
+                                <p className="font-semibold text-slate-300">{b.ownerName}</p>
+                                <p className="text-[10px] text-slate-550">{b.ownerEmail}</p>
+                              </td>
+                              <td className="py-4 px-6 text-center font-bold text-slate-300">{b.branchesCount}</td>
+                              <td className="py-4 px-6 text-center font-bold text-slate-300">{b.usersCount}</td>
+                              <td className="py-4 px-6 text-center">
+                                <div>
+                                  <span className="px-2 py-0.5 rounded text-xs font-bold bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
+                                    {b.subscriptionTier}
+                                  </span>
+                                </div>
+                              </td>
+                              <td className="py-4 px-6 text-center">
+                                <div>
+                                  <span className={`px-2 py-0.5 rounded-full text-xs font-bold border ${
+                                    b.subscriptionStatus === "Active" ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" :
+                                    b.subscriptionStatus === "Trialing" ? "bg-blue-500/10 text-blue-400 border-blue-500/20" :
+                                    b.subscriptionStatus === "PastDue" ? "bg-amber-500/10 text-amber-400 border-amber-500/20" :
+                                    "bg-red-500/10 text-red-400 border-red-500/20"
+                                  }`}>
+                                    {b.subscriptionStatus}
+                                  </span>
+                                </div>
+                              </td>
+                              <td className="py-4 px-6 text-right">
+                                <div className="flex items-center justify-end space-x-2">
+                                  <button
+                                    onClick={() => openSubscriptionModal(b)}
+                                    className="px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-800 text-xs font-semibold text-indigo-400 hover:bg-slate-800 transition-colors"
+                                  >
+                                    Edit Plan
+                                  </button>
+                                  {b.isActive ? (
+                                    <button
+                                      onClick={() => handleSuspend(b.id)}
+                                      disabled={actionLoading}
+                                      className="px-3 py-1.5 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 text-xs font-semibold transition-colors"
+                                    >
+                                      Suspend
+                                    </button>
+                                  ) : (
+                                    <button
+                                      onClick={() => handleActivate(b.id)}
+                                      disabled={actionLoading}
+                                      className="px-3 py-1.5 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/20 text-xs font-semibold transition-colors"
+                                    >
+                                      Activate
+                                    </button>
+                                  )}
+                                </div>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                  
+                  {stats && stats.businessGrowthTrend && (
+                    <div className="border border-slate-900 bg-slate-900/10 rounded-2xl p-6 space-y-4">
+                      <h3 className="font-extrabold text-slate-200 text-base">New Tenant Sign-ups (Last 7 Days)</h3>
+                      <div className="h-40 flex items-end justify-between pt-6 border-b border-slate-900 px-4">
+                        {stats.businessGrowthTrend.map((t, idx) => {
+                          const maxCount = Math.max(...stats.businessGrowthTrend.map((d) => d.businessesCreated), 1);
+                          const pct = Math.max((t.businessesCreated / maxCount) * 100, 8);
+                          return (
+                            <div key={idx} className="flex-1 flex flex-col items-center group relative px-2">
+                              <div className="absolute top-[-28px] scale-0 group-hover:scale-100 transition-all bg-slate-900 border border-slate-800 text-[10px] text-slate-200 font-bold px-2 py-0.5 rounded shadow z-10">
+                                {t.businessesCreated} new
+                              </div>
+                              <div 
+                                style={{ height: `${pct}%` }} 
+                                className="w-8 sm:w-12 rounded-t-lg bg-indigo-500/30 group-hover:bg-indigo-500 border-t border-x border-indigo-500/40 transition-all cursor-pointer shadow-lg shadow-indigo-500/5"
+                              />
+                              <span className="text-[10px] text-slate-500 font-medium mt-2">
+                                {new Date(t.date).toLocaleDateString(undefined, { weekday: "short" })}
+                              </span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {activeTab === "auditLogs" && (
+                <div className="border border-slate-900 bg-slate-900/10 rounded-2xl p-6 space-y-6 animate-in fade-in duration-300">
+                  <div className="flex justify-between items-center">
+                    <h3 className="font-bold text-lg text-slate-100">Recent Platform Activities</h3>
+                    <span className="text-xs text-slate-500 uppercase tracking-wider font-semibold">
+                      Showing last {auditLogs.length} events
+                    </span>
+                  </div>
+
+                  <div className="relative border-l border-slate-900 pl-6 ml-3 space-y-6">
+                    {auditLogs.map((log) => (
+                      <div key={log.id} className="relative group">
+                        <span className={`absolute left-[-31px] top-1.5 h-3.5 w-3.5 rounded-full border-2 ${
+                          log.action === "BusinessSuspended" ? "bg-red-500 border-slate-950" :
+                          log.action === "BusinessActivated" ? "bg-emerald-500 border-slate-950" :
+                          log.action === "SubscriptionUpdated" ? "bg-indigo-500 border-slate-950" :
+                          "bg-slate-700 border-slate-950"
+                        }`} />
+                        
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                          <div className="space-y-1">
+                            <div className="flex items-center space-x-2">
+                              <span className={`px-2 py-0.5 rounded text-[9px] font-bold ${
+                                log.action === "BusinessSuspended" ? "bg-red-500/10 text-red-400 border border-red-500/20" :
+                                log.action === "BusinessActivated" ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20" :
+                                log.action === "SubscriptionUpdated" ? "bg-indigo-500/10 text-indigo-400 border border-indigo-500/20" :
+                                "bg-slate-800 text-slate-400"
+                              }`}>
+                                {log.action}
+                              </span>
+                              <span className="text-xs text-slate-500 font-mono">IP: {log.ipAddress}</span>
+                            </div>
+                            <p className="text-slate-200 text-sm font-semibold leading-tight">{log.details}</p>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                    {auditLogs.length === 0 && (
+                      <p className="text-slate-500 text-sm py-4 pl-2">No audit logs have been recorded yet.</p>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {activeTab === "sale-records" && (
+                <div className="border border-slate-900 bg-slate-900/10 rounded-2xl p-6 space-y-6 animate-in fade-in duration-300">
+                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div>
+                      <h3 className="font-bold text-lg text-slate-100">Sale Records Query</h3>
+                      <p className="text-xs text-slate-500">Query and filter sales transactions across all businesses in real time</p>
+                    </div>
+                    <button
+                      onClick={() => fetchSales(filterBusinessId, filterBranchId, filterCashierId)}
+                      className="px-3 py-1.5 bg-slate-850 hover:bg-slate-800 text-xs font-bold text-slate-200 rounded-lg transition-colors border border-slate-800 cursor-pointer"
+                    >
+                      Refresh Records
+                    </button>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 p-4 bg-slate-950/40 border border-slate-900 rounded-xl">
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-400 mb-1.5">Business Tenant</label>
+                      <select
+                        value={filterBusinessId}
+                        onChange={(e) => {
+                          const bId = e.target.value;
+                          setFilterBusinessId(bId);
+                          setFilterBranchId("");
+                          setFilterCashierId("");
+                          fetchFilterBranches(bId);
+                          fetchFilterCashiers(bId, "");
+                          fetchSales(bId, "", "");
+                        }}
+                        className="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded-lg text-slate-100 text-xs focus:outline-none focus:border-indigo-500"
+                      >
+                        <option value="">All Businesses</option>
+                        {businesses.map((b) => (
+                          <option key={b.id} value={b.id}>{b.name}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-400 mb-1.5">Branch Location</label>
+                      <select
+                        value={filterBranchId}
+                        onChange={(e) => {
+                          const brId = e.target.value;
+                          setFilterBranchId(brId);
+                          setFilterCashierId("");
+                          fetchFilterCashiers(filterBusinessId, brId);
+                          fetchSales(filterBusinessId, brId, "");
+                        }}
+                        disabled={!filterBusinessId}
+                        className="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded-lg text-slate-100 text-xs focus:outline-none focus:border-indigo-500 disabled:opacity-40 disabled:cursor-not-allowed"
+                      >
+                        <option value="">All Branches</option>
+                        {filterBranches.map((br) => (
+                          <option key={br.id} value={br.id}>{br.name}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-400 mb-1.5">Cashier / Staff</label>
+                      <select
+                        value={filterCashierId}
+                        onChange={(e) => {
+                          const cId = e.target.value;
+                          setFilterCashierId(cId);
+                          fetchSales(filterBusinessId, filterBranchId, cId);
+                        }}
+                        disabled={!filterBusinessId}
+                        className="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded-lg text-slate-100 text-xs focus:outline-none focus:border-indigo-500 disabled:opacity-40 disabled:cursor-not-allowed"
+                      >
+                        <option value="">All Staff</option>
+                        {filterCashiers.map((c) => (
+                          <option key={c.id} value={c.id}>{c.name} ({c.role})</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+
+                  {loadingSales ? (
+                    <div className="text-sm text-slate-500 py-6 animate-pulse text-center">Loading sale records...</div>
+                  ) : sales.length === 0 ? (
+                    <div className="text-sm text-slate-550 py-8 text-center bg-slate-950/20 border border-slate-900 rounded-xl">No sale records match the selected filters.</div>
+                  ) : (
+                    <div className="overflow-x-auto border border-slate-900 rounded-xl">
+                      <table className="w-full text-left border-collapse text-xs">
+                        <thead>
+                          <tr className="border-b border-slate-900 bg-slate-950/30 text-slate-400 font-semibold">
+                            <th className="py-3 px-4">Receipt ID</th>
+                            <th className="py-3 px-4">Branch</th>
+                            <th className="py-3 px-4">Cashier</th>
+                            <th className="py-3 px-4">Payment Method</th>
+                            <th className="py-3 px-4">Items Count</th>
+                            <th className="py-3 px-4">Date & Time</th>
+                            <th className="py-3 px-4 text-right">Total Amount</th>
+                            <th className="py-3 px-4 text-right">Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-900 text-slate-350 bg-slate-950/5">
+                          {sales.map((sale) => (
+                            <tr key={sale.id} className="hover:bg-slate-900/10 transition-colors">
+                              <td className="py-3 px-4 font-mono font-semibold text-slate-200">{sale.id.substring(0, 8).toUpperCase()}</td>
+                              <td className="py-3 px-4 text-slate-400">{sale.branchName || "Global/Shared"}</td>
+                              <td className="py-3 px-4 text-slate-400">{sale.cashierName}</td>
+                              <td className="py-3 px-4">
+                                <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${
+                                  sale.paymentMethod === "Mixed" ? "bg-purple-500/10 text-purple-400 border-purple-500/20" :
+                                  sale.paymentMethod === "Cash" ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" :
+                                  sale.paymentMethod === "Transfer" ? "bg-blue-500/10 text-blue-400 border-blue-500/20" :
+                                  "bg-yellow-500/10 text-yellow-400 border-yellow-500/20"
+                                }`}>
+                                  {sale.paymentMethod}
+                                </span>
+                              </td>
+                              <td className="py-3 px-4 text-slate-400">{sale.items?.length ?? 0} items</td>
+                              <td className="py-3 px-4 text-slate-500">{new Date(sale.createdAt).toLocaleString()}</td>
+                              <td className="py-3 px-4 text-right font-bold text-slate-200">₦{sale.total.toFixed(2)}</td>
+                              <td className="py-3 px-4 text-right">
+                                <button
+                                  onClick={() => {
+                                    setSelectedSale(sale);
+                                    setShowReceiptDetailModal(true);
+                                  }}
+                                  className="px-2.5 py-1 bg-indigo-600 hover:bg-indigo-700 text-white text-[10px] font-bold rounded transition-colors active:scale-95 cursor-pointer shadow-sm shadow-indigo-650/15"
+                                >
+                                  View Receipt
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+              )}
+            </>
+          ) : (
+            <div className="space-y-8 animate-in fade-in duration-300">
+              {/* Header */}
+              <div className="relative overflow-hidden rounded-2xl border border-slate-900 bg-slate-900/10 p-6 sm:p-8">
+                <div className="absolute top-[-30%] right-[-10%] w-[350px] h-[350px] bg-indigo-600/10 rounded-full blur-[90px]" />
+                <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                  <div>
+                    <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-100 tracking-tight">
+                      SaaS Subscription Management
+                    </h2>
+                    <p className="text-slate-400 mt-1 sm:mt-2 text-sm sm:text-base">
+                      Monitor tenant plans, adjust pricing tiers, manage subscription status, and track monthly recurring revenue.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Financial Stats Overview */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="border border-slate-900 bg-slate-900/20 backdrop-blur-md rounded-2xl p-5 hover:border-slate-800 transition-all">
+                  <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Active Subscriptions</span>
+                  <p className="text-4xl font-extrabold mt-3 text-slate-100">{stats?.activeSubscriptions ?? 0}</p>
+                  <p className="text-xs text-slate-500 mt-2">Active paying business tenants</p>
+                </div>
+
+                <div className="border border-slate-900 bg-slate-900/20 backdrop-blur-md rounded-2xl p-5 hover:border-slate-800 transition-all">
+                  <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Estimated Monthly SaaS Revenue</span>
+                  <p className="text-4xl font-extrabold mt-3 text-indigo-400">₦{stats?.monthlySaaSRevenue?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) ?? "0.00"}</p>
+                  <p className="text-xs text-slate-500 mt-2">Based on current monthly packages</p>
+                </div>
+
+                <div className="border border-slate-900 bg-slate-900/20 backdrop-blur-md rounded-2xl p-5 hover:border-slate-800 transition-all">
+                  <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Annualized SaaS Revenue</span>
+                  <p className="text-4xl font-extrabold mt-3 text-emerald-400">₦{stats?.totalSaaSRevenue?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) ?? "0.00"}</p>
+                  <p className="text-xs text-slate-500 mt-2">Projected run-rate</p>
+                </div>
+              </div>
+
+              {/* Subscriptions Registry Table */}
+              <div className="border border-slate-900 bg-slate-900/10 rounded-2xl p-6 space-y-6">
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+                  <div>
+                    <h3 className="font-extrabold text-slate-200 text-base">Subscription Plans & Billing Registry</h3>
+                    <p className="text-xs text-slate-500 mt-0.5 font-semibold">Edit billing plans and suspend/activate tenant subscription access</p>
+                  </div>
+                  <div className="w-full sm:max-w-xs relative">
+                    <input
+                      type="text"
+                      placeholder="Filter subscription registry..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="w-full pl-4 pr-10 py-2.5 rounded-xl bg-slate-900/60 border border-slate-800 text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition-colors"
+                    />
+                  </div>
+                </div>
+
+                <div className="overflow-x-auto border border-slate-900 rounded-xl">
+                  <table className="w-full text-left border-collapse text-xs">
+                    <thead>
+                      <tr className="border-b border-slate-900 bg-slate-950/30 text-slate-400 font-semibold">
+                        <th className="py-4 px-6">Business Name</th>
+                        <th className="py-4 px-6 text-center">Subscription Tier</th>
+                        <th className="py-4 px-6 text-center">Plan Status</th>
+                        <th className="py-4 px-6 text-right">Plan Cost (₦/Year)</th>
+                        <th className="py-4 px-6 text-center">Expires At</th>
+                        <th className="py-4 px-6 text-right">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-900 text-slate-350 bg-slate-950/5">
+                      {filteredBusinesses.map((b) => (
+                        <tr key={b.id} className="hover:bg-slate-900/10 transition-colors">
+                          <td className="py-4 px-6 font-bold text-slate-200">
+                            <div>
+                              <p>{b.name}</p>
+                              <p className="text-[10px] text-slate-500 font-mono mt-0.5">{b.subdomain}.vendorapos.com</p>
+                            </div>
+                          </td>
+                          <td className="py-4 px-6 text-center">
+                            <span className="px-2.5 py-0.5 rounded text-xs font-bold bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
                               {b.subscriptionTier}
                             </span>
-                          </div>
-                        </td>
-                        <td className="py-4 px-6 text-center">
-                          <div>
+                          </td>
+                          <td className="py-4 px-6 text-center">
                             <span className={`px-2 py-0.5 rounded-full text-xs font-bold border ${
                               b.subscriptionStatus === "Active" ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" :
                               b.subscriptionStatus === "Trialing" ? "bg-blue-500/10 text-blue-400 border-blue-500/20" :
@@ -542,251 +922,57 @@ export default function SuperAdminDashboard() {
                             }`}>
                               {b.subscriptionStatus}
                             </span>
-                          </div>
-                        </td>
-                        <td className="py-4 px-6 text-right">
-                          <div className="flex items-center justify-end space-x-2">
-                            <button
-                              onClick={() => openSubscriptionModal(b)}
-                              className="px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-800 text-xs font-semibold text-indigo-400 hover:bg-slate-800 transition-colors"
-                            >
-                              Edit Plan
-                            </button>
-                            {b.isActive ? (
+                          </td>
+                          <td className="py-4 px-6 text-right font-semibold text-slate-200">
+                            ₦{b.subscriptionPrice?.toLocaleString(undefined, { minimumFractionDigits: 2 }) ?? "0.00"}
+                          </td>
+                          <td className="py-4 px-6 text-center text-slate-400">
+                            {b.subscriptionExpiresAt ? new Date(b.subscriptionExpiresAt).toLocaleDateString() : "Never"}
+                          </td>
+                          <td className="py-4 px-6 text-right">
+                            <div className="flex items-center justify-end space-x-2">
                               <button
-                                onClick={() => handleSuspend(b.id)}
-                                disabled={actionLoading}
-                                className="px-3 py-1.5 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 text-xs font-semibold transition-colors"
+                                onClick={() => openSubscriptionModal(b)}
+                                className="px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-800 text-xs font-semibold text-indigo-400 hover:bg-slate-800 transition-colors"
                               >
-                                Suspend
+                                Edit Plan
                               </button>
-                            ) : (
-                              <button
-                                onClick={() => handleActivate(b.id)}
-                                disabled={actionLoading}
-                                className="px-3 py-1.5 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/20 text-xs font-semibold transition-colors"
-                              >
-                                Activate
-                              </button>
-                            )}
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-            
-            {stats && stats.businessGrowthTrend && (
-              <div className="border border-slate-900 bg-slate-900/10 rounded-2xl p-6 space-y-4">
-                <h3 className="font-extrabold text-slate-200 text-base">New Tenant Sign-ups (Last 7 Days)</h3>
-                <div className="h-40 flex items-end justify-between pt-6 border-b border-slate-900 px-4">
-                  {stats.businessGrowthTrend.map((t, idx) => {
-                    const maxCount = Math.max(...stats.businessGrowthTrend.map((d) => d.businessesCreated), 1);
-                    const pct = Math.max((t.businessesCreated / maxCount) * 100, 8);
-                    return (
-                      <div key={idx} className="flex-1 flex flex-col items-center group relative px-2">
-                        <div className="absolute top-[-28px] scale-0 group-hover:scale-100 transition-all bg-slate-900 border border-slate-800 text-[10px] text-slate-200 font-bold px-2 py-0.5 rounded shadow z-10">
-                          {t.businessesCreated} new
-                        </div>
-                        <div 
-                          style={{ height: `${pct}%` }} 
-                          className="w-8 sm:w-12 rounded-t-lg bg-indigo-500/30 group-hover:bg-indigo-500 border-t border-x border-indigo-500/40 transition-all cursor-pointer shadow-lg shadow-indigo-500/5"
-                        />
-                        <span className="text-[10px] text-slate-500 font-medium mt-2">
-                          {new Date(t.date).toLocaleDateString(undefined, { weekday: "short" })}
-                        </span>
-                      </div>
-                    );
-                  })}
+                              {b.isActive ? (
+                                <button
+                                  onClick={() => handleSuspend(b.id)}
+                                  disabled={actionLoading}
+                                  className="px-3 py-1.5 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 text-xs font-semibold transition-colors"
+                                >
+                                  Suspend
+                                </button>
+                              ) : (
+                                <button
+                                  onClick={() => handleActivate(b.id)}
+                                  disabled={actionLoading}
+                                  className="px-3 py-1.5 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/20 text-xs font-semibold transition-colors"
+                                >
+                                  Activate
+                                </button>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                      {filteredBusinesses.length === 0 && (
+                        <tr>
+                          <td colSpan={6} className="py-8 text-center text-slate-500">
+                            No tenant subscriptions found matching filter.
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
                 </div>
               </div>
-            )}
-          </div>
-        )}
-
-        {activeTab === "auditLogs" && (
-          <div className="border border-slate-900 bg-slate-900/10 rounded-2xl p-6 space-y-6 animate-in fade-in duration-300">
-            <div className="flex justify-between items-center">
-              <h3 className="font-bold text-lg text-slate-100">Recent Platform Activities</h3>
-              <span className="text-xs text-slate-500 uppercase tracking-wider font-semibold">
-                Showing last {auditLogs.length} events
-              </span>
             </div>
-
-            <div className="relative border-l border-slate-900 pl-6 ml-3 space-y-6">
-              {auditLogs.map((log) => (
-                <div key={log.id} className="relative group">
-                  <span className={`absolute left-[-31px] top-1.5 h-3.5 w-3.5 rounded-full border-2 ${
-                    log.action === "BusinessSuspended" ? "bg-red-500 border-slate-950" :
-                    log.action === "BusinessActivated" ? "bg-emerald-500 border-slate-950" :
-                    log.action === "SubscriptionUpdated" ? "bg-indigo-500 border-slate-950" :
-                    "bg-slate-700 border-slate-950"
-                  }`} />
-                  
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                    <div className="space-y-1">
-                      <div className="flex items-center space-x-2">
-                        <span className={`px-2 py-0.5 rounded text-[9px] font-bold ${
-                          log.action === "BusinessSuspended" ? "bg-red-500/10 text-red-400 border border-red-500/20" :
-                          log.action === "BusinessActivated" ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20" :
-                          log.action === "SubscriptionUpdated" ? "bg-indigo-500/10 text-indigo-400 border border-indigo-500/20" :
-                          "bg-slate-800 text-slate-400"
-                        }`}>
-                          {log.action}
-                        </span>
-                        <span className="text-xs text-slate-500 font-mono">IP: {log.ipAddress}</span>
-                      </div>
-                      <p className="text-slate-200 text-sm font-semibold leading-tight">{log.details}</p>
-                    </div>
-                  </div>
-                </div>
-              ))}
-              {auditLogs.length === 0 && (
-                <p className="text-slate-500 text-sm py-4 pl-2">No audit logs have been recorded yet.</p>
-              )}
-            </div>
-          </div>
-        )}
-
-        {activeTab === "sale-records" && (
-          <div className="border border-slate-900 bg-slate-900/10 rounded-2xl p-6 space-y-6 animate-in fade-in duration-300">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-              <div>
-                <h3 className="font-bold text-lg text-slate-100">Sale Records Query</h3>
-                <p className="text-xs text-slate-500">Query and filter sales transactions across all businesses in real time</p>
-              </div>
-              <button
-                onClick={() => fetchSales(filterBusinessId, filterBranchId, filterCashierId)}
-                className="px-3 py-1.5 bg-slate-850 hover:bg-slate-800 text-xs font-bold text-slate-200 rounded-lg transition-colors border border-slate-800 cursor-pointer"
-              >
-                Refresh Records
-              </button>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 p-4 bg-slate-950/40 border border-slate-900 rounded-xl">
-              <div>
-                <label className="block text-xs font-semibold text-slate-400 mb-1.5">Business Tenant</label>
-                <select
-                  value={filterBusinessId}
-                  onChange={(e) => {
-                    const bId = e.target.value;
-                    setFilterBusinessId(bId);
-                    setFilterBranchId("");
-                    setFilterCashierId("");
-                    fetchFilterBranches(bId);
-                    fetchFilterCashiers(bId, "");
-                    fetchSales(bId, "", "");
-                  }}
-                  className="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded-lg text-slate-100 text-xs focus:outline-none focus:border-indigo-500"
-                >
-                  <option value="">All Businesses</option>
-                  {businesses.map((b) => (
-                    <option key={b.id} value={b.id}>{b.name}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-400 mb-1.5">Branch Location</label>
-                <select
-                  value={filterBranchId}
-                  onChange={(e) => {
-                    const brId = e.target.value;
-                    setFilterBranchId(brId);
-                    setFilterCashierId("");
-                    fetchFilterCashiers(filterBusinessId, brId);
-                    fetchSales(filterBusinessId, brId, "");
-                  }}
-                  disabled={!filterBusinessId}
-                  className="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded-lg text-slate-100 text-xs focus:outline-none focus:border-indigo-500 disabled:opacity-40 disabled:cursor-not-allowed"
-                >
-                  <option value="">All Branches</option>
-                  {filterBranches.map((br) => (
-                    <option key={br.id} value={br.id}>{br.name}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-400 mb-1.5">Cashier / Staff</label>
-                <select
-                  value={filterCashierId}
-                  onChange={(e) => {
-                    const cId = e.target.value;
-                    setFilterCashierId(cId);
-                    fetchSales(filterBusinessId, filterBranchId, cId);
-                  }}
-                  disabled={!filterBusinessId}
-                  className="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded-lg text-slate-100 text-xs focus:outline-none focus:border-indigo-500 disabled:opacity-40 disabled:cursor-not-allowed"
-                >
-                  <option value="">All Staff</option>
-                  {filterCashiers.map((c) => (
-                    <option key={c.id} value={c.id}>{c.name} ({c.role})</option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            {loadingSales ? (
-              <div className="text-sm text-slate-500 py-6 animate-pulse text-center">Loading sale records...</div>
-            ) : sales.length === 0 ? (
-              <div className="text-sm text-slate-550 py-8 text-center bg-slate-950/20 border border-slate-900 rounded-xl">No sale records match the selected filters.</div>
-            ) : (
-              <div className="overflow-x-auto border border-slate-900 rounded-xl">
-                <table className="w-full text-left border-collapse text-xs">
-                  <thead>
-                    <tr className="border-b border-slate-900 bg-slate-950/30 text-slate-400 font-semibold">
-                      <th className="py-3 px-4">Receipt ID</th>
-                      <th className="py-3 px-4">Branch</th>
-                      <th className="py-3 px-4">Cashier</th>
-                      <th className="py-3 px-4">Payment Method</th>
-                      <th className="py-3 px-4">Items Count</th>
-                      <th className="py-3 px-4">Date & Time</th>
-                      <th className="py-3 px-4 text-right">Total Amount</th>
-                      <th className="py-3 px-4 text-right">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-900 text-slate-350 bg-slate-950/5">
-                    {sales.map((sale) => (
-                      <tr key={sale.id} className="hover:bg-slate-900/10 transition-colors">
-                        <td className="py-3 px-4 font-mono font-semibold text-slate-200">{sale.id.substring(0, 8).toUpperCase()}</td>
-                        <td className="py-3 px-4 text-slate-400">{sale.branchName || "Global/Shared"}</td>
-                        <td className="py-3 px-4 text-slate-400">{sale.cashierName}</td>
-                        <td className="py-3 px-4">
-                          <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${
-                            sale.paymentMethod === "Mixed" ? "bg-purple-500/10 text-purple-400 border-purple-500/20" :
-                            sale.paymentMethod === "Cash" ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" :
-                            sale.paymentMethod === "Transfer" ? "bg-blue-500/10 text-blue-400 border-blue-500/20" :
-                            "bg-yellow-500/10 text-yellow-400 border-yellow-500/20"
-                          }`}>
-                            {sale.paymentMethod}
-                          </span>
-                        </td>
-                        <td className="py-3 px-4 text-slate-400">{sale.items?.length ?? 0} items</td>
-                        <td className="py-3 px-4 text-slate-500">{new Date(sale.createdAt).toLocaleString()}</td>
-                        <td className="py-3 px-4 text-right font-bold text-slate-200">₦{sale.total.toFixed(2)}</td>
-                        <td className="py-3 px-4 text-right">
-                          <button
-                            onClick={() => {
-                              setSelectedSale(sale);
-                              setShowReceiptDetailModal(true);
-                            }}
-                            className="px-2.5 py-1 bg-indigo-600 hover:bg-indigo-700 text-white text-[10px] font-bold rounded transition-colors active:scale-95 cursor-pointer shadow-sm shadow-indigo-650/15"
-                          >
-                            View Receipt
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
-        )}
-      </main>
+          )}
+        </main>
+      </div>
 
       {/* Thermal Receipt Detail Modal */}
       {showReceiptDetailModal && selectedSale && (
