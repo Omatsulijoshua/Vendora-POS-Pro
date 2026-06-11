@@ -24,8 +24,15 @@ public static class DbInitializer
         }
 
         // Seed Default SuperAdmin
-        var superAdminEmail = "admin@vendorapos.com";
+        var superAdminEmail = "joshuaomatsuli01@gmail.com";
         var superAdminUser = await userManager.FindByEmailAsync(superAdminEmail);
+
+        // Delete old default superadmin if present to clean up database
+        var oldSuperAdmin = await userManager.FindByEmailAsync("admin@vendorapos.com");
+        if (oldSuperAdmin != null)
+        {
+            await userManager.DeleteAsync(oldSuperAdmin);
+        }
 
         if (superAdminUser == null)
         {
@@ -38,7 +45,7 @@ public static class DbInitializer
                 EmailConfirmed = true
             };
 
-            var result = await userManager.CreateAsync(adminUser, "AdminPassword123!");
+            var result = await userManager.CreateAsync(adminUser, "Jos@56567");
             if (result.Succeeded)
             {
                 await userManager.AddToRoleAsync(adminUser, UserRole.SuperAdmin.ToString());
