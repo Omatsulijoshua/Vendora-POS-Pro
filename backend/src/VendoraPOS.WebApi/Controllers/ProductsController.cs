@@ -1,9 +1,12 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Security.Claims;
+using System.Text;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using VendoraPOS.Application.Common.Interfaces;
@@ -611,6 +614,284 @@ public class ProductsController : ControllerBase
             .ToListAsync();
 
         return Ok(logs);
+    }
+
+    [HttpPost("import-csv")]
+    [Authorize(Roles = "Owner")]
+    public async Task<IActionResult> ImportCSV(IFormFile file)
+    {
+        if (file == null || file.Length == 0)
+        {
+            return BadRequest(new { Message = "No file uploaded." });
+        }
+
+        var extension = Path.GetExtension(file.FileName).ToLowerInvariant();
+        if (extension != ".csv")
+        {
+            return BadRequest(new { Message = "Only CSV files (.csv) are supported." });
+        }
+
+        var tenantId = _tenantProvider.TenantId;
+        if (!tenantId.HasValue) return BadRequest("Tenant context not found.");
+
+        var business = await _context.Businesses
+            .IgnoreQueryFilters()
+            .FirstOrDefaultAsync(b => b.Id == tenantId.Value);
+
+        if (business == null) return BadRequest("Business context not found.");
+
+        var currentUserId = Guid.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? Guid.Empty.ToString());
+        var activeBranchId = _tenantProvider.BranchId;
+
+        var importedCount = 0;
+        var skippedCount = 0;
+        var errors = new List<string>();
+
+        using (var reader = new StreamReader(file.OpenReadStream()))
+        {
+            // Read header
+            var headerLine = await reader.ReadLineAsync();
+            if (string.IsNullOrEmpty(headerLine))
+            {
+                return BadRequest(new { Message = "The uploaded file is empty." });
+            }
+
+            // Expected format: Name, SKU, Barcode, Description, Price, CostPrice, CategoryName, InitialStock, MinStockLevel
+            var headers = headerLine.Split(new[] { ',', ';' }).Select(h => h.Trim().ToLowerInvariant()).ToList();
+
+            // Indices
+            int nameIdx = headers.IndexOf("name");
+            int skuIdx = headers.IndexOf("sku");
+            int barcodeIdx = headers.IndexOf("barcode");
+            int descIdx = headers.IndexOf("description");
+            int priceIdx = headers.IndexOf("price");
+            int costPriceIdx = headers.IndexOf("costprice");
+            int categoryIdx = headers.IndexOf("categoryname");
+            int stockIdx = headers.IndexOf("initialstock");
+            int minStockIdx = headers.IndexOf("minstocklevel");
+
+            if (nameIdx == -1 || skuIdx == -1 || priceIdx == -1 || costPriceIdx == -1)
+            {
+                return BadRequest(new { Message = "CSV must contain at least 'Name', 'SKU', 'Price', and 'CostPrice' columns." });
+            }
+
+            int rowNum = 1;
+            while (!reader.EndOfStream)
+            {
+                rowNum++;
+                var line = await reader.ReadLineAsync();
+                if (string.IsNullOrWhiteSpace(line)) continue;
+
+                var values = ParseCsvRow(line);
+                if (values.Count < Math.Max(nameIdx, Math.Max(skuIdx, Math.Max(priceIdx, costPriceIdx))) + 1)
+                {
+                    errors.Add($"Row {rowNum}: Insufficient columns.");
+                    skippedCount++;
+                    continue;
+                }
+
+                var name = values[nameIdx]?.Trim();
+                var sku = values[skuIdx]?.Trim();
+
+                if (string.IsNullOrEmpty(name) || string.IsNullOrEmpty(sku))
+                {
+                    errors.Add($"Row {rowNum}: Name and SKU are required.");
+                    skippedCount++;
+                    continue;
+                }
+
+                // Check if SKU exists
+                var skuExists = await _context.Products.AnyAsync(p => p.SKU.ToLower() == sku.ToLower());
+                if (skuExists)
+                {
+                    errors.Add($"Row {rowNum}: SKU '{sku}' already exists.");
+                    skippedCount++;
+                    continue;
+                }
+
+                var barcode = barcodeIdx != -1 && barcodeIdx < values.Count ? values[barcodeIdx]?.Trim() : null;
+                if (!string.IsNullOrEmpty(barcode))
+                {
+                    var barcodeExists = await _context.Products.AnyAsync(p => p.Barcode != null && p.Barcode.ToLower() == barcode.ToLower());
+                    if (barcodeExists)
+                    {
+                        errors.Add($"Row {rowNum}: Barcode '{barcode}' already exists.");
+                        skippedCount++;
+                        continue;
+                    }
+                }
+
+                var description = descIdx != -1 && descIdx < values.Count ? values[descIdx]?.Trim() : null;
+
+                if (!decimal.TryParse(values[priceIdx], out var price) || price < 0)
+                {
+                    errors.Add($"Row {rowNum}: Invalid Price value.");
+                    skippedCount++;
+                    continue;
+                }
+
+                if (!decimal.TryParse(values[costPriceIdx], out var costPrice) || costPrice < 0)
+                {
+                    errors.Add($"Row {rowNum}: Invalid CostPrice value.");
+                    skippedCount++;
+                    continue;
+                }
+
+                // Resolve Category
+                Guid? categoryId = null;
+                var categoryName = categoryIdx != -1 && categoryIdx < values.Count ? values[categoryIdx]?.Trim() : null;
+                if (!string.IsNullOrEmpty(categoryName))
+                {
+                    var category = await _context.Categories
+                        .FirstOrDefaultAsync(c => c.Name.ToLower() == categoryName.ToLower());
+                    if (category == null)
+                    {
+                        category = new Category
+                        {
+                            Name = categoryName,
+                            BusinessId = tenantId.Value
+                        };
+                        _context.Categories.Add(category);
+                        await _context.SaveChangesAsync(); // save to get ID
+                    }
+                    categoryId = category.Id;
+                }
+
+                var product = new Product
+                {
+                    Name = name,
+                    SKU = sku,
+                    Barcode = barcode,
+                    Description = description,
+                    Price = price,
+                    CostPrice = costPrice,
+                    BusinessId = tenantId.Value,
+                    CategoryId = categoryId
+                };
+                _context.Products.Add(product);
+                await _context.SaveChangesAsync(); // save to get product ID
+
+                // Handle Initial Stock
+                int initialQty = 0;
+                if (stockIdx != -1 && stockIdx < values.Count)
+                {
+                    int.TryParse(values[stockIdx], out initialQty);
+                }
+                int minStock = 0;
+                if (minStockIdx != -1 && minStockIdx < values.Count)
+                {
+                    int.TryParse(values[minStockIdx], out minStock);
+                }
+
+                if (business.SharedStockMode)
+                {
+                    var stock = new ProductStock
+                    {
+                        ProductId = product.Id,
+                        BranchId = null,
+                        Quantity = initialQty,
+                        MinStockLevel = minStock
+                    };
+                    _context.ProductStocks.Add(stock);
+
+                    if (initialQty > 0)
+                    {
+                        var log = new StockAdjustmentLog
+                        {
+                            ProductId = product.Id,
+                            BranchId = null,
+                            PreviousQuantity = 0,
+                            NewQuantity = initialQty,
+                            AdjustedByUserId = currentUserId,
+                            Reason = "Bulk CSV import (Shared Mode)"
+                        };
+                        _context.StockAdjustmentLogs.Add(log);
+                    }
+                }
+                else
+                {
+                    var branches = await _context.Branches.IgnoreQueryFilters().Where(b => b.BusinessId == tenantId.Value).ToListAsync();
+                    if (branches.Count > 0)
+                    {
+                        foreach (var branch in branches)
+                        {
+                            var branchQty = (activeBranchId.HasValue && branch.Id == activeBranchId.Value) || (!activeBranchId.HasValue && branch == branches.First()) ? initialQty : 0;
+                            var stock = new ProductStock
+                            {
+                                ProductId = product.Id,
+                                BranchId = branch.Id,
+                                Quantity = branchQty,
+                                MinStockLevel = minStock
+                            };
+                            _context.ProductStocks.Add(stock);
+
+                            if (branchQty > 0)
+                            {
+                                var log = new StockAdjustmentLog
+                                {
+                                    ProductId = product.Id,
+                                    BranchId = branch.Id,
+                                    PreviousQuantity = 0,
+                                    NewQuantity = branchQty,
+                                    AdjustedByUserId = currentUserId,
+                                    Reason = $"Bulk CSV import (Branch: {branch.Name})"
+                                };
+                                _context.StockAdjustmentLogs.Add(log);
+                            }
+                        }
+                    }
+                }
+
+                importedCount++;
+            }
+
+            await _context.SaveChangesAsync();
+        }
+
+        var userEmail = User.FindFirst(ClaimTypes.Email)?.Value ?? "owner@vendorapos.com";
+        var ip = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "127.0.0.1";
+        await _auditLogService.LogAsync(
+            "BulkProductsImported",
+            $"Imported {importedCount} products via CSV upload. {skippedCount} rows skipped.",
+            userEmail,
+            tenantId.Value,
+            ip
+        );
+
+        return Ok(new
+        {
+            Message = $"Import completed: {importedCount} products added, {skippedCount} rows skipped.",
+            ImportedCount = importedCount,
+            SkippedCount = skippedCount,
+            Errors = errors
+        });
+    }
+
+    private List<string> ParseCsvRow(string row)
+    {
+        var result = new List<string>();
+        var inQuotes = false;
+        var currentField = new StringBuilder();
+
+        for (int i = 0; i < row.Length; i++)
+        {
+            char c = row[i];
+            if (c == '"')
+            {
+                inQuotes = !inQuotes;
+            }
+            else if ((c == ',' || c == ';') && !inQuotes)
+            {
+                result.Add(currentField.ToString());
+                currentField.Clear();
+            }
+            else
+            {
+                currentField.Append(c);
+            }
+        }
+        result.Add(currentField.ToString());
+        return result;
     }
 
     [HttpDelete("{id}")]

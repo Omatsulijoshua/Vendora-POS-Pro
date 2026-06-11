@@ -83,6 +83,11 @@ export default function OwnerDashboard() {
   const [showEditProductModal, setShowEditProductModal] = useState(false);
   const [showAdjustStockModal, setShowAdjustStockModal] = useState(false);
   const [showLogModal, setShowLogModal] = useState(false);
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [importFile, setImportFile] = useState<File | null>(null);
+  const [importSubmitting, setImportSubmitting] = useState(false);
+  const [importResult, setImportResult] = useState<any>(null);
+  const [importError, setImportError] = useState("");
 
   // Selected Entities for editing/adjustments
   const [selectedCategory, setSelectedCategory] = useState<any>(null);
@@ -1285,6 +1290,45 @@ export default function OwnerDashboard() {
     }
   };
 
+  // Submit CSV Import
+  const handleImportCSV = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!importFile) {
+      setImportError("Please select a CSV file first.");
+      return;
+    }
+    setImportError("");
+    setImportResult(null);
+    setImportSubmitting(true);
+
+    const formData = new FormData();
+    formData.append("file", importFile);
+
+    try {
+      const res = await fetch("http://localhost:5149/api/products/import-csv", {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${token}`
+        },
+        body: formData
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.message || "Failed to import products.");
+      }
+
+      setImportResult(data);
+      setImportFile(null);
+      fetchProducts();
+      fetchCategories();
+    } catch (err: any) {
+      setImportError(err.message || "An error occurred during import.");
+    } finally {
+      setImportSubmitting(false);
+    }
+  };
+
   const handleUpdateProduct = async (e: React.FormEvent) => {
     e.preventDefault();
     setProdError("");
@@ -1964,12 +2008,25 @@ export default function OwnerDashboard() {
           <div className="border border-slate-900 bg-slate-900/20 rounded-xl p-6 space-y-6 animate-in fade-in duration-300">
             <div className="flex justify-between items-center">
               <h3 className="font-bold text-lg text-slate-100">Product Inventory</h3>
-              <button
-                onClick={() => setShowAddProductModal(true)}
-                className="px-3 py-1.5 bg-indigo-650 hover:bg-indigo-700 text-xs font-bold text-white rounded-lg transition-colors"
-              >
-                + Add Product
-              </button>
+              <div className="flex space-x-2">
+                <button
+                  onClick={() => {
+                    setImportError("");
+                    setImportResult(null);
+                    setImportFile(null);
+                    setShowImportModal(true);
+                  }}
+                  className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-bold text-slate-200 rounded-lg transition-colors cursor-pointer"
+                >
+                  📥 Import CSV
+                </button>
+                <button
+                  onClick={() => setShowAddProductModal(true)}
+                  className="px-3 py-1.5 bg-primary hover:bg-primary-hover text-xs font-bold text-white rounded-lg transition-colors cursor-pointer"
+                >
+                  + Add Product
+                </button>
+              </div>
             </div>
 
             {loadingProducts ? (
@@ -4592,6 +4649,147 @@ export default function OwnerDashboard() {
                 Go to Billing & Subscriptions
               </button>
             </div>
+          </div>
+        </div>
+      )}
+      {/* Import Products Modal */}
+      {showImportModal && (
+        <div className="fixed inset-0 bg-slate-950/70 backdrop-blur-md flex justify-center items-center p-4 z-50 animate-in fade-in duration-300">
+          <div className="w-full max-w-lg p-6 bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto animate-in scale-in duration-300">
+            <div className="flex justify-between items-center pb-2 border-b border-slate-850">
+              <h3 className="text-xl font-bold text-slate-100 flex items-center gap-2">
+                📥 Import Products Catalog
+              </h3>
+              <button 
+                onClick={() => { setShowImportModal(false); setImportResult(null); setImportFile(null); }}
+                className="text-slate-500 hover:text-slate-300 text-sm cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            {importError && (
+              <div className="p-3 bg-red-950/50 border border-red-800 text-red-400 rounded-lg text-xs font-medium animate-in slide-in-from-top-2">
+                ✕ {importError}
+              </div>
+            )}
+
+            {importResult ? (
+              <div className="space-y-4">
+                <div className="p-4 bg-emerald-950/30 border border-emerald-900/30 rounded-xl space-y-2">
+                  <h4 className="text-emerald-400 font-bold text-sm">✓ Import Process Completed</h4>
+                  <p className="text-slate-300 text-xs">
+                    {importResult.message}
+                  </p>
+                  <div className="grid grid-cols-2 gap-4 pt-2">
+                    <div className="bg-slate-950/50 p-2.5 rounded-lg border border-slate-850 text-center">
+                      <span className="block text-slate-500 text-[9px] uppercase font-bold tracking-wider">Imported</span>
+                      <strong className="text-emerald-400 text-lg">{importResult.importedCount}</strong>
+                    </div>
+                    <div className="bg-slate-950/50 p-2.5 rounded-lg border border-slate-850 text-center">
+                      <span className="block text-slate-500 text-[9px] uppercase font-bold tracking-wider">Skipped</span>
+                      <strong className="text-amber-500 text-lg">{importResult.skippedCount}</strong>
+                    </div>
+                  </div>
+                </div>
+
+                {importResult.errors && importResult.errors.length > 0 && (
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] uppercase tracking-wider font-bold text-slate-500">Skipped Rows / Errors</label>
+                    <div className="bg-slate-950/60 border border-red-950/50 rounded-lg p-3 text-[10px] font-mono text-slate-400 space-y-1 max-h-[150px] overflow-y-auto">
+                      {importResult.errors.map((err: string, idx: number) => (
+                        <div key={idx} className="text-red-400/90">• {err}</div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                <div className="pt-2">
+                  <button 
+                    onClick={() => { setShowImportModal(false); setImportResult(null); }}
+                    className="w-full py-2.5 bg-primary hover:bg-primary-hover text-white text-xs font-bold rounded-lg transition-colors cursor-pointer"
+                  >
+                    Done
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <form onSubmit={handleImportCSV} className="space-y-4">
+                <p className="text-xs text-slate-405 leading-relaxed">
+                  Upload a standard comma-separated **CSV** file to import products in bulk. Missing categories will be auto-created. Duplicate SKUs will be safely skipped.
+                </p>
+
+                <div className="bg-slate-950/50 border border-slate-850 rounded-xl p-3.5 space-y-2">
+                  <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Expected Columns Outline</h4>
+                  <div className="grid grid-cols-3 gap-y-1.5 gap-x-2 text-[10px] font-mono">
+                    <span className="text-emerald-400">Name*</span>
+                    <span className="text-emerald-400">SKU*</span>
+                    <span className="text-emerald-400">Price*</span>
+                    <span className="text-emerald-400">CostPrice*</span>
+                    <span className="text-slate-500">Barcode</span>
+                    <span className="text-slate-500">Description</span>
+                    <span className="text-slate-500">CategoryName</span>
+                    <span className="text-slate-500">InitialStock</span>
+                    <span className="text-slate-500">MinStockLevel</span>
+                  </div>
+                  <div className="text-[9px] text-slate-500 pt-1 border-t border-slate-900 leading-relaxed">
+                    * *Required fields must have values.*
+                    <br />
+                    * Save Excel spreadsheet as **CSV (Comma Delimited)**.
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="block text-xs font-semibold text-slate-300">Select CSV File</label>
+                  <div className="relative border-2 border-dashed border-slate-800 hover:border-primary/40 rounded-xl p-5 text-center transition-colors">
+                    <input
+                      type="file"
+                      accept=".csv"
+                      onChange={(e) => setImportFile(e.target.files?.[0] || null)}
+                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                    />
+                    <div className="space-y-1">
+                      <span className="block text-2xl">📄</span>
+                      <span className="block text-xs text-slate-300">
+                        {importFile ? importFile.name : "Drag & drop or click to choose file"}
+                      </span>
+                      {importFile && (
+                        <span className="block text-[10px] text-slate-555 font-mono">
+                          ({(importFile.size / 1024).toFixed(1)} KB)
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex space-x-3 pt-4 border-t border-slate-850">
+                  <button 
+                    type="button" 
+                    onClick={() => { setShowImportModal(false); setImportFile(null); }}
+                    className="flex-1 py-2.5 bg-slate-800 hover:bg-slate-755 text-slate-355 text-xs font-bold rounded-lg transition-colors cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button 
+                    type="submit" 
+                    disabled={importSubmitting} 
+                    className="flex-1 py-2.5 bg-primary hover:bg-primary-hover text-white text-xs font-bold rounded-lg transition-colors cursor-pointer flex items-center justify-center gap-2"
+                  >
+                    {importSubmitting ? (
+                      <>
+                        <svg className="animate-spin h-3.5 w-3.5 text-white" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        Importing...
+                      </>
+                    ) : (
+                      "Upload & Import"
+                    )}
+                  </button>
+                </div>
+              </form>
+            )}
           </div>
         </div>
       )}
