@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.19.0] - 2026-06-11
+
+### Added
+- **Production Deployment & Scaling Blueprints (Phase 20):**
+  - **Production Playbook (`DEPLOYMENT.md`)**: Formulated step-by-step production hosting guidelines for Next.js (Vercel), Web API (Render/VPS), and Database (Neon PostgreSQL).
+  - **CI/CD Automation (`deploy.yml`)**: Designed a GitHub Actions pipeline validating lint checks, running test suites, and executing production builds for both backend (.NET 10) and frontend (Next.js) layers on push/pull-requests to `main`.
+  - **Environment Configurations**: Created production environment variable templates (`.env.example` and `appsettings.Production.json`) documenting JWT keys, Stripe secrets, pooled connection strings, and CORS rules.
+  - **Database Migration Playbook**: Designed compiled EF core migration bundles (`efbundle`) for safe, isolated schema updates on production instances.
+  - **Scaling Plan**: Formulated architecture guidelines for horizontal scale, including Neon connection pooling (PgBouncer), cloud object storage (AWS S3/Cloudinary), serverless Redis caching, and read-replicas for analytical queries.
+
 ## [0.18.0] - 2026-06-11
 
 ### Added
