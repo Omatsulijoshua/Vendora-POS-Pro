@@ -463,6 +463,110 @@ public class ProductsController : ControllerBase
         return Ok(new { Message = "Product updated successfully." });
     }
 
+    [HttpPut("{id}/add-stock")]
+    public async Task<IActionResult> AddStock(Guid id, [FromBody] AddStockDto dto)
+    {
+        var tenantId = _tenantProvider.TenantId;
+        if (!tenantId.HasValue) return BadRequest("Tenant context not found.");
+
+        var business = await _context.Businesses
+            .IgnoreQueryFilters()
+            .FirstOrDefaultAsync(b => b.Id == tenantId.Value);
+
+        if (business == null) return BadRequest("Business context not found.");
+
+        var product = await _context.Products.FirstOrDefaultAsync(p => p.Id == id);
+        if (product == null) return NotFound();
+
+        // Verify Roles & Permissions
+        var currentUserId = Guid.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? Guid.Empty.ToString());
+        var userRole = User.FindFirst(ClaimTypes.Role)?.Value;
+
+        if (userRole == "Cashier")
+        {
+            return StatusCode(403, new { Message = "Cashiers are not allowed to add stock levels." });
+        }
+
+        if (userRole == "Manager")
+        {
+            var managerBranchIdClaim = User.FindFirst("branch_id")?.Value;
+            if (string.IsNullOrEmpty(managerBranchIdClaim) || !Guid.TryParse(managerBranchIdClaim, out var managerBranchId))
+            {
+                return BadRequest("Manager does not have an assigned branch context.");
+            }
+
+            if (business.SharedStockMode)
+            {
+                return BadRequest("Shared stock adjustments are restricted to Business Owners.");
+            }
+
+            if (dto.BranchId != managerBranchId)
+            {
+                return StatusCode(403, new { Message = "Managers can only add stock for their assigned branch." });
+            }
+        }
+
+        ProductStock? stock = null;
+        if (business.SharedStockMode)
+        {
+            stock = await _context.ProductStocks.FirstOrDefaultAsync(ps => ps.ProductId == id && ps.BranchId == null);
+            if (stock == null)
+            {
+                stock = new ProductStock { ProductId = id, BranchId = null, Quantity = 0, MinStockLevel = 0 };
+                _context.ProductStocks.Add(stock);
+            }
+        }
+        else
+        {
+            if (!dto.BranchId.HasValue)
+            {
+                return BadRequest("Branch ID is required for adding stock in branch mode.");
+            }
+
+            var branchExists = await _context.Branches.IgnoreQueryFilters().AnyAsync(b => b.Id == dto.BranchId.Value && b.BusinessId == tenantId.Value);
+            if (!branchExists) return BadRequest("Branch not found under this business.");
+
+            stock = await _context.ProductStocks.FirstOrDefaultAsync(ps => ps.ProductId == id && ps.BranchId == dto.BranchId.Value);
+            if (stock == null)
+            {
+                stock = new ProductStock { ProductId = id, BranchId = dto.BranchId.Value, Quantity = 0, MinStockLevel = 0 };
+                _context.ProductStocks.Add(stock);
+            }
+        }
+
+        int previousQty = stock.Quantity;
+        stock.Quantity += dto.QuantityToAdd;
+
+        // Add Log
+        var log = new StockAdjustmentLog
+        {
+            ProductId = id,
+            BranchId = business.SharedStockMode ? null : dto.BranchId,
+            PreviousQuantity = previousQty,
+            NewQuantity = stock.Quantity,
+            AdjustedByUserId = currentUserId,
+            Reason = $"Added {dto.QuantityToAdd} units. Reason: {dto.Reason}"
+        };
+
+        _context.StockAdjustmentLogs.Add(log);
+        await _context.SaveChangesAsync();
+
+        await _notificationService.CheckAndTriggerLowStockAlertAsync(id, dto.BranchId ?? Guid.Empty);
+
+        // Audit Log
+        var userEmail = User.FindFirst(ClaimTypes.Email)?.Value ?? "owner@vendorapos.com";
+        var ip = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "127.0.0.1";
+        await _auditLogService.LogAsync(
+            "StockAdded",
+            $"Added {dto.QuantityToAdd} units to stock of '{product.Name}' (SKU: {product.SKU}). Previous stock: {previousQty}, New stock: {stock.Quantity}. Reason: {dto.Reason}",
+            userEmail,
+            tenantId.Value,
+            ip
+        );
+
+        return Ok(new { Message = "Stock level incremented successfully.", PreviousQuantity = previousQty, NewQuantity = stock.Quantity });
+    }
+
     [HttpPut("{id}/adjust-stock")]
     public async Task<IActionResult> AdjustStock(Guid id, [FromBody] AdjustStockDto dto)
     {

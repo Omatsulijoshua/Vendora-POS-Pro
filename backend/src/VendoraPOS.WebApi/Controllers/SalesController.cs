@@ -13,7 +13,7 @@ using VendoraPOS.Infrastructure.Data;
 
 namespace VendoraPOS.WebApi.Controllers;
 
-[Authorize(Roles = "Owner,Manager,Cashier")]
+[Authorize]
 [ApiController]
 [Route("api/[controller]")]
 public class SalesController : ControllerBase
@@ -35,6 +35,7 @@ public class SalesController : ControllerBase
         _notificationService = notificationService;
     }
 
+    [Authorize(Roles = "Owner,Manager,Cashier")]
     [HttpPost]
     public async Task<IActionResult> Checkout([FromBody] CreateSaleDto dto)
     {
@@ -302,16 +303,80 @@ public class SalesController : ControllerBase
     }
 
     [HttpGet]
-    public async Task<IActionResult> GetSales()
+    public async Task<IActionResult> GetSales([FromQuery] Guid? businessId = null, [FromQuery] Guid? branchId = null, [FromQuery] Guid? cashierId = null)
     {
+        var userRole = User.FindFirst(ClaimTypes.Role)?.Value;
+
+        // SuperAdmin can query all sales across the platform
+        if (userRole == "SuperAdmin")
+        {
+            var queryAdmin = _context.Sales
+                .IgnoreQueryFilters()
+                .AsNoTracking()
+                .Include(s => s.User)
+                .Include(s => s.Branch)
+                .Include(s => s.SaleItems)
+                    .ThenInclude(si => si.Product)
+                .AsQueryable();
+
+            if (businessId.HasValue)
+            {
+                queryAdmin = queryAdmin.Where(s => s.BusinessId == businessId.Value);
+            }
+            if (branchId.HasValue)
+            {
+                queryAdmin = queryAdmin.Where(s => s.BranchId == branchId.Value);
+            }
+            if (cashierId.HasValue)
+            {
+                queryAdmin = queryAdmin.Where(s => s.UserId == cashierId.Value);
+            }
+
+            var adminSales = await queryAdmin
+                .OrderByDescending(s => s.CreatedAt)
+                .Select(s => new SaleDto
+                {
+                    Id = s.Id,
+                    BranchId = s.BranchId,
+                    BranchName = s.Branch != null ? s.Branch.Name : "Global/Shared",
+                    CashierId = s.UserId,
+                    CashierName = s.User != null ? $"{s.User.FirstName} {s.User.LastName}" : "System",
+                    Subtotal = s.Subtotal,
+                    DiscountAmount = s.DiscountAmount,
+                    TaxAmount = s.TaxAmount,
+                    Total = s.Total,
+                    PaymentMethod = s.PaymentMethod.ToString(),
+                    PaymentDetails = s.PaymentDetails,
+                    AppliedCouponId = s.AppliedCouponId,
+                    AppliedCouponCode = s.AppliedCouponCode,
+                    IsRefunded = s.IsRefunded,
+                    RefundedAt = s.RefundedAt,
+                    CreatedAt = s.CreatedAt,
+                    Items = s.SaleItems.Select(si => new SaleItemDto
+                    {
+                        Id = si.Id,
+                        ProductId = si.ProductId,
+                        ProductName = si.Product != null ? si.Product.Name : "Product",
+                        SKU = si.Product != null ? si.Product.SKU : "SKU",
+                        Quantity = si.Quantity,
+                        UnitPrice = si.UnitPrice,
+                        CostPrice = si.CostPrice,
+                        DiscountAmount = si.DiscountAmount,
+                        Total = si.Total
+                    }).ToList()
+                })
+                .ToListAsync();
+
+            return Ok(adminSales);
+        }
+
+        // For Owner, Manager, Cashier, they must have a tenant context
         var tenantId = _tenantProvider.TenantId;
         if (!tenantId.HasValue) return BadRequest(new { Message = "Tenant context not found." });
 
-        var userRole = User.FindFirst(ClaimTypes.Role)?.Value;
         var activeBranchId = _tenantProvider.BranchId;
         var currentUserId = Guid.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? Guid.Empty.ToString());
 
-        // Managers and Cashiers are restricted to their branch sales
         if (userRole == "Manager" || userRole == "Cashier")
         {
             var branchIdClaim = User.FindFirst("branch_id")?.Value;
@@ -322,7 +387,7 @@ public class SalesController : ControllerBase
             activeBranchId = userBranchId;
         }
 
-        var query = _context.Sales
+        var queryOwner = _context.Sales
             .IgnoreQueryFilters()
             .AsNoTracking()
             .Include(s => s.User)
@@ -333,14 +398,27 @@ public class SalesController : ControllerBase
 
         if (userRole == "Cashier")
         {
-            query = query.Where(s => s.UserId == currentUserId);
+            queryOwner = queryOwner.Where(s => s.UserId == currentUserId);
         }
-        else if (activeBranchId.HasValue)
+        else 
         {
-            query = query.Where(s => s.BranchId == activeBranchId.Value);
+            // Owner and Manager can filter by branch and cashier
+            if (branchId.HasValue)
+            {
+                queryOwner = queryOwner.Where(s => s.BranchId == branchId.Value);
+            }
+            else if (activeBranchId.HasValue)
+            {
+                queryOwner = queryOwner.Where(s => s.BranchId == activeBranchId.Value);
+            }
+
+            if (cashierId.HasValue)
+            {
+                queryOwner = queryOwner.Where(s => s.UserId == cashierId.Value);
+            }
         }
 
-        var sales = await query
+        var sales = await queryOwner
             .OrderByDescending(s => s.CreatedAt)
             .Select(s => new SaleDto
             {
@@ -348,7 +426,7 @@ public class SalesController : ControllerBase
                 BranchId = s.BranchId,
                 BranchName = s.Branch != null ? s.Branch.Name : "Global/Shared",
                 CashierId = s.UserId,
-                CashierName = $"{s.User.FirstName} {s.User.LastName}",
+                CashierName = s.User != null ? $"{s.User.FirstName} {s.User.LastName}" : "System Cashier",
                 Subtotal = s.Subtotal,
                 DiscountAmount = s.DiscountAmount,
                 TaxAmount = s.TaxAmount,
@@ -364,8 +442,8 @@ public class SalesController : ControllerBase
                 {
                     Id = si.Id,
                     ProductId = si.ProductId,
-                    ProductName = si.Product.Name,
-                    SKU = si.Product.SKU,
+                    ProductName = si.Product != null ? si.Product.Name : "Product",
+                    SKU = si.Product != null ? si.Product.SKU : "SKU",
                     Quantity = si.Quantity,
                     UnitPrice = si.UnitPrice,
                     CostPrice = si.CostPrice,
@@ -481,10 +559,59 @@ public class SalesController : ControllerBase
     [HttpGet("{id}")]
     public async Task<IActionResult> GetSale(Guid id)
     {
+        var userRole = User.FindFirst(ClaimTypes.Role)?.Value;
+
+        if (userRole == "SuperAdmin")
+        {
+            var saleAdmin = await _context.Sales
+                .IgnoreQueryFilters()
+                .AsNoTracking()
+                .Include(s => s.User)
+                .Include(s => s.Branch)
+                .Include(s => s.SaleItems)
+                    .ThenInclude(si => si.Product)
+                .FirstOrDefaultAsync(s => s.Id == id);
+
+            if (saleAdmin == null) return NotFound();
+
+            var dtoAdmin = new SaleDto
+            {
+                Id = saleAdmin.Id,
+                BranchId = saleAdmin.BranchId,
+                BranchName = saleAdmin.Branch != null ? saleAdmin.Branch.Name : "Global/Shared",
+                CashierId = saleAdmin.UserId,
+                CashierName = saleAdmin.User != null ? $"{saleAdmin.User.FirstName} {saleAdmin.User.LastName}" : "System",
+                Subtotal = saleAdmin.Subtotal,
+                DiscountAmount = saleAdmin.DiscountAmount,
+                TaxAmount = saleAdmin.TaxAmount,
+                Total = saleAdmin.Total,
+                PaymentMethod = saleAdmin.PaymentMethod.ToString(),
+                PaymentDetails = saleAdmin.PaymentDetails,
+                AppliedCouponId = saleAdmin.AppliedCouponId,
+                AppliedCouponCode = saleAdmin.AppliedCouponCode,
+                IsRefunded = saleAdmin.IsRefunded,
+                RefundedAt = saleAdmin.RefundedAt,
+                CreatedAt = saleAdmin.CreatedAt,
+                Items = saleAdmin.SaleItems.Select(si => new SaleItemDto
+                {
+                    Id = si.Id,
+                    ProductId = si.ProductId,
+                    ProductName = si.Product != null ? si.Product.Name : "Product",
+                    SKU = si.Product != null ? si.Product.SKU : "SKU",
+                    Quantity = si.Quantity,
+                    UnitPrice = si.UnitPrice,
+                    CostPrice = si.CostPrice,
+                    DiscountAmount = si.DiscountAmount,
+                    Total = si.Total
+                }).ToList()
+            };
+
+            return Ok(dtoAdmin);
+        }
+
         var tenantId = _tenantProvider.TenantId;
         if (!tenantId.HasValue) return BadRequest(new { Message = "Tenant context not found." });
 
-        var userRole = User.FindFirst(ClaimTypes.Role)?.Value;
         var activeBranchId = _tenantProvider.BranchId;
         var currentUserId = Guid.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? Guid.Empty.ToString());
 
@@ -528,7 +655,7 @@ public class SalesController : ControllerBase
             BranchId = sale.BranchId,
             BranchName = sale.Branch != null ? sale.Branch.Name : "Global/Shared",
             CashierId = sale.UserId,
-            CashierName = $"{sale.User.FirstName} {sale.User.LastName}",
+            CashierName = sale.User != null ? $"{sale.User.FirstName} {sale.User.LastName}" : "System Cashier",
             Subtotal = sale.Subtotal,
             DiscountAmount = sale.DiscountAmount,
             TaxAmount = sale.TaxAmount,
@@ -544,8 +671,8 @@ public class SalesController : ControllerBase
             {
                 Id = si.Id,
                 ProductId = si.ProductId,
-                ProductName = si.Product.Name,
-                SKU = si.Product.SKU,
+                ProductName = si.Product != null ? si.Product.Name : "Product",
+                SKU = si.Product != null ? si.Product.SKU : "SKU",
                 Quantity = si.Quantity,
                 UnitPrice = si.UnitPrice,
                 CostPrice = si.CostPrice,

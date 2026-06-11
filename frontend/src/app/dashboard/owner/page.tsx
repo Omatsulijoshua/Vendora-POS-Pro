@@ -140,6 +140,8 @@ export default function OwnerDashboard() {
   const [adjReason, setAdjReason] = useState("");
   const [adjError, setAdjError] = useState("");
   const [adjSubmitting, setAdjSubmitting] = useState(false);
+  const [stockModalTab, setStockModalTab] = useState<'add' | 'correct'>('add');
+  const [adjQuantityToAdd, setAdjQuantityToAdd] = useState("");
 
   // Phase 7 Stock Transfers
   const [transfers, setTransfers] = useState<any[]>([]);
@@ -159,6 +161,8 @@ export default function OwnerDashboard() {
   const [selectedSale, setSelectedSale] = useState<any>(null);
   const [showReceiptDetailModal, setShowReceiptDetailModal] = useState(false);
   const [refundingSaleId, setRefundingSaleId] = useState<string | null>(null);
+  const [filterBranchId, setFilterBranchId] = useState("");
+  const [filterCashierId, setFilterCashierId] = useState("");
 
   // Phase 14 Audit Logs
   const [auditLogs, setAuditLogs] = useState<any[]>([]);
@@ -416,10 +420,16 @@ export default function OwnerDashboard() {
   };
 
   // Fetch sales history
-  const fetchSales = async () => {
+  const fetchSales = async (branchId?: string, cashierId?: string) => {
     try {
       setLoadingSales(true);
-      const res = await fetch("http://localhost:5149/api/sales", {
+      const params = new URLSearchParams();
+      const bId = branchId !== undefined ? branchId : filterBranchId;
+      const cId = cashierId !== undefined ? cashierId : filterCashierId;
+      if (bId) params.append("branchId", bId);
+      if (cId) params.append("cashierId", cId);
+
+      const res = await fetch(`http://localhost:5149/api/sales?${params.toString()}`, {
         headers: { "Authorization": `Bearer ${token}` }
       });
       if (res.ok) {
@@ -1381,32 +1391,41 @@ export default function OwnerDashboard() {
     }
   };
 
-  // Adjust Stock
+  // Adjust / Add Stock
   const handleAdjustStock = async (e: React.FormEvent) => {
     e.preventDefault();
     setAdjError("");
     setAdjSubmitting(true);
     try {
-      const res = await fetch(`http://localhost:5149/api/products/${selectedProduct.id}/adjust-stock`, {
+      const isAdd = stockModalTab === "add";
+      const endpoint = isAdd ? "add-stock" : "adjust-stock";
+      const payload = isAdd ? {
+        branchId: activeBusiness.sharedStockMode ? null : adjBranchId,
+        quantityToAdd: parseInt(adjQuantityToAdd) || 0,
+        reason: adjReason.trim()
+      } : {
+        branchId: activeBusiness.sharedStockMode ? null : adjBranchId,
+        quantity: adjQuantity,
+        minStockLevel: adjMinLevel,
+        reason: adjReason.trim()
+      };
+
+      const res = await fetch(`http://localhost:5149/api/products/${selectedProduct.id}/${endpoint}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
           "Authorization": `Bearer ${token}`
         },
-        body: JSON.stringify({
-          branchId: activeBusiness.sharedStockMode ? null : adjBranchId,
-          quantity: adjQuantity,
-          minStockLevel: adjMinLevel,
-          reason: adjReason.trim()
-        })
+        body: JSON.stringify(payload)
       });
 
       if (!res.ok) {
         const err = await res.json();
-        throw new Error(err.message || "Failed to adjust stock.");
+        throw new Error(err.message || "Failed to update stock.");
       }
 
       setAdjReason("");
+      setAdjQuantityToAdd("");
       setShowAdjustStockModal(false);
       setSelectedProduct(null);
       fetchProducts();
@@ -2300,11 +2319,52 @@ export default function OwnerDashboard() {
             <div className="flex justify-between items-center">
               <h3 className="font-bold text-lg text-slate-100">Sales History Logs</h3>
               <button
-                onClick={fetchSales}
+                onClick={() => fetchSales(filterBranchId, filterCashierId)}
                 className="px-3 py-1.5 bg-slate-850 hover:bg-slate-800 text-xs font-bold text-slate-200 rounded-lg transition-colors border border-slate-800"
               >
                 Refresh Logs
               </button>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 bg-slate-950/40 border border-slate-900 rounded-xl">
+              <div>
+                <label className="block text-xs font-semibold text-slate-400 mb-1.5">Branch Location</label>
+                <select
+                  value={filterBranchId}
+                  onChange={(e) => {
+                    const brId = e.target.value;
+                    setFilterBranchId(brId);
+                    setFilterCashierId("");
+                    fetchSales(brId, "");
+                  }}
+                  className="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded-lg text-slate-100 text-xs focus:outline-none focus:border-indigo-500"
+                >
+                  <option value="">All Branches</option>
+                  {branches.map((br) => (
+                    <option key={br.id} value={br.id}>{br.name}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-400 mb-1.5">Cashier / Staff</label>
+                <select
+                  value={filterCashierId}
+                  onChange={(e) => {
+                    const cId = e.target.value;
+                    setFilterCashierId(cId);
+                    fetchSales(filterBranchId, cId);
+                  }}
+                  className="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded-lg text-slate-100 text-xs focus:outline-none focus:border-indigo-500"
+                >
+                  <option value="">All Staff</option>
+                  {staff
+                    .filter((s) => !filterBranchId || s.branchId === filterBranchId)
+                    .map((s) => (
+                      <option key={s.id} value={s.id}>{s.firstName} {s.lastName} ({s.role})</option>
+                    ))}
+                </select>
+              </div>
             </div>
 
             {loadingSales ? (
@@ -3898,207 +3958,35 @@ export default function OwnerDashboard() {
 
       {/* Adjust Stock Modal */}
       {showAdjustStockModal && (
-        <div className="fixed inset-0 bg-slate-950/70 backdrop-blur-md flex justify-center items-center p-4 z-50">
-          <div className="w-full max-w-md p-6 bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl">
-            <h3 className="text-xl font-bold text-slate-100 mb-1">Adjust Inventory Level</h3>
-            <p className="text-xs text-slate-455 mb-4">Product: <span className="text-indigo-400 font-bold">{selectedProduct?.name}</span></p>
-            {adjError && <div className="mb-4 p-3 bg-red-950/50 border border-red-800 text-red-400 rounded-lg text-xs">{adjError}</div>}
+        <div className="fixed inset-0 bg-slate-950/70 backdrop-blur-md flex justify-center items-center p-4 z-50 animate-in fade-in duration-300">
+          <div className="w-full max-w-md p-6 bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl space-y-4">
+            <div>
+              <h3 className="text-xl font-bold text-slate-100 mb-1">Update Inventory Stock</h3>
+              <p className="text-xs text-slate-455">Product: <span className="text-indigo-400 font-bold">{selectedProduct?.name}</span></p>
+            </div>
+            {adjError && <div className="p-3 bg-red-950/50 border border-red-800 text-red-400 rounded-lg text-xs animate-in slide-in-from-top-2">{adjError}</div>}
             
-            <form onSubmit={handleAdjustStock} className="space-y-4">
-              {!activeBusiness.sharedStockMode && (
-                <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-1.5">Branch Location Context</label>
-                  <select
-                    value={adjBranchId}
-                    onChange={(e) => {
-                      setAdjBranchId(e.target.value);
-                      const currentStock = selectedProduct.branchStocks?.find((bs: any) => bs.branchId === e.target.value) || { quantity: 0, minStockLevel: 0 };
-                      setAdjQuantity(currentStock.quantity);
-                      setAdjMinLevel(currentStock.minStockLevel);
-                    }}
-                    className="w-full px-3 py-2.5 bg-slate-950 border border-slate-800 rounded-lg text-slate-100 text-sm focus:outline-none"
-                  >
-                    {branches.map((br) => (
-                      <option key={br.id} value={br.id}>{br.name}</option>
-                    ))}
-                  </select>
-                </div>
-              )}
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-1.5">New Stock Quantity</label>
-                  <input
-                    type="number"
-                    value={adjQuantity}
-                    onChange={(e) => setAdjQuantity(parseInt(e.target.value) || 0)}
-                    required
-                    className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-slate-100 text-sm"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-1.5">Low Stock Alert Limit</label>
-                  <input
-                    type="number"
-                    value={adjMinLevel}
-                    onChange={(e) => setAdjMinLevel(parseInt(e.target.value) || 0)}
-                    required
-                    className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-slate-100 text-sm"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1.5">Adjustment Reason / Notes</label>
-                <input
-                  type="text"
-                  value={adjReason}
-                  onChange={(e) => setAdjReason(e.target.value)}
-                  placeholder="Intake delivery, damaged items, stock take, etc."
-                  required
-                  className="w-full px-3 py-2.5 bg-slate-950 border border-slate-800 rounded-lg text-slate-100 text-sm"
-                />
-              </div>
-
-              <div className="flex space-x-3 pt-4 border-t border-slate-850">
-                <button type="button" onClick={() => { setShowAdjustStockModal(false); setSelectedProduct(null); }} className="flex-1 py-2.5 bg-slate-800 text-slate-355 text-xs font-bold rounded-lg">Cancel</button>
-                <button type="submit" disabled={adjSubmitting} className="flex-1 py-2.5 bg-indigo-650 text-white text-xs font-bold rounded-lg">Confirm Changes</button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* Adjustment Logs Modal */}
-      {showLogModal && (
-        <div className="fixed inset-0 bg-slate-950/70 backdrop-blur-md flex justify-center items-center p-4 z-50">
-          <div className="w-full max-w-2xl p-6 bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl">
-            <div className="flex justify-between items-center mb-4">
-              <div>
-                <h3 className="text-xl font-bold text-slate-100">Stock Adjustment Audit Trail</h3>
-                <p className="text-xs text-slate-455">Product: <span className="text-indigo-400 font-bold">{selectedProduct?.name}</span></p>
-              </div>
+            <div className="flex border-b border-slate-850">
               <button
-                onClick={() => { setShowLogModal(false); setSelectedProduct(null); setAdjustmentLogs([]); }}
-                className="text-xs font-bold text-slate-400 hover:text-slate-100"
+                type="button"
+                onClick={() => setStockModalTab('add')}
+                className={`flex-1 pb-2 text-xs font-bold transition-all border-b-2 cursor-pointer ${
+                  stockModalTab === 'add' ? 'text-primary border-primary' : 'text-slate-500 border-transparent hover:text-slate-300'
+                }`}
               >
-                Close
+                📥 Add Stock (Restock)
+              </button>
+              <button
+                type="button"
+                onClick={() => setStockModalTab('correct')}
+                className={`flex-1 pb-2 text-xs font-bold transition-all border-b-2 cursor-pointer ${
+                  stockModalTab === 'correct' ? 'text-primary border-primary' : 'text-slate-500 border-transparent hover:text-slate-300'
+                }`}
+              >
+                🛠️ Correct Stock (Audit)
               </button>
             </div>
-            
-            <div className="max-h-96 overflow-y-auto space-y-3 p-1">
-              {adjustmentLogs.length === 0 ? (
-                <p className="text-xs text-slate-500 text-center py-8">No stock adjustments logged for this product.</p>
-              ) : (
-                adjustmentLogs.map((log) => (
-                  <div key={log.id} className="p-3 bg-slate-950/30 border border-slate-850 rounded-lg text-xs space-y-1.5">
-                    <div className="flex justify-between font-semibold">
-                      <span className="text-slate-300">Changed by: {log.adjustedByUserName}</span>
-                      <span className="text-slate-500">{new Date(log.createdAt).toLocaleString()}</span>
-                    </div>
-                    <div className="grid grid-cols-3 gap-2 text-[11px] text-slate-400">
-                      <div>Branch: <span className="text-purple-400 font-medium">{log.branchName}</span></div>
-                      <div>Prev Qty: <span className="text-slate-300">{log.previousQuantity}</span></div>
-                      <div>New Qty: <span className="text-indigo-400 font-bold">{log.newQuantity}</span></div>
-                    </div>
-                    <div className="text-[11px] text-slate-450 border-t border-slate-850/50 pt-1">
-                      Reason: <span className="text-slate-300 italic">{log.reason}</span>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
-        </div>
-      )}
 
-      {/* Initiate Transfer Modal */}
-      {showAddTransferModal && (
-        <div className="fixed inset-0 bg-slate-950/70 backdrop-blur-md flex justify-center items-center p-4 z-50">
-          <div className="w-full max-w-md p-6 bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl">
-            <h3 className="text-xl font-bold text-slate-100 mb-2">Initiate Stock Transfer</h3>
-            {transferError && <div className="mb-4 p-3 bg-red-950/50 border border-red-800 text-red-400 rounded-lg text-xs">{transferError}</div>}
-            <form onSubmit={handleInitiateTransfer} className="space-y-4">
-              <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1.5">Select Product</label>
-                <select
-                  value={transferProductId}
-                  onChange={(e) => setTransferProductId(e.target.value)}
-                  className="w-full px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-lg text-slate-100 text-sm focus:outline-none"
-                >
-                  {products.map((p) => (
-                    <option key={p.id} value={p.id}>{p.name} (Available: {p.totalStock})</option>
-                  ))}
-                </select>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-1.5">Source Branch</label>
-                  <select
-                    value={transferSourceBranchId}
-                    onChange={(e) => setTransferSourceBranchId(e.target.value)}
-                    className="w-full px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-lg text-slate-100 text-sm focus:outline-none"
-                  >
-                    {branches.map((br) => (
-                      <option key={br.id} value={br.id}>{br.name}</option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-1.5">Target Branch</label>
-                  <select
-                    value={transferTargetBranchId}
-                    onChange={(e) => setTransferTargetBranchId(e.target.value)}
-                    className="w-full px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-lg text-slate-100 text-sm focus:outline-none"
-                  >
-                    {branches.map((br) => (
-                      <option key={br.id} value={br.id}>{br.name}</option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1.5">Quantity to Transfer</label>
-                <input
-                  type="number"
-                  min="1"
-                  value={transferQuantity}
-                  onChange={(e) => setTransferQuantity(parseInt(e.target.value) || 1)}
-                  required
-                  className="w-full px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-lg text-slate-100 text-sm focus:outline-none"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1.5">Transfer Notes</label>
-                <input
-                  type="text"
-                  value={transferNotes}
-                  onChange={(e) => setTransferNotes(e.target.value)}
-                  placeholder="Coca-cola branch restock"
-                  className="w-full px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-lg text-slate-100 text-sm focus:outline-none"
-                />
-              </div>
-              <div className="flex space-x-3 pt-4 border-t border-slate-850">
-                <button type="button" onClick={() => setShowAddTransferModal(false)} className="flex-1 py-2.5 bg-slate-800 text-slate-350 text-xs font-bold rounded-lg">Cancel</button>
-              </div>
-
-              <div className="flex space-x-3 pt-4 border-t border-slate-850">
-                <button type="button" onClick={() => { setShowEditProductModal(false); setSelectedProduct(null); }} className="flex-1 py-2.5 bg-slate-800 text-slate-355 text-xs font-bold rounded-lg">Cancel</button>
-                <button type="submit" disabled={prodSubmitting} className="flex-1 py-2.5 bg-indigo-650 text-white text-xs font-bold rounded-lg">Save Changes</button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* Adjust Stock Modal */}
-      {showAdjustStockModal && (
-        <div className="fixed inset-0 bg-slate-950/70 backdrop-blur-md flex justify-center items-center p-4 z-50">
-          <div className="w-full max-w-md p-6 bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl">
-            <h3 className="text-xl font-bold text-slate-100 mb-1">Adjust Inventory Level</h3>
-            <p className="text-xs text-slate-455 mb-4">Product: <span className="text-indigo-400 font-bold">{selectedProduct?.name}</span></p>
-            {adjError && <div className="mb-4 p-3 bg-red-950/50 border border-red-800 text-red-400 rounded-lg text-xs">{adjError}</div>}
-            
             <form onSubmit={handleAdjustStock} className="space-y-4">
               {!activeBusiness.sharedStockMode && (
                 <div>
@@ -4120,44 +4008,69 @@ export default function OwnerDashboard() {
                 </div>
               )}
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-1.5">New Stock Quantity</label>
-                  <input
-                    type="number"
-                    value={adjQuantity}
-                    onChange={(e) => setAdjQuantity(parseInt(e.target.value) || 0)}
-                    required
-                    className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-slate-100 text-sm"
-                  />
+              {stockModalTab === 'add' ? (
+                <div className="space-y-4">
+                  <div className="p-3 bg-slate-950/40 border border-slate-850 rounded-xl flex justify-between items-center text-xs">
+                    <span className="text-slate-450">Current Stock Level:</span>
+                    <strong className="text-indigo-400 font-bold">{adjQuantity} units</strong>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-300 mb-1.5">Quantity to Add</label>
+                    <input
+                      type="number"
+                      min="1"
+                      value={adjQuantityToAdd}
+                      onChange={(e) => setAdjQuantityToAdd(e.target.value)}
+                      required
+                      placeholder="e.g. 50"
+                      className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-slate-100 text-sm focus:outline-none"
+                    />
+                  </div>
                 </div>
-                <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-1.5">Low Stock Alert Limit</label>
-                  <input
-                    type="number"
-                    value={adjMinLevel}
-                    onChange={(e) => setAdjMinLevel(parseInt(e.target.value) || 0)}
-                    required
-                    className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-slate-100 text-sm"
-                  />
+              ) : (
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-300 mb-1.5">New Stock Quantity</label>
+                    <input
+                      type="number"
+                      value={adjQuantity}
+                      onChange={(e) => setAdjQuantity(parseInt(e.target.value) || 0)}
+                      required
+                      className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-slate-100 text-sm focus:outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-300 mb-1.5">Low Stock Alert Limit</label>
+                    <input
+                      type="number"
+                      value={adjMinLevel}
+                      onChange={(e) => setAdjMinLevel(parseInt(e.target.value) || 0)}
+                      required
+                      className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-slate-100 text-sm focus:outline-none"
+                    />
+                  </div>
                 </div>
-              </div>
+              )}
 
               <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1.5">Adjustment Reason / Notes</label>
+                <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+                  {stockModalTab === 'add' ? "Addition Notes / Reason" : "Adjustment Reason / Notes"}
+                </label>
                 <input
                   type="text"
                   value={adjReason}
                   onChange={(e) => setAdjReason(e.target.value)}
-                  placeholder="Intake delivery, damaged items, stock take, etc."
+                  placeholder={stockModalTab === 'add' ? "Intake delivery, new shipment, etc." : "Damaged items, counting mistake, audit correction, etc."}
                   required
-                  className="w-full px-3 py-2.5 bg-slate-950 border border-slate-800 rounded-lg text-slate-100 text-sm"
+                  className="w-full px-3 py-2.5 bg-slate-950 border border-slate-800 rounded-lg text-slate-100 text-sm focus:outline-none"
                 />
               </div>
 
               <div className="flex space-x-3 pt-4 border-t border-slate-850">
-                <button type="button" onClick={() => { setShowAdjustStockModal(false); setSelectedProduct(null); }} className="flex-1 py-2.5 bg-slate-800 text-slate-355 text-xs font-bold rounded-lg">Cancel</button>
-                <button type="submit" disabled={adjSubmitting} className="flex-1 py-2.5 bg-indigo-650 text-white text-xs font-bold rounded-lg">Confirm Changes</button>
+                <button type="button" onClick={() => { setShowAdjustStockModal(false); setSelectedProduct(null); setAdjQuantityToAdd(""); setAdjReason(""); }} className="flex-1 py-2.5 bg-slate-800 text-slate-355 text-xs font-bold rounded-lg transition-colors cursor-pointer">Cancel</button>
+                <button type="submit" disabled={adjSubmitting} className="flex-1 py-2.5 bg-primary hover:bg-primary-hover text-white text-xs font-bold rounded-lg transition-colors cursor-pointer">
+                  {adjSubmitting ? "Updating..." : stockModalTab === 'add' ? "Add Stock" : "Correct Stock"}
+                </button>
               </div>
             </form>
           </div>

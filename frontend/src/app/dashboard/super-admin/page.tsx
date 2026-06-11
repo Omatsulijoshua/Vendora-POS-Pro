@@ -52,8 +52,22 @@ export default function SuperAdminDashboard() {
   const [auditLogs, setAuditLogs] = useState<SuperAdminAuditLog[]>([]);
   
   const [searchQuery, setSearchQuery] = useState("");
-  const [activeTab, setActiveTab] = useState<"businesses" | "auditLogs">("businesses");
+  const [activeTab, setActiveTab] = useState<"businesses" | "auditLogs" | "sale-records">("businesses");
   
+  // Sales records states
+  const [sales, setSales] = useState<any[]>([]);
+  const [loadingSales, setLoadingSales] = useState(false);
+  const [selectedSale, setSelectedSale] = useState<any>(null);
+  const [showReceiptDetailModal, setShowReceiptDetailModal] = useState(false);
+
+  // Filter dropdown states
+  const [filterBusinessId, setFilterBusinessId] = useState("");
+  const [filterBranchId, setFilterBranchId] = useState("");
+  const [filterCashierId, setFilterCashierId] = useState("");
+
+  const [filterBranches, setFilterBranches] = useState<any[]>([]);
+  const [filterCashiers, setFilterCashiers] = useState<any[]>([]);
+
   // Modals & form state
   const [selectedBusiness, setSelectedBusiness] = useState<SuperAdminBusiness | null>(null);
   const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
@@ -108,6 +122,67 @@ export default function SuperAdminDashboard() {
       }
     } catch (err) {
       console.error("Failed to fetch audit logs", err);
+    }
+  }, [token]);
+
+  const fetchFilterBranches = async (businessId: string) => {
+    if (!businessId) {
+      setFilterBranches([]);
+      setFilterBranchId("");
+      return;
+    }
+    try {
+      const res = await fetch(`${baseUrl}/api/superadmin/branches?businessId=${businessId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setFilterBranches(data);
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const fetchFilterCashiers = async (businessId: string, branchId: string) => {
+    if (!businessId) {
+      setFilterCashiers([]);
+      setFilterCashierId("");
+      return;
+    }
+    try {
+      const url = `${baseUrl}/api/superadmin/cashiers?businessId=${businessId}${branchId ? `&branchId=${branchId}` : ""}`;
+      const res = await fetch(url, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setFilterCashiers(data);
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const fetchSales = useCallback(async (bId?: string, brId?: string, cId?: string) => {
+    setLoadingSales(true);
+    try {
+      const params = new URLSearchParams();
+      if (bId) params.append("businessId", bId);
+      if (brId) params.append("branchId", brId);
+      if (cId) params.append("cashierId", cId);
+
+      const res = await fetch(`${baseUrl}/api/sales?${params.toString()}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setSales(data);
+      }
+    } catch (err) {
+      console.error("Failed to fetch sales", err);
+    } finally {
+      setLoadingSales(false);
     }
   }, [token]);
 
@@ -392,11 +467,24 @@ export default function SuperAdminDashboard() {
           >
             System Audit Trail ({auditLogs.length})
           </button>
+          <button
+            onClick={() => {
+              setActiveTab("sale-records");
+              fetchSales(filterBusinessId, filterBranchId, filterCashierId);
+            }}
+            className={`py-3 px-6 text-sm font-semibold border-b-2 transition-all ${
+              activeTab === "sale-records"
+                ? "border-indigo-500 text-indigo-400"
+                : "border-transparent text-slate-400 hover:text-slate-200"
+            }`}
+          >
+            Sale Records
+          </button>
         </div>
 
         {/* Tab Panels */}
-        {activeTab === "businesses" ? (
-          <div className="space-y-6">
+        {activeTab === "businesses" && (
+          <div className="space-y-6 animate-in fade-in duration-300">
             {/* Business Control Panel Header */}
             <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
               <div className="w-full sm:max-w-md relative">
@@ -408,54 +496,40 @@ export default function SuperAdminDashboard() {
                   className="w-full pl-4 pr-10 py-2.5 rounded-xl bg-slate-900/60 border border-slate-800 text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition-colors"
                 />
               </div>
-              <div className="text-xs text-slate-400 font-semibold uppercase tracking-wider">
-                Showing {filteredBusinesses.length} of {businesses.length} tenants
-              </div>
             </div>
 
-            {/* Businesses Table Card */}
-            <div className="border border-slate-900 bg-slate-900/10 rounded-2xl overflow-hidden">
-              <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse min-w-[1000px]">
+            {/* Businesses Table */}
+            <div className="border border-slate-900 bg-slate-900/10 rounded-2xl p-6 space-y-4">
+              <div className="overflow-x-auto border border-slate-900 rounded-xl">
+                <table className="w-full text-left border-collapse text-xs">
                   <thead>
-                    <tr className="border-b border-slate-900 bg-slate-900/40 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                      <th className="py-4 px-6">Company / Subdomain</th>
-                      <th className="py-4 px-6">Owner Account</th>
-                      <th className="py-4 px-4 text-center">Branches</th>
-                      <th className="py-4 px-4 text-center">Users</th>
-                      <th className="py-4 px-6 text-right">Gross Sales</th>
-                      <th className="py-4 px-6 text-center">Subscription Tier & Price</th>
-                      <th className="py-4 px-6 text-center">Billing Status</th>
+                    <tr className="border-b border-slate-900 bg-slate-950/30 text-slate-400 font-semibold">
+                      <th className="py-4 px-6">Business Name</th>
+                      <th className="py-4 px-6">Domain URL</th>
+                      <th className="py-4 px-6">Registered Owner</th>
+                      <th className="py-4 px-6 text-center">Branches</th>
+                      <th className="py-4 px-6 text-center">Staff Users</th>
+                      <th className="py-4 px-6 text-center">Subscription Tier</th>
+                      <th className="py-4 px-6 text-center">Status</th>
                       <th className="py-4 px-6 text-right">Actions</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-900/60 text-sm text-slate-300">
+                  <tbody className="divide-y divide-slate-900 text-slate-350 bg-slate-950/5">
                     {filteredBusinesses.map((b) => (
-                      <tr key={b.id} className="hover:bg-slate-900/15 transition-colors">
+                      <tr key={b.id} className="hover:bg-slate-900/10 transition-colors">
+                        <td className="py-4 px-6 font-bold text-slate-200">{b.name}</td>
+                        <td className="py-4 px-6 text-slate-400 font-mono">{b.subdomain}.vendorapos.com</td>
                         <td className="py-4 px-6">
-                          <div>
-                            <p className="font-bold text-slate-200">{b.name}</p>
-                            <p className="font-mono text-xs text-indigo-400 mt-0.5">{b.subdomain}.vendorapos.com</p>
-                            <span className="text-[10px] text-slate-500">Created: {new Date(b.createdAt).toLocaleDateString()}</span>
-                          </div>
+                          <p className="font-semibold text-slate-300">{b.ownerName}</p>
+                          <p className="text-[10px] text-slate-500">{b.ownerEmail}</p>
                         </td>
-                        <td className="py-4 px-6">
-                          <div>
-                            <p className="font-medium text-slate-300">{b.ownerName}</p>
-                            <p className="text-xs text-slate-500">{b.ownerEmail}</p>
-                          </div>
-                        </td>
-                        <td className="py-4 px-4 text-center font-bold text-slate-200">{b.branchesCount}</td>
-                        <td className="py-4 px-4 text-center font-bold text-slate-200">{b.usersCount}</td>
-                        <td className="py-4 px-6 text-right font-semibold text-slate-200">
-                          ₦{b.totalSalesRevenue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                        </td>
+                        <td className="py-4 px-6 text-center font-bold text-slate-300">{b.branchesCount}</td>
+                        <td className="py-4 px-6 text-center font-bold text-slate-300">{b.usersCount}</td>
                         <td className="py-4 px-6 text-center">
                           <div>
                             <span className="px-2 py-0.5 rounded text-xs font-bold bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
                               {b.subscriptionTier}
                             </span>
-                            <p className="text-xs text-slate-400 mt-1">₦{b.subscriptionPrice}/yr</p>
                           </div>
                         </td>
                         <td className="py-4 px-6 text-center">
@@ -468,11 +542,6 @@ export default function SuperAdminDashboard() {
                             }`}>
                               {b.subscriptionStatus}
                             </span>
-                            {b.subscriptionExpiresAt && (
-                              <p className="text-[10px] text-slate-500 mt-1">
-                                Exp: {new Date(b.subscriptionExpiresAt).toLocaleDateString()}
-                              </p>
-                            )}
                           </div>
                         </td>
                         <td className="py-4 px-6 text-right">
@@ -504,33 +573,23 @@ export default function SuperAdminDashboard() {
                         </td>
                       </tr>
                     ))}
-                    {filteredBusinesses.length === 0 && (
-                      <tr>
-                        <td colSpan={8} className="py-8 text-center text-slate-500 text-sm">
-                          No business tenants found matching your query.
-                        </td>
-                      </tr>
-                    )}
                   </tbody>
                 </table>
               </div>
             </div>
-
-            {/* Growth Trend Visualizer */}
+            
             {stats && stats.businessGrowthTrend && (
               <div className="border border-slate-900 bg-slate-900/10 rounded-2xl p-6 space-y-4">
                 <h3 className="font-extrabold text-slate-200 text-base">New Tenant Sign-ups (Last 7 Days)</h3>
                 <div className="h-40 flex items-end justify-between pt-6 border-b border-slate-900 px-4">
                   {stats.businessGrowthTrend.map((t, idx) => {
                     const maxCount = Math.max(...stats.businessGrowthTrend.map((d) => d.businessesCreated), 1);
-                    const pct = Math.max((t.businessesCreated / maxCount) * 100, 8); // min height for visibility
+                    const pct = Math.max((t.businessesCreated / maxCount) * 100, 8);
                     return (
                       <div key={idx} className="flex-1 flex flex-col items-center group relative px-2">
-                        {/* Hover Tooltip */}
                         <div className="absolute top-[-28px] scale-0 group-hover:scale-100 transition-all bg-slate-900 border border-slate-800 text-[10px] text-slate-200 font-bold px-2 py-0.5 rounded shadow z-10">
                           {t.businessesCreated} new
                         </div>
-                        {/* Bar */}
                         <div 
                           style={{ height: `${pct}%` }} 
                           className="w-8 sm:w-12 rounded-t-lg bg-indigo-500/30 group-hover:bg-indigo-500 border-t border-x border-indigo-500/40 transition-all cursor-pointer shadow-lg shadow-indigo-500/5"
@@ -538,7 +597,6 @@ export default function SuperAdminDashboard() {
                         <span className="text-[10px] text-slate-500 font-medium mt-2">
                           {new Date(t.date).toLocaleDateString(undefined, { weekday: "short" })}
                         </span>
-                        <span className="text-[9px] text-slate-600 font-mono mt-0.5">{t.date.split("-")[2]}</span>
                       </div>
                     );
                   })}
@@ -546,9 +604,10 @@ export default function SuperAdminDashboard() {
               </div>
             )}
           </div>
-        ) : (
-          /* Audit Logs tab */
-          <div className="border border-slate-900 bg-slate-900/10 rounded-2xl p-6 space-y-6">
+        )}
+
+        {activeTab === "auditLogs" && (
+          <div className="border border-slate-900 bg-slate-900/10 rounded-2xl p-6 space-y-6 animate-in fade-in duration-300">
             <div className="flex justify-between items-center">
               <h3 className="font-bold text-lg text-slate-100">Recent Platform Activities</h3>
               <span className="text-xs text-slate-500 uppercase tracking-wider font-semibold">
@@ -559,7 +618,6 @@ export default function SuperAdminDashboard() {
             <div className="relative border-l border-slate-900 pl-6 ml-3 space-y-6">
               {auditLogs.map((log) => (
                 <div key={log.id} className="relative group">
-                  {/* Dot icon */}
                   <span className={`absolute left-[-31px] top-1.5 h-3.5 w-3.5 rounded-full border-2 ${
                     log.action === "BusinessSuspended" ? "bg-red-500 border-slate-950" :
                     log.action === "BusinessActivated" ? "bg-emerald-500 border-slate-950" :
@@ -581,17 +639,6 @@ export default function SuperAdminDashboard() {
                         <span className="text-xs text-slate-500 font-mono">IP: {log.ipAddress}</span>
                       </div>
                       <p className="text-slate-200 text-sm font-semibold leading-tight">{log.details}</p>
-                      <p className="text-xs text-slate-400">
-                        Performed by: <span className="font-semibold text-slate-300">{log.userEmail}</span> 
-                        {log.businessId && (
-                          <>
-                            {" "}• Tenant: <span className="font-semibold text-indigo-400">{log.businessName}</span>
-                          </>
-                        )}
-                      </p>
-                    </div>
-                    <div className="text-[10px] text-slate-500 font-medium">
-                      {new Date(log.createdAt).toLocaleString()}
                     </div>
                   </div>
                 </div>
@@ -602,7 +649,189 @@ export default function SuperAdminDashboard() {
             </div>
           </div>
         )}
+
+        {activeTab === "sale-records" && (
+          <div className="border border-slate-900 bg-slate-900/10 rounded-2xl p-6 space-y-6 animate-in fade-in duration-300">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div>
+                <h3 className="font-bold text-lg text-slate-100">Sale Records Query</h3>
+                <p className="text-xs text-slate-500">Query and filter sales transactions across all businesses in real time</p>
+              </div>
+              <button
+                onClick={() => fetchSales(filterBusinessId, filterBranchId, filterCashierId)}
+                className="px-3 py-1.5 bg-slate-850 hover:bg-slate-800 text-xs font-bold text-slate-200 rounded-lg transition-colors border border-slate-800 cursor-pointer"
+              >
+                Refresh Records
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 p-4 bg-slate-950/40 border border-slate-900 rounded-xl">
+              <div>
+                <label className="block text-xs font-semibold text-slate-400 mb-1.5">Business Tenant</label>
+                <select
+                  value={filterBusinessId}
+                  onChange={(e) => {
+                    const bId = e.target.value;
+                    setFilterBusinessId(bId);
+                    setFilterBranchId("");
+                    setFilterCashierId("");
+                    fetchFilterBranches(bId);
+                    fetchFilterCashiers(bId, "");
+                    fetchSales(bId, "", "");
+                  }}
+                  className="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded-lg text-slate-100 text-xs focus:outline-none focus:border-indigo-500"
+                >
+                  <option value="">All Businesses</option>
+                  {businesses.map((b) => (
+                    <option key={b.id} value={b.id}>{b.name}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-400 mb-1.5">Branch Location</label>
+                <select
+                  value={filterBranchId}
+                  onChange={(e) => {
+                    const brId = e.target.value;
+                    setFilterBranchId(brId);
+                    setFilterCashierId("");
+                    fetchFilterCashiers(filterBusinessId, brId);
+                    fetchSales(filterBusinessId, brId, "");
+                  }}
+                  disabled={!filterBusinessId}
+                  className="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded-lg text-slate-100 text-xs focus:outline-none focus:border-indigo-500 disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  <option value="">All Branches</option>
+                  {filterBranches.map((br) => (
+                    <option key={br.id} value={br.id}>{br.name}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-400 mb-1.5">Cashier / Staff</label>
+                <select
+                  value={filterCashierId}
+                  onChange={(e) => {
+                    const cId = e.target.value;
+                    setFilterCashierId(cId);
+                    fetchSales(filterBusinessId, filterBranchId, cId);
+                  }}
+                  disabled={!filterBusinessId}
+                  className="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded-lg text-slate-100 text-xs focus:outline-none focus:border-indigo-500 disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  <option value="">All Staff</option>
+                  {filterCashiers.map((c) => (
+                    <option key={c.id} value={c.id}>{c.name} ({c.role})</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {loadingSales ? (
+              <div className="text-sm text-slate-500 py-6 animate-pulse text-center">Loading sale records...</div>
+            ) : sales.length === 0 ? (
+              <div className="text-sm text-slate-550 py-8 text-center bg-slate-950/20 border border-slate-900 rounded-xl">No sale records match the selected filters.</div>
+            ) : (
+              <div className="overflow-x-auto border border-slate-900 rounded-xl">
+                <table className="w-full text-left border-collapse text-xs">
+                  <thead>
+                    <tr className="border-b border-slate-900 bg-slate-950/30 text-slate-400 font-semibold">
+                      <th className="py-3 px-4">Receipt ID</th>
+                      <th className="py-3 px-4">Branch</th>
+                      <th className="py-3 px-4">Cashier</th>
+                      <th className="py-3 px-4">Payment Method</th>
+                      <th className="py-3 px-4">Items Count</th>
+                      <th className="py-3 px-4">Date & Time</th>
+                      <th className="py-3 px-4 text-right">Total Amount</th>
+                      <th className="py-3 px-4 text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-900 text-slate-350 bg-slate-950/5">
+                    {sales.map((sale) => (
+                      <tr key={sale.id} className="hover:bg-slate-900/10 transition-colors">
+                        <td className="py-3 px-4 font-mono font-semibold text-slate-200">{sale.id.substring(0, 8).toUpperCase()}</td>
+                        <td className="py-3 px-4 text-slate-400">{sale.branchName || "Global/Shared"}</td>
+                        <td className="py-3 px-4 text-slate-400">{sale.cashierName}</td>
+                        <td className="py-3 px-4">
+                          <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${
+                            sale.paymentMethod === "Mixed" ? "bg-purple-500/10 text-purple-400 border-purple-500/20" :
+                            sale.paymentMethod === "Cash" ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" :
+                            sale.paymentMethod === "Transfer" ? "bg-blue-500/10 text-blue-400 border-blue-500/20" :
+                            "bg-yellow-500/10 text-yellow-400 border-yellow-500/20"
+                          }`}>
+                            {sale.paymentMethod}
+                          </span>
+                        </td>
+                        <td className="py-3 px-4 text-slate-400">{sale.items?.length ?? 0} items</td>
+                        <td className="py-3 px-4 text-slate-500">{new Date(sale.createdAt).toLocaleString()}</td>
+                        <td className="py-3 px-4 text-right font-bold text-slate-200">₦{sale.total.toFixed(2)}</td>
+                        <td className="py-3 px-4 text-right">
+                          <button
+                            onClick={() => {
+                              setSelectedSale(sale);
+                              setShowReceiptDetailModal(true);
+                            }}
+                            className="px-2.5 py-1 bg-indigo-600 hover:bg-indigo-700 text-white text-[10px] font-bold rounded transition-colors active:scale-95 cursor-pointer shadow-sm shadow-indigo-650/15"
+                          >
+                            View Receipt
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        )}
       </main>
+
+      {/* Thermal Receipt Detail Modal */}
+      {showReceiptDetailModal && selectedSale && (
+        <div className="fixed inset-0 bg-slate-950/70 backdrop-blur-md flex justify-center items-center p-4 z-50 animate-in fade-in duration-200">
+          <div className="w-full max-w-sm p-6 bg-white text-slate-900 border border-slate-200 rounded-2xl shadow-2xl flex flex-col font-mono text-xs">
+            <div className="text-center space-y-1 pb-4 border-b border-dashed border-slate-300">
+              <h3 className="text-sm font-bold tracking-wider">VENDORA INVENTORY SYSTEM</h3>
+              <p className="text-[10px] text-slate-550">{selectedSale.branchName}</p>
+              <p className="text-[9px] text-slate-455">Date: {new Date(selectedSale.createdAt).toLocaleString()}</p>
+              <p className="text-[9px] text-slate-455">Receipt ID: {selectedSale.id.substring(0, 8).toUpperCase()}</p>
+            </div>
+            <div className="py-2 border-b border-dashed border-slate-300 text-[9px] text-slate-500">
+              <span>Cashier: {selectedSale.cashierName}</span>
+            </div>
+            <div className="flex-1 py-4 space-y-3 max-h-60 overflow-y-auto">
+              {selectedSale.items?.map((item: any) => (
+                <div key={item.id} className="flex justify-between items-start text-[10px]">
+                  <div className="space-y-0.5">
+                    <p className="font-bold">{item.productName}</p>
+                    <p className="text-[9px] text-slate-500">
+                      {item.quantity} x ₦{item.unitPrice.toFixed(2)}
+                    </p>
+                  </div>
+                  <span className="font-bold">₦{item.total.toFixed(2)}</span>
+                </div>
+              ))}
+            </div>
+            <div className="border-t border-dashed border-slate-300 pt-3 space-y-1.5 text-[10px]">
+              <div className="flex justify-between">
+                <span>TOTAL</span>
+                <span>₦{selectedSale.total.toFixed(2)}</span>
+              </div>
+            </div>
+            <button
+              onClick={() => {
+                setShowReceiptDetailModal(false);
+                setSelectedSale(null);
+              }}
+              className="mt-4 py-2.5 w-full bg-slate-900 text-white font-bold rounded-xl text-xs hover:bg-slate-800 transition-colors cursor-pointer text-center"
+            >
+              Close Receipt
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Subscription Edit Modal */}
       {showSubscriptionModal && selectedBusiness && (

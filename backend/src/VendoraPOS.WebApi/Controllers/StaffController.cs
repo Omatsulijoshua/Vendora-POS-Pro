@@ -14,7 +14,7 @@ using VendoraPOS.Infrastructure.Data;
 
 namespace VendoraPOS.WebApi.Controllers;
 
-[Authorize(Roles = "Owner")]
+[Authorize(Roles = "Owner,Manager")]
 [ApiController]
 [Route("api/[controller]")]
 public class StaffController : ControllerBase
@@ -84,6 +84,7 @@ public class StaffController : ControllerBase
         return Ok(staffList);
     }
 
+    [Authorize(Roles = "Owner")]
     [HttpPost]
     public async Task<IActionResult> CreateStaff([FromBody] CreateStaffDto model)
     {
@@ -151,6 +152,7 @@ public class StaffController : ControllerBase
         return Ok(resultDto);
     }
 
+    [Authorize(Roles = "Owner")]
     [HttpPut("{id}/toggle-active")]
     public async Task<IActionResult> ToggleActive(Guid id)
     {

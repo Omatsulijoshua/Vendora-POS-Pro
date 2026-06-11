@@ -245,4 +245,57 @@ public class SuperAdminController : ControllerBase
 
         return Ok(dtoList);
     }
+
+    [HttpGet("branches")]
+    public async Task<IActionResult> GetBranches([FromQuery] Guid? businessId = null)
+    {
+        var query = _context.Branches.IgnoreQueryFilters().AsNoTracking();
+        if (businessId.HasValue)
+        {
+            query = query.Where(b => b.BusinessId == businessId.Value);
+        }
+        var branches = await query
+            .OrderBy(b => b.Name)
+            .Select(b => new { b.Id, b.Name, b.BusinessId })
+            .ToListAsync();
+        return Ok(branches);
+    }
+
+    [HttpGet("cashiers")]
+    public async Task<IActionResult> GetCashiers([FromQuery] Guid? businessId = null, [FromQuery] Guid? branchId = null)
+    {
+        var query = _context.Users.IgnoreQueryFilters().AsNoTracking();
+        if (businessId.HasValue)
+        {
+            query = query.Where(u => u.BusinessId == businessId.Value);
+        }
+        if (branchId.HasValue)
+        {
+            query = query.Where(u => u.BranchId == branchId.Value);
+        }
+
+        var users = await query.ToListAsync();
+        var cashierList = new List<object>();
+
+        foreach (var user in users)
+        {
+            var roles = await _userManager.GetRolesAsync(user);
+            var role = roles.FirstOrDefault() ?? string.Empty;
+
+            if (role == "Cashier" || role == "Manager")
+            {
+                cashierList.Add(new
+                {
+                    Id = user.Id,
+                    Name = $"{user.FirstName} {user.LastName}",
+                    Email = user.Email,
+                    Role = role,
+                    BusinessId = user.BusinessId,
+                    BranchId = user.BranchId
+                });
+            }
+        }
+
+        return Ok(cashierList);
+    }
 }
