@@ -412,4 +412,32 @@ public class AuthController : ControllerBase
             IsSubscriptionActive = isSubscriptionActive
         });
     }
+
+    [Authorize]
+    [HttpPost("change-password")]
+    public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordDto model)
+    {
+        var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (string.IsNullOrEmpty(userIdClaim) || !Guid.TryParse(userIdClaim, out var userId))
+        {
+            return Unauthorized(new { Message = "User session is invalid." });
+        }
+
+        var user = await _userManager.FindByIdAsync(userId.ToString());
+        if (user == null)
+        {
+            return NotFound(new { Message = "User not found." });
+        }
+
+        var result = await _userManager.ChangePasswordAsync(user, model.CurrentPassword, model.NewPassword);
+        if (!result.Succeeded)
+        {
+            var errors = string.Join(", ", result.Errors.Select(e => e.Description));
+            return BadRequest(new { Message = $"Failed to change password: {errors}" });
+        }
+
+        await _auditLogService.LogAsync("PasswordChanged", "User successfully changed their password", user.Email ?? "Unknown", user.BusinessId, HttpContext.Connection.RemoteIpAddress?.ToString() ?? "Unknown");
+
+        return Ok(new { Message = "Password changed successfully." });
+    }
 }

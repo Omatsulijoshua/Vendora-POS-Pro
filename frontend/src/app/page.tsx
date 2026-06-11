@@ -50,7 +50,7 @@ export default function Home() {
         </span>
         
         <h1 className="text-4xl sm:text-6xl font-black tracking-tight leading-tight text-foreground mb-8 max-w-4xl">
-          The Intelligent POS & Inventory Engine for{" "}
+          The Intelligent Inventory Management Engine for{" "}
           <span className="bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
             Multi-Branch Scale
           </span>
@@ -85,7 +85,7 @@ export default function Home() {
                 <span className="w-3 h-3 rounded-full bg-red-500/70" />
                 <span className="w-3 h-3 rounded-full bg-yellow-500/70" />
                 <span className="w-3 h-3 rounded-full bg-green-500/70" />
-                <span className="text-xs text-muted-foreground ml-4 font-mono">http://dashboard.vendorapos.pro</span>
+                <span className="text-xs text-muted-foreground ml-4 font-mono">http://dashboard.vendorainventory.com</span>
               </div>
               <div className="flex items-center gap-3">
                 <span className="w-2 h-2 rounded-full bg-accent animate-ping" />

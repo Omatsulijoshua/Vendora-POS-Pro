@@ -168,10 +168,12 @@ export default function VerifyReceiptPage() {
             </div>
           )}
 
-          <div className="flex justify-between text-slate-400">
-            <span>Sales Tax</span>
-            <span>₦{sale.taxAmount.toFixed(2)}</span>
-          </div>
+          {sale.taxAmount > 0 && (
+            <div className="flex justify-between text-slate-400">
+              <span>Sales Tax</span>
+              <span>₦{sale.taxAmount.toFixed(2)}</span>
+            </div>
+          )}
 
           <div className="flex justify-between text-sm font-black border-t border-slate-800 pt-3 text-white">
             <span>TOTAL PAID</span>

@@ -5,6 +5,7 @@ import { useAuth } from "@/context/AuthContext";
 import { Printer } from "lucide-react";
 import { Logo } from "@/components/Logo";
 import { ThemeToggle } from "@/context/ThemeContext";
+import ChangePasswordModal from "@/components/ChangePasswordModal";
 
 interface CartItem {
   id: string;
@@ -16,6 +17,7 @@ interface CartItem {
 
 export default function CashierDashboard() {
   const { user, token, logout } = useAuth();
+  const [showChangePasswordModal, setShowChangePasswordModal] = useState(false);
   const [cart, setCart] = useState<CartItem[]>([]);
   const [showSuccess, setShowSuccess] = useState(false);
   const [branchName, setBranchName] = useState("Loading branch...");
@@ -191,8 +193,8 @@ export default function CashierDashboard() {
   }
 
   const discountAmount = Math.min(manualDiscount + couponDiscount, subtotal);
-  const tax = Math.max(0, subtotal - discountAmount) * 0.08;
-  const total = subtotal - discountAmount + tax;
+  const tax = 0;
+  const total = subtotal - discountAmount;
 
   const handleApplyCoupon = async () => {
     if (!couponCode.trim()) return;
@@ -588,6 +590,12 @@ export default function CashierDashboard() {
             </div>
             <ThemeToggle />
             <button
+              onClick={() => setShowChangePasswordModal(true)}
+              className="px-3 py-2 rounded-lg bg-slate-900 border border-slate-800 hover:bg-slate-800 text-sm font-medium text-slate-300 hover:text-slate-100 transition-all active:scale-[0.98] flex items-center gap-1.5 cursor-pointer"
+            >
+              🔑 Change Password
+            </button>
+            <button
               onClick={logout}
               className="px-4 py-2 rounded-lg bg-slate-900 border border-slate-800 hover:bg-slate-800 text-sm font-medium text-slate-300 hover:text-slate-100 transition-all active:scale-[0.98]"
             >
@@ -797,10 +805,12 @@ export default function CashierDashboard() {
                   <span>-₦{discountAmount.toFixed(2)}</span>
                 </div>
               )}
-              <div className="flex justify-between text-sm text-slate-400">
-                <span>Tax (8%)</span>
-                <span>₦{tax.toFixed(2)}</span>
-              </div>
+              {tax > 0 && (
+                <div className="flex justify-between text-sm text-slate-400">
+                  <span>Tax (8%)</span>
+                  <span>₦{tax.toFixed(2)}</span>
+                </div>
+              )}
               <div className="flex justify-between text-lg font-bold text-slate-100 border-t border-slate-900 pt-3">
                 <span>Total</span>
                 <span className="text-indigo-400">₦{total.toFixed(2)}</span>
@@ -960,15 +970,17 @@ export default function CashierDashboard() {
                       const maxAmt = Math.max(...stats.dailySalesTrend.map((t: any) => t.amount), 1);
                       const heightPct = (trend.amount / maxAmt) * 100;
                       return (
-                        <div key={index} className="flex flex-col items-center flex-1 group relative">
+                        <div key={index} className="h-full flex flex-col justify-end items-center flex-1 group relative">
                           <div className="absolute top-[-32px] bg-slate-900 border border-slate-800 text-slate-100 text-[9px] font-black py-1 px-1.5 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10 shadow-xl whitespace-nowrap">
                             ₦{trend.amount.toFixed(2)} ({trend.count} sales)
                           </div>
-                          <div 
-                            className="w-10 sm:w-14 bg-gradient-to-t from-primary to-accent rounded-t group-hover:from-primary-hover group-hover:to-accent/90 transition-all cursor-pointer shadow-lg shadow-primary/10"
-                            style={{ height: `${Math.max(6, heightPct)}%` }}
-                          ></div>
-                          <span className="text-[9px] text-slate-550 mt-2 font-mono font-semibold">
+                          <div className="w-full h-28 flex items-end justify-center relative">
+                            <div 
+                              className="w-10 sm:w-14 bg-gradient-to-t from-primary to-accent rounded-t group-hover:from-primary-hover group-hover:to-accent/90 transition-all cursor-pointer shadow-lg shadow-primary/10"
+                              style={{ height: `${Math.max(6, heightPct)}%` }}
+                            ></div>
+                          </div>
+                          <span className="text-[9px] text-slate-550 mt-2 font-mono font-semibold block whitespace-nowrap">
                             {new Date(trend.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
                           </span>
                         </div>
@@ -1347,10 +1359,12 @@ export default function CashierDashboard() {
                           <span>-₦{completedSale.discountAmount.toFixed(2)}</span>
                         </div>
                       )}
-                      <div className="flex justify-between text-[10px] text-slate-500">
-                        <span>Sales Tax (8%)</span>
-                        <span className="font-medium text-slate-800">₦{completedSale.taxAmount.toFixed(2)}</span>
-                      </div>
+                      {completedSale.taxAmount > 0 && (
+                        <div className="flex justify-between text-[10px] text-slate-500">
+                          <span>Sales Tax (8%)</span>
+                          <span className="font-medium text-slate-800">₦{completedSale.taxAmount.toFixed(2)}</span>
+                        </div>
+                      )}
                       <div className="flex justify-between border-t pt-2 text-sm font-black" style={{ borderTopColor: receiptSetting?.customBrandingColor || "#6366F1", color: receiptSetting?.customBrandingColor || "#6366F1" }}>
                         <span>Total Paid</span>
                         <span>₦{completedSale.total.toFixed(2)}</span>
@@ -1444,10 +1458,12 @@ export default function CashierDashboard() {
                         <span>-₦{completedSale.discountAmount.toFixed(2)}</span>
                       </div>
                     )}
-                    <div className="flex justify-between">
-                      <span>Sales Tax</span>
-                      <span>₦{completedSale.taxAmount.toFixed(2)}</span>
-                    </div>
+                    {completedSale.taxAmount > 0 && (
+                      <div className="flex justify-between">
+                        <span>Sales Tax</span>
+                        <span>₦{completedSale.taxAmount.toFixed(2)}</span>
+                      </div>
+                    )}
                     <div className="flex justify-between text-xs font-bold border-t border-double pt-2 text-slate-900">
                       <span>TOTAL</span>
                       <span>₦{completedSale.total.toFixed(2)}</span>
@@ -1637,10 +1653,12 @@ export default function CashierDashboard() {
                       <span>-₦{completedSale.discountAmount.toFixed(2)}</span>
                     </div>
                   )}
-                  <div className="flex justify-between text-slate-500">
-                    <span>Sales Tax (8%)</span>
-                    <span className="font-semibold text-slate-800">₦{completedSale.taxAmount.toFixed(2)}</span>
-                  </div>
+                  {completedSale.taxAmount > 0 && (
+                    <div className="flex justify-between text-slate-500">
+                      <span>Sales Tax</span>
+                      <span className="font-semibold text-slate-800">₦{completedSale.taxAmount.toFixed(2)}</span>
+                    </div>
+                  )}
                   <div className="flex justify-between border-t pt-2.5 text-base font-black" style={{ borderColor: receiptSetting?.customBrandingColor || "#6366F1", color: receiptSetting?.customBrandingColor || "#6366F1" }}>
                     <span>Total Paid</span>
                     <span>₦{completedSale.total.toFixed(2)}</span>
@@ -1734,10 +1752,12 @@ export default function CashierDashboard() {
                     <span>-₦{completedSale.discountAmount.toFixed(2)}</span>
                   </div>
                 )}
-                <div className="flex justify-between">
-                  <span>Sales Tax (8%)</span>
-                  <span>₦{completedSale.taxAmount.toFixed(2)}</span>
-                </div>
+                {completedSale.taxAmount > 0 && (
+                  <div className="flex justify-between">
+                    <span>Sales Tax</span>
+                    <span>₦{completedSale.taxAmount.toFixed(2)}</span>
+                  </div>
+                )}
                 <div className="flex justify-between text-xs font-black border-t border-double border-slate-900 pt-2">
                   <span>TOTAL PAID</span>
                   <span>₦{completedSale.total.toFixed(2)}</span>
@@ -1791,6 +1811,11 @@ export default function CashierDashboard() {
           )}
         </div>
       )}
+      <ChangePasswordModal
+        isOpen={showChangePasswordModal}
+        onClose={() => setShowChangePasswordModal(false)}
+        token={token}
+      />
     </>
   );
 }

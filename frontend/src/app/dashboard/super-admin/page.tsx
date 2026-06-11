@@ -4,6 +4,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { Logo } from "@/components/Logo";
 import { ThemeToggle } from "@/context/ThemeContext";
+import ChangePasswordModal from "@/components/ChangePasswordModal";
 
 interface SuperAdminStats {
   totalBusinesses: number;
@@ -50,6 +51,7 @@ export default function SuperAdminDashboard() {
   const [stats, setStats] = useState<SuperAdminStats | null>(null);
   const [businesses, setBusinesses] = useState<SuperAdminBusiness[]>([]);
   const [auditLogs, setAuditLogs] = useState<SuperAdminAuditLog[]>([]);
+  const [showChangePasswordModal, setShowChangePasswordModal] = useState(false);
   
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTab, setActiveTab] = useState<"businesses" | "auditLogs" | "sale-records">("businesses");
@@ -355,6 +357,12 @@ export default function SuperAdminDashboard() {
             </div>
             <ThemeToggle />
             <button
+              onClick={() => setShowChangePasswordModal(true)}
+              className="px-3 py-2 rounded-lg bg-slate-900 border border-slate-800 hover:bg-slate-800 text-sm font-medium text-slate-300 hover:text-slate-100 transition-all active:scale-[0.98] flex items-center gap-1.5 cursor-pointer"
+            >
+              🔑 Change Password
+            </button>
+            <button
               onClick={logout}
               className="px-4 py-2 rounded-lg bg-slate-900 border border-slate-800 hover:bg-slate-800 text-sm font-medium text-slate-300 hover:text-slate-100 transition-all active:scale-[0.98]"
             >
@@ -630,15 +638,17 @@ export default function SuperAdminDashboard() {
                           const maxCount = Math.max(...stats.businessGrowthTrend.map((d) => d.businessesCreated), 1);
                           const pct = Math.max((t.businessesCreated / maxCount) * 100, 8);
                           return (
-                            <div key={idx} className="flex-1 flex flex-col items-center group relative px-2">
+                            <div key={idx} className="h-full flex flex-col justify-end items-center flex-1 group relative px-2">
                               <div className="absolute top-[-28px] scale-0 group-hover:scale-100 transition-all bg-slate-900 border border-slate-800 text-[10px] text-slate-200 font-bold px-2 py-0.5 rounded shadow z-10">
                                 {t.businessesCreated} new
                               </div>
-                              <div 
-                                style={{ height: `${pct}%` }} 
-                                className="w-8 sm:w-12 rounded-t-lg bg-indigo-500/30 group-hover:bg-indigo-500 border-t border-x border-indigo-500/40 transition-all cursor-pointer shadow-lg shadow-indigo-500/5"
-                              />
-                              <span className="text-[10px] text-slate-500 font-medium mt-2">
+                              <div className="w-full h-28 flex items-end justify-center relative">
+                                <div 
+                                  style={{ height: `${pct}%` }} 
+                                  className="w-8 sm:w-12 rounded-t-lg bg-indigo-500/30 group-hover:bg-indigo-500 border-t border-x border-indigo-500/40 transition-all cursor-pointer shadow-lg shadow-indigo-500/5"
+                                />
+                              </div>
+                              <span className="text-[10px] text-slate-500 font-medium mt-2 block whitespace-nowrap">
                                 {new Date(t.date).toLocaleDateString(undefined, { weekday: "short" })}
                               </span>
                             </div>
@@ -1103,6 +1113,11 @@ export default function SuperAdminDashboard() {
           </div>
         </div>
       )}
+      <ChangePasswordModal
+        isOpen={showChangePasswordModal}
+        onClose={() => setShowChangePasswordModal(false)}
+        token={token}
+      />
     </div>
   );
 }

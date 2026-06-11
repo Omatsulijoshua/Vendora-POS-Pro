@@ -5,9 +5,11 @@ import { useAuth } from "@/context/AuthContext";
 import NotificationBell from "@/components/NotificationBell";
 import { Logo } from "@/components/Logo";
 import { ThemeToggle } from "@/context/ThemeContext";
+import ChangePasswordModal from "@/components/ChangePasswordModal";
 
 export default function ManagerDashboard() {
   const { user, token, logout } = useAuth();
+  const [showChangePasswordModal, setShowChangePasswordModal] = useState(false);
   const [branchName, setBranchName] = useState("Loading branch...");
   const [products, setProducts] = useState<any[]>([]);
   const [loadingProducts, setLoadingProducts] = useState(false);
@@ -848,6 +850,12 @@ export default function ManagerDashboard() {
               <p className="text-xs text-slate-500">Branch: {branchName}</p>
             </div>
             <ThemeToggle />
+            <button
+              onClick={() => setShowChangePasswordModal(true)}
+              className="px-3 py-2 rounded-lg bg-slate-900 border border-slate-800 hover:bg-slate-800 text-sm font-medium text-slate-300 hover:text-slate-100 transition-all active:scale-[0.98] flex items-center gap-1.5 cursor-pointer"
+            >
+              🔑 Change Password
+            </button>
             <button
               onClick={logout}
               className="px-4 py-2 rounded-lg bg-slate-900 border border-slate-800 hover:bg-slate-800 text-sm font-medium text-slate-300 hover:text-slate-100 transition-all active:scale-[0.98]"
@@ -2294,21 +2302,23 @@ export default function ManagerDashboard() {
             <div className="border-t border-dashed border-slate-300 pt-3 space-y-1.5 text-[10px]">
               <div className="flex justify-between">
                 <span>Subtotal</span>
-                <span>${selectedSale.subtotal.toFixed(2)}</span>
+                <span>₦{selectedSale.subtotal.toFixed(2)}</span>
               </div>
               {selectedSale.discountAmount > 0 && (
                 <div className="flex justify-between text-red-655 font-bold">
                   <span>Discount</span>
-                  <span>-${selectedSale.discountAmount.toFixed(2)}</span>
+                  <span>-₦{selectedSale.discountAmount.toFixed(2)}</span>
                 </div>
               )}
-              <div className="flex justify-between">
-                <span>Sales Tax</span>
-                <span>${selectedSale.taxAmount.toFixed(2)}</span>
-              </div>
+              {selectedSale.taxAmount > 0 && (
+                <div className="flex justify-between">
+                  <span>Sales Tax</span>
+                  <span>₦{selectedSale.taxAmount.toFixed(2)}</span>
+                </div>
+              )}
               <div className="flex justify-between text-sm font-bold border-t border-double border-slate-400 pt-2 text-slate-900">
                 <span>TOTAL</span>
-                <span>${selectedSale.total.toFixed(2)}</span>
+                <span>₦{selectedSale.total.toFixed(2)}</span>
               </div>
             </div>
 
@@ -2601,6 +2611,11 @@ export default function ManagerDashboard() {
           </div>
         </div>
       )}
+      <ChangePasswordModal
+        isOpen={showChangePasswordModal}
+        onClose={() => setShowChangePasswordModal(false)}
+        token={token}
+      />
     </div>
   );
 }

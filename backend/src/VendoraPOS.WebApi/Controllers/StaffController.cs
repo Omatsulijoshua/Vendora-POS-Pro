@@ -191,4 +191,41 @@ public class StaffController : ControllerBase
 
         return Ok(new { Id = staffUser.Id, IsActive = staffUser.IsActive });
     }
+
+    [Authorize(Roles = "Owner,Manager")]
+    [HttpPut("{id}/reset-password")]
+    public async Task<IActionResult> ResetPassword(Guid id, [FromBody] ResetStaffPasswordDto model)
+    {
+        var businessIdClaim = User.FindFirst("business_id")?.Value;
+        if (string.IsNullOrEmpty(businessIdClaim) || !Guid.TryParse(businessIdClaim, out var businessId))
+        {
+            return BadRequest(new { Message = "No active business context selected." });
+        }
+
+        var staffUser = await _userManager.Users.FirstOrDefaultAsync(u => u.Id == id && u.BusinessId == businessId);
+        if (staffUser == null)
+        {
+            return NotFound(new { Message = "Staff member not found." });
+        }
+
+        var roles = await _userManager.GetRolesAsync(staffUser);
+        var role = roles.FirstOrDefault() ?? string.Empty;
+
+        // Only allow resetting Manager and Cashier passwords
+        if (role != UserRole.Manager.ToString() && role != UserRole.Cashier.ToString())
+        {
+            return BadRequest(new { Message = "Only Manager and Cashier passwords can be reset." });
+        }
+
+        var token = await _userManager.GeneratePasswordResetTokenAsync(staffUser);
+        var result = await _userManager.ResetPasswordAsync(staffUser, token, model.NewPassword);
+
+        if (!result.Succeeded)
+        {
+            var errors = string.Join(", ", result.Errors.Select(e => e.Description));
+            return BadRequest(new { Message = $"Failed to reset password: {errors}" });
+        }
+
+        return Ok(new { Message = "Password reset successfully." });
+    }
 }

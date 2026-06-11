@@ -5,6 +5,7 @@ import { useAuth } from "@/context/AuthContext";
 import NotificationBell from "@/components/NotificationBell";
 import { Logo } from "@/components/Logo";
 import { ThemeToggle } from "@/context/ThemeContext";
+import ChangePasswordModal from "@/components/ChangePasswordModal";
 
 export default function OwnerDashboard() {
   const { user, token, switchBusiness, switchBranch, logout } = useAuth();
@@ -88,6 +89,16 @@ export default function OwnerDashboard() {
   const [importSubmitting, setImportSubmitting] = useState(false);
   const [importResult, setImportResult] = useState<any>(null);
   const [importError, setImportError] = useState("");
+
+  // Reset staff password state
+  const [showResetStaffPasswordModal, setShowResetStaffPasswordModal] = useState(false);
+  const [selectedResetStaff, setSelectedResetStaff] = useState<any>(null);
+  const [resetStaffPassword, setResetStaffPassword] = useState("");
+  const [resetStaffError, setResetStaffError] = useState("");
+  const [resetStaffSubmitting, setResetStaffSubmitting] = useState(false);
+
+  // Self-change password state
+  const [showChangePasswordModal, setShowChangePasswordModal] = useState(false);
 
   // Selected Entities for editing/adjustments
   const [selectedCategory, setSelectedCategory] = useState<any>(null);
@@ -1170,6 +1181,51 @@ export default function OwnerDashboard() {
     }
   };
 
+  const handleInitiatePasswordReset = (staffMember: any) => {
+    setSelectedResetStaff(staffMember);
+    setResetStaffPassword("");
+    setResetStaffError("");
+    setResetStaffSubmitting(false);
+    setShowResetStaffPasswordModal(true);
+  };
+
+  const handleResetStaffPasswordSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedResetStaff) return;
+    if (resetStaffPassword.length < 8) {
+      setResetStaffError("Password must be at least 8 characters long.");
+      return;
+    }
+
+    setResetStaffError("");
+    setResetStaffSubmitting(true);
+
+    try {
+      const res = await fetch(`http://localhost:5149/api/staff/${selectedResetStaff.id}/reset-password`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify({ newPassword: resetStaffPassword })
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.message || "Failed to reset staff password.");
+      }
+
+      alert(`Password for ${selectedResetStaff.firstName} ${selectedResetStaff.lastName} reset successfully!`);
+      setShowResetStaffPasswordModal(false);
+      setSelectedResetStaff(null);
+      setResetStaffPassword("");
+    } catch (err: any) {
+      setResetStaffError(err.message || "An error occurred.");
+    } finally {
+      setResetStaffSubmitting(false);
+    }
+  };
+
   // Submit Category
   const handleAddCategory = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -1298,6 +1354,25 @@ export default function OwnerDashboard() {
     } finally {
       setProdSubmitting(false);
     }
+  };
+
+  // Download Sample CSV template
+  const handleDownloadSampleCSV = () => {
+    const headers = "Name,SKU,Price,CostPrice,Barcode,Description,CategoryName,InitialStock,MinStockLevel\n";
+    const row1 = 'Espresso Blend Coffee Bean,ESP-BE-001,4500.00,3200.00,123456789012,"High quality dark roast espresso beans, 1kg",Beverages,50,10\n';
+    const row2 = 'Thermal Receipt Paper 80mm,TH-PR-080,850.00,500.00,880123456789,"Standard thermal paper rolls for POS printers",Supplies,100,20\n';
+    const row3 = 'Branded Ceramic Mug,MUG-CR-002,2500.00,1200.00,990123456789,"12oz ceramic coffee mug with green logo",Merchandise,30,5\n';
+    
+    const csvContent = headers + row1 + row2 + row3;
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", "vendora_products_template.csv");
+    link.style.visibility = "hidden";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   // Submit CSV Import
@@ -1570,7 +1645,13 @@ export default function OwnerDashboard() {
               <p className="text-sm font-medium text-slate-300">{user?.firstName} {user?.lastName}</p>
               <p className="text-xs text-slate-500">Business Owner</p>
             </div>
-            <ThemeToggle />
+             <ThemeToggle />
+            <button
+              onClick={() => setShowChangePasswordModal(true)}
+              className="px-3 py-2 rounded-lg bg-slate-900 border border-slate-800 hover:bg-slate-800 text-sm font-medium text-slate-300 hover:text-slate-100 transition-all flex items-center gap-1.5 cursor-pointer"
+            >
+              🔑 Change Password
+            </button>
             <button
               onClick={logout}
               className="px-4 py-2 rounded-lg bg-slate-900 border border-slate-800 hover:bg-slate-800 text-sm font-medium text-slate-300 hover:text-slate-100 transition-all"
@@ -1739,7 +1820,7 @@ export default function OwnerDashboard() {
                         const profHeight = (trend.profit / maxRev) * 100;
 
                         return (
-                          <div key={index} className="flex-1 flex flex-col items-center group relative h-full justify-end">
+                          <div key={index} className="flex-1 flex flex-col items-center justify-end h-full group relative">
                             {/* Tooltip */}
                             <div className="absolute top-[-48px] bg-slate-900 border border-slate-800 text-[10px] text-slate-100 font-bold py-1.5 px-2.5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10 shadow-2xl whitespace-nowrap text-center space-y-0.5">
                               <p className="font-semibold text-slate-400">{trend.date}</p>
@@ -1749,7 +1830,7 @@ export default function OwnerDashboard() {
                             </div>
 
                             {/* Stacked / Adjacent bars */}
-                            <div className="w-full flex justify-center gap-1.5 h-full items-end">
+                            <div className="w-full h-32 flex justify-center gap-1.5 items-end relative">
                               {/* Revenue Bar */}
                               <div 
                                 className="w-3 sm:w-5 bg-indigo-600 hover:bg-indigo-550 rounded-t transition-all shadow-md shadow-indigo-500/10"
@@ -1762,7 +1843,7 @@ export default function OwnerDashboard() {
                               ></div>
                             </div>
 
-                            <span className="text-[9px] text-slate-500 mt-2 font-mono font-semibold">
+                            <span className="text-[9px] text-slate-500 mt-2 font-mono font-semibold block whitespace-nowrap">
                               {new Date(trend.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
                             </span>
                           </div>
@@ -2009,13 +2090,19 @@ export default function OwnerDashboard() {
                                 <td className="py-3 pl-4 text-right">
                                   <button
                                     onClick={() => handleToggleStaffActive(s.id)}
-                                    className={`px-2 py-1 rounded text-[10px] font-bold transition-all border ${
+                                    className={`px-2 py-1 rounded text-[10px] font-bold transition-all border mr-2 cursor-pointer ${
                                       s.isActive 
                                         ? "bg-red-950/20 text-red-400 border-red-900/40 hover:bg-red-900/30"
                                         : "bg-emerald-950/20 text-emerald-400 border-emerald-900/40 hover:bg-emerald-900/30"
                                     }`}
                                   >
                                     {s.isActive ? "Deactivate" : "Activate"}
+                                  </button>
+                                  <button
+                                    onClick={() => handleInitiatePasswordReset(s)}
+                                    className="px-2 py-1 rounded text-[10px] font-bold transition-all border bg-slate-800 text-slate-200 border-slate-700 hover:bg-slate-750 cursor-pointer"
+                                  >
+                                    🔑 Reset Password
                                   </button>
                                 </td>
                               </tr>
@@ -4240,21 +4327,23 @@ export default function OwnerDashboard() {
             <div className="border-t border-dashed border-slate-300 pt-3 space-y-1.5 text-[10px]">
               <div className="flex justify-between">
                 <span>Subtotal</span>
-                <span>${selectedSale.subtotal.toFixed(2)}</span>
+                <span>₦{selectedSale.subtotal.toFixed(2)}</span>
               </div>
               {selectedSale.discountAmount > 0 && (
                 <div className="flex justify-between text-red-650 font-bold">
                   <span>Discount</span>
-                  <span>-${selectedSale.discountAmount.toFixed(2)}</span>
+                  <span>-₦{selectedSale.discountAmount.toFixed(2)}</span>
                 </div>
               )}
-              <div className="flex justify-between">
-                <span>Sales Tax</span>
-                <span>${selectedSale.taxAmount.toFixed(2)}</span>
-              </div>
+              {selectedSale.taxAmount > 0 && (
+                <div className="flex justify-between">
+                  <span>Sales Tax</span>
+                  <span>₦{selectedSale.taxAmount.toFixed(2)}</span>
+                </div>
+              )}
               <div className="flex justify-between text-sm font-bold border-t border-double border-slate-400 pt-2 text-slate-900">
                 <span>TOTAL</span>
-                <span>${selectedSale.total.toFixed(2)}</span>
+                <span>₦{selectedSale.total.toFixed(2)}</span>
               </div>
             </div>
 
@@ -4636,9 +4725,18 @@ export default function OwnerDashboard() {
               </div>
             ) : (
               <form onSubmit={handleImportCSV} className="space-y-4">
-                <p className="text-xs text-slate-405 leading-relaxed">
-                  Upload a standard comma-separated **CSV** file to import products in bulk. Missing categories will be auto-created. Duplicate SKUs will be safely skipped.
-                </p>
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800/40 pb-3">
+                  <p className="text-xs text-slate-400 leading-relaxed max-w-[70%]">
+                    Upload a standard comma-separated **CSV** file to import products in bulk. Missing categories will be auto-created. Duplicate SKUs will be safely skipped.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={handleDownloadSampleCSV}
+                    className="text-primary hover:text-primary-hover hover:underline text-xs font-bold flex items-center gap-1.5 cursor-pointer whitespace-nowrap self-start sm:self-center"
+                  >
+                    📥 Download Template
+                  </button>
+                </div>
 
                 <div className="bg-slate-950/50 border border-slate-850 rounded-xl p-3.5 space-y-2">
                   <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Expected Columns Outline</h4>
@@ -4711,6 +4809,61 @@ export default function OwnerDashboard() {
                 </div>
               </form>
             )}
+          </div>
+        </div>
+      )}
+      <ChangePasswordModal
+        isOpen={showChangePasswordModal}
+        onClose={() => setShowChangePasswordModal(false)}
+        token={token}
+      />
+
+      {/* Reset Staff Password Modal */}
+      {showResetStaffPasswordModal && selectedResetStaff && (
+        <div className="fixed inset-0 bg-slate-950/70 backdrop-blur-md flex justify-center items-center p-4 z-50 animate-in fade-in duration-300">
+          <div className="w-full max-w-md p-6 bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl space-y-4 animate-in scale-in duration-300">
+            <div>
+              <h3 className="text-xl font-bold text-slate-100 flex items-center gap-2">
+                🔑 Reset Staff Password
+              </h3>
+              <p className="text-xs text-slate-400 mt-1">
+                Forcing password reset for <strong className="text-slate-200">{selectedResetStaff.firstName} {selectedResetStaff.lastName}</strong> ({selectedResetStaff.email})
+              </p>
+            </div>
+            {resetStaffError && (
+              <div className="p-3 bg-red-950/50 border border-red-800 text-red-400 rounded-lg text-xs font-medium">
+                ✕ {resetStaffError}
+              </div>
+            )}
+            <form onSubmit={handleResetStaffPasswordSubmit} className="space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1.5">New Password</label>
+                <input
+                  type="password"
+                  value={resetStaffPassword}
+                  onChange={(e) => setResetStaffPassword(e.target.value)}
+                  placeholder="Min 8 characters"
+                  required
+                  className="w-full px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-lg text-slate-100 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+                />
+              </div>
+              <div className="flex space-x-3 pt-4 border-t border-slate-850">
+                <button 
+                  type="button" 
+                  onClick={() => { setShowResetStaffPasswordModal(false); setSelectedResetStaff(null); setResetStaffPassword(""); }}
+                  className="flex-1 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold rounded-lg transition-colors cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button 
+                  type="submit" 
+                  disabled={resetStaffSubmitting} 
+                  className="flex-1 py-2.5 bg-primary hover:bg-primary-hover text-white text-xs font-bold rounded-lg transition-colors cursor-pointer flex items-center justify-center gap-2"
+                >
+                  {resetStaffSubmitting ? "Resetting..." : "Confirm Reset"}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
