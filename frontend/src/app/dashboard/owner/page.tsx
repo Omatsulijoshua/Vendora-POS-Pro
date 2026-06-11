@@ -3,6 +3,8 @@
 import React, { useState, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
 import NotificationBell from "@/components/NotificationBell";
+import { Logo } from "@/components/Logo";
+import { ThemeToggle } from "@/context/ThemeContext";
 
 export default function OwnerDashboard() {
   const { user, token, switchBusiness, switchBranch, logout } = useAuth();
@@ -1394,12 +1396,10 @@ export default function OwnerDashboard() {
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col relative font-sans">
       {/* Header Navbar */}
-      <header className="border-b border-slate-900 bg-slate-900/40 backdrop-blur-md sticky top-0 z-50">
+      <header className="border-b border-slate-800 bg-slate-900/40 backdrop-blur-md sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <div className="flex items-center space-x-3">
-            <div className="h-9 w-9 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center font-bold text-white shadow-lg shadow-indigo-500/30">
-              V
-            </div>
+            <Logo size={32} />
             
             {/* Business Selector */}
             <div className="relative">
@@ -1507,6 +1507,7 @@ export default function OwnerDashboard() {
               <p className="text-sm font-medium text-slate-300">{user?.firstName} {user?.lastName}</p>
               <p className="text-xs text-slate-500">Business Owner</p>
             </div>
+            <ThemeToggle />
             <button
               onClick={logout}
               className="px-4 py-2 rounded-lg bg-slate-900 border border-slate-800 hover:bg-slate-800 text-sm font-medium text-slate-300 hover:text-slate-100 transition-all"

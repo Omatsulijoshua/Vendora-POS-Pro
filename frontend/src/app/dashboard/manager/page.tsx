@@ -3,6 +3,8 @@
 import React, { useState, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
 import NotificationBell from "@/components/NotificationBell";
+import { Logo } from "@/components/Logo";
+import { ThemeToggle } from "@/context/ThemeContext";
 
 export default function ManagerDashboard() {
   const { user, token, logout } = useAuth();
@@ -788,14 +790,13 @@ export default function ManagerDashboard() {
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans">
       {/* Header */}
-      <header className="border-b border-slate-900 bg-slate-900/40 backdrop-blur-md sticky top-0 z-50">
+      <header className="border-b border-slate-800 bg-slate-900/40 backdrop-blur-md sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <div className="flex items-center space-x-3">
-            <div className="h-9 w-9 rounded-lg bg-emerald-600 flex items-center justify-center font-bold text-white shadow-lg shadow-emerald-500/30">
-              V
-            </div>
-            <span className="font-bold text-lg bg-gradient-to-r from-indigo-400 to-purple-400 bg-clip-text text-transparent">
-              Vendora POS Pro
+            <Logo size={32} />
+            <span className="font-bold text-lg flex items-center">
+              <span className="text-slate-900 dark:text-white font-black">Vendora</span>
+              <span className="text-[#0E9F6E] font-medium ml-1">POS Pro</span>
             </span>
             <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-450 border border-emerald-500/20">
               Manager Panel
@@ -809,6 +810,7 @@ export default function ManagerDashboard() {
               </p>
               <p className="text-xs text-slate-500">Branch: {branchName}</p>
             </div>
+            <ThemeToggle />
             <button
               onClick={logout}
               className="px-4 py-2 rounded-lg bg-slate-900 border border-slate-800 hover:bg-slate-800 text-sm font-medium text-slate-300 hover:text-slate-100 transition-all active:scale-[0.98]"

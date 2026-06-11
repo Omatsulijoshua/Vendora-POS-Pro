@@ -46,75 +46,138 @@
   --radius-2xl: calc(var(--radius) * 1.8);
   --radius-3xl: calc(var(--radius) * 2.2);
   --radius-4xl: calc(var(--radius) * 2.6);
+
+  /* Dynamic mapping of the Slate color family to enable dynamic theme support without code edits */
+  --color-slate-950: var(--slate-950);
+  --color-slate-900: var(--slate-900);
+  --color-slate-850: var(--slate-850);
+  --color-slate-800: var(--slate-800);
+  --color-slate-700: var(--slate-700);
+  --color-slate-600: var(--slate-600);
+  --color-slate-500: var(--slate-500);
+  --color-slate-400: var(--slate-400);
+  --color-slate-300: var(--slate-300);
+  --color-slate-200: var(--slate-200);
+  --color-slate-100: var(--slate-100);
+
+  /* Override hardcoded indigo colors to direct to brand blue and green */
+  --color-indigo-950: var(--slate-950);
+  --color-indigo-900: var(--slate-900);
+  --color-indigo-800: var(--slate-850);
+  --color-indigo-750: var(--slate-800);
+  --color-indigo-600: var(--primary);
+  --color-indigo-500: var(--primary-hover);
+  --color-indigo-400: var(--accent);
 }
 
 :root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
+  /* Slate family mapping for light mode (soft light theme) */
+  --slate-950: #f8fafc;
+  --slate-900: #ffffff;
+  --slate-850: #f1f5f9;
+  --slate-800: #e2e8f0;
+  --slate-700: #cbd5e1;
+  --slate-600: #94a3b8;
+  --slate-500: #64748b;
+  --slate-400: #475569;
+  --slate-300: #334155;
+  --slate-200: #1e293b;
+  --slate-100: #0f172a;
+
+  /* Shadcn variables compatibility mapping */
+  --background: var(--slate-950);
+  --foreground: var(--slate-100);
+  --card: var(--slate-900);
+  --card-foreground: var(--slate-100);
+  --popover: var(--slate-900);
+  --popover-foreground: var(--slate-100);
+
+  --primary: #0A429C;      /* Logo Royal Blue */
+  --primary-hover: #083782;
+  --primary-foreground: #ffffff;
+
+  --accent: #0E9F6E;       /* Logo Emerald Green */
+  --accent-foreground: #ffffff;
+
+  --secondary: var(--slate-850);
+  --secondary-foreground: var(--slate-100);
+  --muted: var(--slate-850);
+  --muted-foreground: var(--slate-400);
   --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
+  --border: var(--slate-800);
+  --input: var(--slate-800);
+  --ring: var(--primary);
+  
   --radius: 0.625rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+
+  --sidebar: var(--slate-900);
+  --sidebar-foreground: var(--slate-100);
+  --sidebar-primary: var(--primary);
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: var(--slate-850);
+  --sidebar-accent-foreground: var(--slate-100);
+  --sidebar-border: var(--slate-800);
+  --sidebar-ring: var(--ring);
+
+  --chart-1: #0A429C;
+  --chart-2: #0E9F6E;
+  --chart-3: #f59e0b;
+  --chart-4: #ef4444;
+  --chart-5: #8b5cf6;
 }
 
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
+  /* Slate family mapping for dark mode (rich navy dark theme) */
+  --slate-950: #030d21;
+  --slate-900: #0b172e;
+  --slate-850: #12213f;
+  --slate-800: #1e2b4a;
+  --slate-700: #2c3e6b;
+  --slate-600: #475569;
+  --slate-500: #64748b;
+  --slate-400: #94a3b8;
+  --slate-300: #cbd5e1;
+  --slate-200: #e2e8f0;
+  --slate-100: #f8fafc;
+
+  /* Shadcn variables compatibility mapping */
+  --background: var(--slate-950);
+  --foreground: var(--slate-100);
+  --card: var(--slate-900);
+  --card-foreground: var(--slate-100);
+  --popover: var(--slate-900);
+  --popover-foreground: var(--slate-100);
+
+  --primary: #0A429C;      /* Logo Royal Blue */
+  --primary-hover: #1257c7;
+  --primary-foreground: #ffffff;
+
+  --accent: #0E9F6E;       /* Logo Emerald Green */
+  --accent-foreground: #ffffff;
+
+  --secondary: var(--slate-850);
+  --secondary-foreground: var(--slate-100);
+  --muted: var(--slate-850);
+  --muted-foreground: var(--slate-400);
   --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+  --border: var(--slate-800);
+  --input: var(--slate-800);
+  --ring: var(--primary);
+
+  --sidebar: var(--slate-900);
+  --sidebar-foreground: var(--slate-100);
+  --sidebar-primary: var(--primary);
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: var(--slate-850);
+  --sidebar-accent-foreground: var(--slate-100);
+  --sidebar-border: var(--slate-800);
+  --sidebar-ring: var(--ring);
+
+  --chart-1: #0A429C;
+  --chart-2: #0E9F6E;
+  --chart-3: #f59e0b;
+  --chart-4: #ef4444;
+  --chart-5: #8b5cf6;
 }
 
 @layer base {

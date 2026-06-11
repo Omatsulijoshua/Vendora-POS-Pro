@@ -4,6 +4,8 @@ import React, { useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { Logo } from "@/components/Logo";
+import { ThemeToggle } from "@/context/ThemeContext";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -29,17 +31,27 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="flex-1 flex flex-col justify-center items-center px-4 relative overflow-hidden bg-slate-950">
+    <div className="flex-1 flex flex-col justify-center items-center px-4 relative overflow-hidden bg-background text-foreground transition-colors duration-300">
+      {/* Top action bar */}
+      <div className="absolute top-4 right-4 flex items-center gap-3 z-20">
+        <ThemeToggle />
+        <Link href="/" className="px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-850 text-xs font-semibold text-slate-300 hover:text-slate-100 transition-colors">
+          Home
+        </Link>
+      </div>
+
       {/* Decorative blurred background shapes */}
-      <div className="absolute top-[-20%] left-[-10%] w-[500px] h-[500px] bg-indigo-900/30 rounded-full blur-[100px]" />
-      <div className="absolute bottom-[-20%] right-[-10%] w-[500px] h-[500px] bg-purple-900/30 rounded-full blur-[100px]" />
+      <div className="absolute top-[-20%] left-[-10%] w-[500px] h-[500px] bg-primary/10 rounded-full blur-[100px]" />
+      <div className="absolute bottom-[-20%] right-[-10%] w-[500px] h-[500px] bg-accent/5 rounded-full blur-[100px]" />
 
       <div className="w-full max-w-md p-8 bg-slate-900/50 backdrop-blur-xl border border-slate-800 rounded-2xl shadow-2xl relative z-10">
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold bg-gradient-to-r from-indigo-400 to-purple-400 bg-clip-text text-transparent">
-            Vendora POS Pro
+        <div className="text-center mb-8 flex flex-col items-center">
+          <Logo size={44} className="mb-3" />
+          <h1 className="text-2xl font-bold flex items-center">
+            <span className="text-slate-900 dark:text-white font-black">Vendora</span>
+            <span className="text-[#0E9F6E] font-medium ml-1">POS Pro</span>
           </h1>
-          <p className="text-slate-400 mt-2">Sign in to manage your business</p>
+          <p className="text-slate-400 mt-2 text-xs">Sign in to manage your business</p>
         </div>
 
         {error && (

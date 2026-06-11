@@ -11,36 +11,32 @@ import {
   BarChart3, 
   Bell 
 } from "lucide-react";
+import { LogoWithText } from "@/components/Logo";
+import { ThemeToggle } from "@/context/ThemeContext";
 
 export default function Home() {
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 font-sans antialiased overflow-x-hidden selection:bg-indigo-500 selection:text-white">
+    <div className="min-h-screen bg-background text-foreground font-sans antialiased overflow-x-hidden selection:bg-primary selection:text-white transition-colors duration-300">
       {/* Background Gradients */}
-      <div className="absolute top-0 left-1/4 w-96 h-96 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
-      <div className="absolute top-1/3 right-1/4 w-[500px] h-[500px] bg-purple-500/5 rounded-full blur-3xl pointer-events-none" />
-      <div className="absolute bottom-10 left-10 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute top-0 left-1/4 w-96 h-96 bg-primary/10 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute top-1/3 right-1/4 w-[500px] h-[500px] bg-accent/5 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute bottom-10 left-10 w-96 h-96 bg-primary/5 rounded-full blur-3xl pointer-events-none" />
 
       {/* Navigation Header */}
-      <header className="sticky top-0 z-50 backdrop-blur-md bg-slate-950/80 border-b border-slate-900 px-6 lg:px-16 py-4 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-violet-600 to-indigo-600 flex items-center justify-center font-bold text-white shadow-lg shadow-indigo-600/30">
-            V
-          </div>
-          <span className="text-xl font-bold tracking-tight bg-gradient-to-r from-white via-slate-100 to-slate-400 bg-clip-text text-transparent">
-            Vendora <span className="text-indigo-500">POS Pro</span>
-          </span>
-        </div>
+      <header className="sticky top-0 z-50 backdrop-blur-md bg-background/80 border-b border-border px-6 lg:px-16 py-4 flex items-center justify-between transition-colors duration-300">
+        <LogoWithText size={38} showTagline={false} />
 
         <div className="flex items-center gap-4">
+          <ThemeToggle />
           <Link
             href="/login"
-            className="px-4 py-2 text-sm font-medium text-slate-300 hover:text-white transition-colors"
+            className="px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
           >
             Sign In
           </Link>
           <Link
             href="/register"
-            className="relative group overflow-hidden px-5 py-2 text-sm font-semibold rounded-xl bg-indigo-600 text-white shadow-md shadow-indigo-600/20 hover:bg-indigo-500 active:scale-95 transition-all"
+            className="relative group overflow-hidden px-5 py-2 text-sm font-semibold rounded-xl bg-primary text-white shadow-md shadow-primary/20 hover:bg-primary-hover active:scale-95 transition-all"
           >
             Get Started
           </Link>
@@ -356,14 +352,14 @@ export default function Home() {
       </section>
 
       {/* Footer Section */}
-      <footer className="border-t border-slate-900 bg-slate-950 px-6 lg:px-16 py-12 flex flex-col sm:flex-row items-center justify-between gap-6">
-        <span className="text-sm text-slate-500">
+      <footer className="border-t border-border bg-card px-6 lg:px-16 py-12 flex flex-col sm:flex-row items-center justify-between gap-6 transition-colors duration-300">
+        <span className="text-sm text-muted-foreground">
           © {new Date().getFullYear()} Vendora POS Pro. All rights reserved.
         </span>
-        <div className="flex gap-6 text-sm text-slate-500">
-          <a href="#" className="hover:text-slate-300">Privacy Policy</a>
-          <a href="#" className="hover:text-slate-300">Terms of Service</a>
-          <a href="#" className="hover:text-slate-300">Support Desk</a>
+        <div className="flex gap-6 text-sm text-muted-foreground">
+          <a href="#" className="hover:text-foreground transition-colors">Privacy Policy</a>
+          <a href="#" className="hover:text-foreground transition-colors">Terms of Service</a>
+          <a href="#" className="hover:text-foreground transition-colors">Support Desk</a>
         </div>
       </footer>
     </div>
