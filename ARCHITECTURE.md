@@ -338,3 +338,18 @@ To ensure isolation and tenant data confidentiality, access is gated through str
 * **Manager Boundaries**: Restricted from cross-branch adjustments, product definitions CRUD, and SuperAdmin endpoints.
 * **Owner Permissions**: Authorized to access business-wide audit logs, manage product properties, and configure receipt customization.
 
+---
+
+## 15. System Integration & Verification Testing Architecture (Phase 19)
+
+To guarantee the long-term reliability and stability of the platform's multi-tenant boundaries, branch isolation, and checkout rules, a comprehensive integration testing architecture has been established:
+
+### 1. Integration Test Runner
+The platform utilizes a customized PowerShell automation runner (`verify_phase19_system_testing.ps1`) that interacts directly with the Web API endpoints under simulated user flows. The script tests real-world operational scenarios and security blockades in a sequential pipeline:
+* **Tenant & Branch Isolation Checks**: Registers multiple independent tenants (Tenant A/B) and branches (Branch A1/A2), validating that cross-tenant read/write queries return `404 Not Found` or `403 Forbidden`.
+* **RBAC Scoping Verification**: Asserts that cashier and manager users are blocked from executing unauthorized cross-branch stock modifications and sales retrievals.
+* **POS & Inventory Accuracy Tests**: Validates checkout calculations, local branch stock level reductions, stock transfer reservation locks, and transfer resolution approval logic.
+* **Coupon & Discount Validation**: Tests coupon threshold checks (such as minimum cart spend) and cashier discount ceiling limits (maximum 15%).
+* **Subscription Operational Gating**: Verifies that expired plans correctly block cashier staff logins with `402 Payment Required` while allowing owners access with Warning overlays, and suspended business logins return `403 Forbidden`.
+
+

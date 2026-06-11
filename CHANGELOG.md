@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.18.0] - 2026-06-11
+
+### Added
+- **Full System Testing (Phase 19):**
+  - **Comprehensive Integration Test Suite**: Developed `verify_phase19_system_testing.ps1` to validate the entire platform's security boundaries, transactional processes, and operational gates.
+  - **Multi-Business Isolation**: Validated that cross-tenant read/write/update operations (e.g. products, categories) are strictly blocked by EF Core query filters and tenant checks, returning `404 Not Found` or `403 Forbidden`.
+  - **Multi-Branch Isolation**: Validated branch security scopes, ensuring that Branch managers and cashiers are blocked from mutating or retrieving resources of other branches under the same tenant.
+  - **POS Flow & Inventory Calculations**: Verified checkout calculations, stock level deductions on sales, manual stock adjustments, and real-time validation of cashier discount limits (max 15%).
+  - **Stock Transfer Verification**: Tested stock transfers with immediate stock reservation locks (reductions) in source branch and subsequent additions in target branch upon manager/owner approval.
+  - **Receipt Customization & Public verification**: Verified receipt settings mutations and tested the unauthenticated public verification endpoint `/api/sales/verify/{id}`.
+  - **Coupon Validation Logic**: Tested coupon code date windowing, minimum spend requirements, usage tracking, and discount application.
+  - **Subscription Enforcement Gating**: Verified login blocks (`402 Payment Required`) for cashier staff under expired plans, owner access with active flags disabled, and full dashboard blocking (`403 Forbidden`) on suspended tenants.
+
 ## [0.17.0] - 2026-06-11
 
 ### Added
