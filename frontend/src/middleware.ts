@@ -40,14 +40,16 @@ export function middleware(request: NextRequest) {
   // 3. Strict Role-based Sub-route protection
   if (isDashboardPage && token) {
     const payload = parseJwt(token);
-    if (!payload || !payload.role) {
+    const roleVal = payload ? (payload.role || payload["http://schemas.microsoft.com/ws/2008/06/identity/claims/role"] || payload["http://schemas.xmlsoap.org/ws/2005/05/identity/claims/role"]) : null;
+
+    if (!payload || !roleVal) {
       // Invalid token payload -> force logout / login redirect
       const response = NextResponse.redirect(new URL("/login", request.url));
       response.cookies.delete("vendorapos_token");
       return response;
     }
 
-    const role = typeof payload.role === "string" ? payload.role : payload.role[0];
+    const role = typeof roleVal === "string" ? roleVal : roleVal[0] || "";
 
     // Enforce dashboard sub-route checks
     if (pathname.startsWith("/dashboard/super-admin") && role !== "SuperAdmin") {

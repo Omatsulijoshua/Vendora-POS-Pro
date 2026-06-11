@@ -75,7 +75,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             email: decoded.email,
             firstName: decoded.first_name,
             lastName: decoded.last_name,
-            role: typeof decoded.role === "string" ? decoded.role : (Array.isArray(decoded.role) ? decoded.role[0] : "") || "",
+            role: (() => {
+              const r = decoded.role || (decoded as any)["http://schemas.microsoft.com/ws/2008/06/identity/claims/role"] || (decoded as any)["http://schemas.xmlsoap.org/ws/2005/05/identity/claims/role"];
+              return typeof r === "string" ? r : (Array.isArray(r) ? r[0] : "") || "";
+            })(),
             businessId: decoded.business_id,
             branchId: decoded.branch_id,
             isSubscriptionActive: decoded.is_subscription_active === "true",
@@ -101,7 +104,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       email: decoded.email,
       firstName: decoded.first_name,
       lastName: decoded.last_name,
-      role: typeof decoded.role === "string" ? decoded.role : (Array.isArray(decoded.role) ? decoded.role[0] : "") || "",
+      role: (() => {
+        const r = decoded.role || (decoded as any)["http://schemas.microsoft.com/ws/2008/06/identity/claims/role"] || (decoded as any)["http://schemas.xmlsoap.org/ws/2005/05/identity/claims/role"];
+        return typeof r === "string" ? r : (Array.isArray(r) ? r[0] : "") || "";
+      })(),
       businessId: decoded.business_id,
       branchId: decoded.branch_id,
       isSubscriptionActive: decoded.is_subscription_active === "true",
