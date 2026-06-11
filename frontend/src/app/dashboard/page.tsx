@@ -28,13 +28,13 @@ export default function DashboardFallbackPage() {
   }, [user, loading, isAuthenticated, router]);
 
   return (
-    <div className="flex-1 flex flex-col justify-center items-center bg-slate-950 min-h-screen text-slate-200">
-      <div className="absolute top-[-10%] left-[-15%] w-[600px] h-[600px] bg-indigo-900/10 rounded-full blur-[120px]" />
-      <div className="absolute bottom-[-10%] right-[-15%] w-[600px] h-[600px] bg-purple-900/10 rounded-full blur-[120px]" />
+    <div className="flex-1 flex flex-col justify-center items-center bg-background min-h-screen text-foreground">
+      <div className="absolute top-[-10%] left-[-15%] w-[600px] h-[600px] bg-primary/10 rounded-full blur-[120px]" />
+      <div className="absolute bottom-[-10%] right-[-15%] w-[600px] h-[600px] bg-accent/5 rounded-full blur-[120px]" />
       
       <div className="flex flex-col items-center z-10 space-y-4">
-        <div className="w-12 h-12 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin" />
-        <p className="text-slate-400 font-medium">Redirecting you to your space...</p>
+        <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+        <p className="text-muted-foreground font-semibold">Redirecting you to your space...</p>
       </div>
     </div>
   );

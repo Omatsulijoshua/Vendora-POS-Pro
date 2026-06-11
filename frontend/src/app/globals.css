@@ -47,7 +47,16 @@
   --radius-3xl: calc(var(--radius) * 2.2);
   --radius-4xl: calc(var(--radius) * 2.6);
 
-  /* Dynamic mapping of the Slate color family to enable dynamic theme support without code edits */
+  /* Overrides for default Tailwind colors to match theme */
+  --color-indigo-650: var(--primary);
+  --color-indigo-600: var(--primary);
+  --color-indigo-500: var(--primary);
+  --color-indigo-400: var(--accent);
+  --color-purple-600: var(--primary);
+  --color-purple-700: var(--primary-hover);
+  --color-purple-500: var(--accent);
+  --color-violet-400: var(--accent);
+  
   --color-slate-950: var(--slate-950);
   --color-slate-900: var(--slate-900);
   --color-slate-850: var(--slate-850);
@@ -59,22 +68,13 @@
   --color-slate-300: var(--slate-300);
   --color-slate-200: var(--slate-200);
   --color-slate-100: var(--slate-100);
-
-  /* Override hardcoded indigo colors to direct to brand blue and green */
-  --color-indigo-950: var(--slate-950);
-  --color-indigo-900: var(--slate-900);
-  --color-indigo-800: var(--slate-850);
-  --color-indigo-750: var(--slate-800);
-  --color-indigo-600: var(--primary);
-  --color-indigo-500: var(--primary-hover);
-  --color-indigo-400: var(--accent);
 }
 
 :root {
-  /* Slate family mapping for light mode (soft light theme) */
-  --slate-950: #f8fafc;
+  /* Dynamic Slate Color Fallbacks */
+  --slate-950: #ffffff;
   --slate-900: #ffffff;
-  --slate-850: #f1f5f9;
+  --slate-850: #f8fafc;
   --slate-800: #e2e8f0;
   --slate-700: #cbd5e1;
   --slate-600: #94a3b8;
@@ -84,54 +84,55 @@
   --slate-200: #1e293b;
   --slate-100: #0f172a;
 
-  /* Shadcn variables compatibility mapping */
-  --background: var(--slate-950);
-  --foreground: var(--slate-100);
-  --card: var(--slate-900);
-  --card-foreground: var(--slate-100);
-  --popover: var(--slate-900);
-  --popover-foreground: var(--slate-100);
+  /* Semantic palette */
+  --background: #ffffff; /* White background */
+  --foreground: #0f172a; /* Slate 900 text */
+  --card: #ffffff; /* White card */
+  --card-foreground: #0f172a;
+  --popover: #ffffff;
+  --popover-foreground: #0f172a;
 
-  --primary: #0A429C;      /* Logo Royal Blue */
-  --primary-hover: #083782;
+  --primary: #1E3A8A;      /* Brand Deep Blue */
+  --primary-hover: #172b64;
   --primary-foreground: #ffffff;
 
-  --accent: #0E9F6E;       /* Logo Emerald Green */
+  --accent: #10B981;       /* Brand Emerald Green */
   --accent-foreground: #ffffff;
 
-  --secondary: var(--slate-850);
-  --secondary-foreground: var(--slate-100);
-  --muted: var(--slate-850);
-  --muted-foreground: var(--slate-400);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: var(--slate-800);
-  --input: var(--slate-800);
+  --secondary: #f1f5f9;
+  --secondary-foreground: #0f172a;
+  
+  --muted: #f1f5f9;
+  --muted-foreground: #64748b;
+  
+  --border: #e2e8f0;
+  --input: #e2e8f0;
   --ring: var(--primary);
   
   --radius: 0.625rem;
 
-  --sidebar: var(--slate-900);
-  --sidebar-foreground: var(--slate-100);
+  --sidebar: var(--card);
+  --sidebar-foreground: var(--foreground);
   --sidebar-primary: var(--primary);
   --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: var(--slate-850);
-  --sidebar-accent-foreground: var(--slate-100);
-  --sidebar-border: var(--slate-800);
+  --sidebar-accent: var(--secondary);
+  --sidebar-accent-foreground: var(--foreground);
+  --sidebar-border: var(--border);
   --sidebar-ring: var(--ring);
 
-  --chart-1: #0A429C;
-  --chart-2: #0E9F6E;
+  --chart-1: #1E3A8A;
+  --chart-2: #10B981;
   --chart-3: #f59e0b;
   --chart-4: #ef4444;
   --chart-5: #8b5cf6;
 }
 
 .dark {
-  /* Slate family mapping for dark mode (rich navy dark theme) */
-  --slate-950: #030d21;
-  --slate-900: #0b172e;
-  --slate-850: #12213f;
-  --slate-800: #1e2b4a;
+  /* Dynamic Slate Color Fallbacks for dark mode */
+  --slate-950: #070e1e;
+  --slate-900: #0c1527;
+  --slate-850: #132038;
+  --slate-800: #1f3054;
   --slate-700: #2c3e6b;
   --slate-600: #475569;
   --slate-500: #64748b;
@@ -140,41 +141,42 @@
   --slate-200: #e2e8f0;
   --slate-100: #f8fafc;
 
-  /* Shadcn variables compatibility mapping */
-  --background: var(--slate-950);
-  --foreground: var(--slate-100);
-  --card: var(--slate-900);
-  --card-foreground: var(--slate-100);
-  --popover: var(--slate-900);
-  --popover-foreground: var(--slate-100);
+  /* Semantic palette */
+  --background: #070e1e; /* Deep blue-black */
+  --foreground: #f8fafc;
+  --card: #0c1527; /* Navy card */
+  --card-foreground: #f8fafc;
+  --popover: #0c1527;
+  --popover-foreground: #f8fafc;
 
-  --primary: #0A429C;      /* Logo Royal Blue */
-  --primary-hover: #1257c7;
+  --primary: #1E3A8A;      /* Brand Deep Blue */
+  --primary-hover: #274bb3;
   --primary-foreground: #ffffff;
 
-  --accent: #0E9F6E;       /* Logo Emerald Green */
+  --accent: #10B981;       /* Brand Emerald Green */
   --accent-foreground: #ffffff;
 
-  --secondary: var(--slate-850);
-  --secondary-foreground: var(--slate-100);
-  --muted: var(--slate-850);
-  --muted-foreground: var(--slate-400);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: var(--slate-800);
-  --input: var(--slate-800);
+  --secondary: #132038;
+  --secondary-foreground: #f8fafc;
+  
+  --muted: #132038;
+  --muted-foreground: #94a3b8;
+  
+  --border: #1f3054;
+  --input: #1f3054;
   --ring: var(--primary);
 
-  --sidebar: var(--slate-900);
-  --sidebar-foreground: var(--slate-100);
+  --sidebar: var(--card);
+  --sidebar-foreground: var(--foreground);
   --sidebar-primary: var(--primary);
   --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: var(--slate-850);
-  --sidebar-accent-foreground: var(--slate-100);
-  --sidebar-border: var(--slate-800);
+  --sidebar-accent: var(--secondary);
+  --sidebar-accent-foreground: var(--foreground);
+  --sidebar-border: var(--border);
   --sidebar-ring: var(--ring);
 
-  --chart-1: #0A429C;
-  --chart-2: #0E9F6E;
+  --chart-1: #1E3A8A;
+  --chart-2: #10B981;
   --chart-3: #f59e0b;
   --chart-4: #ef4444;
   --chart-5: #8b5cf6;

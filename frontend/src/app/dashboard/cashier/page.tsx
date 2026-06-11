@@ -549,15 +549,15 @@ export default function CashierDashboard() {
 
   return (
     <>
-      <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col h-screen overflow-hidden font-sans print:hidden">
+      <div className="min-h-screen bg-background text-foreground flex flex-col h-screen overflow-hidden font-sans print:hidden">
       {/* Header */}
-      <header className="border-b border-slate-800 bg-slate-900/40 backdrop-blur-md h-16 shrink-0">
+      <header className="border-b border-border bg-card/40 backdrop-blur-md h-16 shrink-0">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-full flex items-center justify-between">
           <div className="flex items-center space-x-3">
             <Logo size={32} />
             <span className="font-bold text-lg flex items-center">
-              <span className="text-slate-900 dark:text-white font-black">Vendora</span>
-              <span className="text-[#0E9F6E] font-medium ml-1">POS Pro</span>
+              <span className="text-foreground font-black">Vendora</span>
+              <span className="text-[#10B981] font-medium ml-1">POS Pro</span>
             </span>
             <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
               POS Terminal

@@ -788,15 +788,15 @@ export default function ManagerDashboard() {
   const totalStockCount = products.reduce((acc, p) => acc + p.totalStock, 0);
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans">
+    <div className="min-h-screen bg-background text-foreground flex flex-col font-sans">
       {/* Header */}
-      <header className="border-b border-slate-800 bg-slate-900/40 backdrop-blur-md sticky top-0 z-50">
+      <header className="border-b border-border bg-card/40 backdrop-blur-md sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <div className="flex items-center space-x-3">
             <Logo size={32} />
             <span className="font-bold text-lg flex items-center">
-              <span className="text-slate-900 dark:text-white font-black">Vendora</span>
-              <span className="text-[#0E9F6E] font-medium ml-1">POS Pro</span>
+              <span className="text-foreground font-black">Vendora</span>
+              <span className="text-[#10B981] font-medium ml-1">POS Pro</span>
             </span>
             <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-450 border border-emerald-500/20">
               Manager Panel

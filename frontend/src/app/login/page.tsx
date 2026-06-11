@@ -35,7 +35,7 @@ export default function LoginPage() {
       {/* Top action bar */}
       <div className="absolute top-4 right-4 flex items-center gap-3 z-20">
         <ThemeToggle />
-        <Link href="/" className="px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-850 text-xs font-semibold text-slate-300 hover:text-slate-100 transition-colors">
+        <Link href="/" className="px-3 py-1.5 rounded-lg bg-secondary border border-border text-xs font-semibold text-foreground hover:bg-secondary/80 transition-colors">
           Home
         </Link>
       </div>
@@ -44,25 +44,25 @@ export default function LoginPage() {
       <div className="absolute top-[-20%] left-[-10%] w-[500px] h-[500px] bg-primary/10 rounded-full blur-[100px]" />
       <div className="absolute bottom-[-20%] right-[-10%] w-[500px] h-[500px] bg-accent/5 rounded-full blur-[100px]" />
 
-      <div className="w-full max-w-md p-8 bg-slate-900/50 backdrop-blur-xl border border-slate-800 rounded-2xl shadow-2xl relative z-10">
+      <div className="w-full max-w-md p-8 bg-card border border-border rounded-2xl shadow-xl relative z-10">
         <div className="text-center mb-8 flex flex-col items-center">
           <Logo size={44} className="mb-3" />
           <h1 className="text-2xl font-bold flex items-center">
-            <span className="text-slate-900 dark:text-white font-black">Vendora</span>
-            <span className="text-[#0E9F6E] font-medium ml-1">POS Pro</span>
+            <span className="text-foreground font-black">Vendora</span>
+            <span className="text-[#10B981] font-medium ml-1">POS Pro</span>
           </h1>
-          <p className="text-slate-400 mt-2 text-xs">Sign in to manage your business</p>
+          <p className="text-muted-foreground mt-2 text-xs">Sign in to manage your business</p>
         </div>
 
         {error && (
-          <div className="mb-6 p-4 bg-red-950/50 border border-red-800/80 text-red-400 rounded-lg text-sm">
+          <div className="mb-6 p-4 bg-destructive/10 border border-destructive/20 text-destructive rounded-lg text-sm animate-in fade-in duration-200">
             {error}
           </div>
         )}
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>
-            <label className="block text-sm font-medium text-slate-300 mb-2">
+            <label className="block text-sm font-semibold text-foreground mb-2">
               Email Address
             </label>
             <input
@@ -70,13 +70,13 @@ export default function LoginPage() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
-              className="w-full px-4 py-3 bg-slate-950 border border-slate-800 rounded-lg text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 transition-all"
+              className="w-full px-4 py-3 bg-background border border-input rounded-lg text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all"
               placeholder="owner@example.com"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-slate-300 mb-2">
+            <label className="block text-sm font-semibold text-foreground mb-2">
               Password
             </label>
             <input
@@ -84,7 +84,7 @@ export default function LoginPage() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
-              className="w-full px-4 py-3 bg-slate-950 border border-slate-800 rounded-lg text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 transition-all"
+              className="w-full px-4 py-3 bg-background border border-input rounded-lg text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all"
               placeholder="••••••••"
             />
           </div>
@@ -92,17 +92,17 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={submitting}
-            className="w-full py-3 px-4 bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white font-medium rounded-lg shadow-lg shadow-indigo-500/20 active:scale-[0.98] transition-all disabled:opacity-50 disabled:pointer-events-none"
+            className="w-full py-3 px-4 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold rounded-lg shadow-lg shadow-primary/20 active:scale-[0.98] transition-all disabled:opacity-50 disabled:pointer-events-none cursor-pointer"
           >
             {submitting ? "Signing in..." : "Sign In"}
           </button>
         </form>
 
-        <div className="mt-8 text-center text-sm text-slate-400">
+        <div className="mt-8 text-center text-sm text-muted-foreground">
           New to Vendora?{" "}
           <Link
             href="/register"
-            className="font-medium text-indigo-400 hover:text-indigo-300 transition-colors"
+            className="font-semibold text-primary hover:underline transition-colors"
           >
             Register your business
           </Link>

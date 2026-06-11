@@ -1394,9 +1394,9 @@ export default function OwnerDashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col relative font-sans">
+    <div className="min-h-screen bg-background text-foreground flex flex-col relative font-sans">
       {/* Header Navbar */}
-      <header className="border-b border-slate-800 bg-slate-900/40 backdrop-blur-md sticky top-0 z-50">
+      <header className="border-b border-border bg-card/40 backdrop-blur-md sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <div className="flex items-center space-x-3">
             <Logo size={32} />
