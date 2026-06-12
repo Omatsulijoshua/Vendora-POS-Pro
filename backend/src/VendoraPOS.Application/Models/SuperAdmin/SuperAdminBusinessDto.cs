@@ -11,6 +11,7 @@ public class SuperAdminBusinessDto
     public string OwnerEmail { get; set; } = string.Empty;
     public DateTime CreatedAt { get; set; }
     public bool IsActive { get; set; }
+    public bool IsApproved { get; set; }
     public int BranchesCount { get; set; }
     public int UsersCount { get; set; }
     public string SubscriptionTier { get; set; } = string.Empty;

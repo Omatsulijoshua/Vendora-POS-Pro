@@ -88,7 +88,8 @@ public class AuthController : ControllerBase
                 Name = model.BusinessName,
                 Subdomain = model.Subdomain.ToLower(),
                 OwnerId = user.Id,
-                IsActive = true
+                IsActive = true,
+                IsApproved = false
             };
 
             _context.Businesses.Add(business);
@@ -174,6 +175,13 @@ public class AuthController : ControllerBase
 
             if (business != null)
             {
+                if (!business.IsApproved)
+                {
+                    var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "127.0.0.1";
+                    await _auditLogService.LogAsync("LoginFailurePendingApproval", "Failed login: business account is pending approval", model.Email, user.BusinessId, ipAddress);
+                    return StatusCode(403, new { Message = "Your business account is pending approval by the system administrator. You will be notified once it is approved." });
+                }
+
                 if (!business.IsActive)
                 {
                     var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "127.0.0.1";

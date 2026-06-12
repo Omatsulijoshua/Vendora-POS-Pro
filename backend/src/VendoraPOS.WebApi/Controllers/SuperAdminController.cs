@@ -42,8 +42,9 @@ public class SuperAdminController : ControllerBase
         var usersCount = await _context.Users.IgnoreQueryFilters().CountAsync();
 
         var totalBusinesses = businesses.Count;
-        var activeBusinesses = businesses.Count(b => b.IsActive);
-        var suspendedBusinesses = totalBusinesses - activeBusinesses;
+        var activeBusinesses = businesses.Count(b => b.IsActive && b.IsApproved);
+        var suspendedBusinesses = businesses.Count(b => !b.IsActive && b.IsApproved);
+        var pendingApproval = businesses.Count(b => !b.IsApproved);
 
         var activeSubs = businesses.Count(b => b.IsActive && b.SubscriptionStatus == "Active");
         var totalSaaSRevenue = businesses
@@ -70,6 +71,7 @@ public class SuperAdminController : ControllerBase
             TotalBusinesses = totalBusinesses,
             ActiveBusinesses = activeBusinesses,
             SuspendedBusinesses = suspendedBusinesses,
+            PendingApprovalBusinesses = pendingApproval,
             ActiveSubscriptions = activeSubs,
             TotalSaaSRevenue = totalSaaSRevenue,
             MonthlySaaSRevenue = monthlySaaSRevenue,
@@ -111,6 +113,7 @@ public class SuperAdminController : ControllerBase
                 OwnerEmail = b.Owner?.Email ?? "Unknown",
                 CreatedAt = b.CreatedAt,
                 IsActive = b.IsActive,
+                IsApproved = b.IsApproved,
                 BranchesCount = bBranchesCount,
                 UsersCount = bUsersCount,
                 SubscriptionTier = b.SubscriptionTier,
@@ -164,12 +167,13 @@ public class SuperAdminController : ControllerBase
             return NotFound(new { Message = "Business not found." });
         }
 
-        if (business.IsActive)
+        if (business.IsActive && business.IsApproved)
         {
             return BadRequest(new { Message = "Business is already active." });
         }
 
         business.IsActive = true;
+        business.IsApproved = true;
         await _context.SaveChangesAsync();
 
         var adminEmail = User.FindFirst(ClaimTypes.Email)?.Value ?? "admin@vendorapos.com";
@@ -184,6 +188,38 @@ public class SuperAdminController : ControllerBase
         );
 
         return Ok(new { Message = "Business activated successfully." });
+    }
+
+    [HttpPost("businesses/{id}/approve")]
+    public async Task<IActionResult> ApproveBusiness(Guid id)
+    {
+        var business = await _context.Businesses.IgnoreQueryFilters().FirstOrDefaultAsync(b => b.Id == id);
+        if (business == null)
+        {
+            return NotFound(new { Message = "Business not found." });
+        }
+
+        if (business.IsApproved)
+        {
+            return BadRequest(new { Message = "Business is already approved." });
+        }
+
+        business.IsApproved = true;
+        business.IsActive = true; // Automatically activate upon approval
+        await _context.SaveChangesAsync();
+
+        var adminEmail = User.FindFirst(ClaimTypes.Email)?.Value ?? "admin@vendorapos.com";
+        var ip = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "127.0.0.1";
+
+        await _auditLogService.LogAsync(
+            "BusinessApproved",
+            $"Approved business: {business.Name} (subdomain: {business.Subdomain})",
+            adminEmail,
+            id,
+            ip
+        );
+
+        return Ok(new { Message = "Business approved successfully." });
     }
 
     [HttpPut("businesses/{id}/subscription")]

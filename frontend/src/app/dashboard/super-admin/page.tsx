@@ -11,6 +11,7 @@ interface SuperAdminStats {
   totalBusinesses: number;
   activeBusinesses: number;
   suspendedBusinesses: number;
+  pendingApprovalBusinesses: number;
   activeSubscriptions: number;
   totalSaaSRevenue: number;
   monthlySaaSRevenue: number;
@@ -27,6 +28,7 @@ interface SuperAdminBusiness {
   ownerEmail: string;
   createdAt: string;
   isActive: boolean;
+  isApproved: boolean;
   branchesCount: number;
   usersCount: number;
   subscriptionTier: string;
@@ -467,6 +469,29 @@ export default function SuperAdminDashboard() {
     }
   };
 
+  // Approve Business
+  const handleApprove = async (id: string) => {
+    if (!window.confirm("Are you sure you want to APPROVE this business account?")) return;
+    setActionLoading(true);
+    try {
+      const res = await fetch(`${baseUrl}/api/superadmin/businesses/${id}/approve`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) {
+        flashSuccess("Business approved successfully.");
+        await Promise.all([fetchStats(), fetchBusinesses(), fetchAuditLogs()]);
+      } else {
+        const data = await res.json();
+        flashError(data.message || "Failed to approve business.");
+      }
+    } catch (err) {
+      flashError("Network error approving business.");
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
   // Open Edit Subscription Modal
   const openSubscriptionModal = (b: SuperAdminBusiness) => {
     setSelectedBusiness(b);
@@ -692,20 +717,30 @@ export default function SuperAdminDashboard() {
               </div>
 
               {/* Stats Grid */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 scroll-reveal">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 scroll-reveal">
                 <div className="border border-slate-900 bg-slate-900/20 backdrop-blur-md rounded-2xl p-5 hover:border-slate-800 transition-all">
                   <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Total Businesses</span>
                   <p className="text-4xl font-extrabold mt-3 text-slate-100">{stats?.totalBusinesses ?? 0}</p>
-                  <div className="flex justify-between items-center text-xs text-slate-500 mt-2">
+                  <div className="flex justify-between items-center text-[10px] text-slate-500 mt-2">
                     <span>Active: {stats?.activeBusinesses ?? 0}</span>
                     <span>Suspended: {stats?.suspendedBusinesses ?? 0}</span>
                   </div>
                 </div>
 
                 <div className="border border-slate-900 bg-slate-900/20 backdrop-blur-md rounded-2xl p-5 hover:border-slate-800 transition-all">
+                  <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Pending Approvals</span>
+                  <p className={`text-4xl font-extrabold mt-3 ${(stats?.pendingApprovalBusinesses ?? 0) > 0 ? "text-amber-400 animate-pulse" : "text-slate-100"}`}>
+                    {stats?.pendingApprovalBusinesses ?? 0}
+                  </p>
+                  <p className="text-[10px] text-slate-500 mt-2">
+                    {(stats?.pendingApprovalBusinesses ?? 0) > 0 ? "Requires admin action" : "All accounts approved"}
+                  </p>
+                </div>
+
+                <div className="border border-slate-900 bg-slate-900/20 backdrop-blur-md rounded-2xl p-5 hover:border-slate-800 transition-all">
                   <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Active Subscriptions</span>
                   <p className="text-4xl font-extrabold mt-3 text-slate-100">{stats?.activeSubscriptions ?? 0}</p>
-                  <p className="text-xs text-slate-500 mt-2">
+                  <p className="text-[10px] text-slate-500 mt-2">
                     {stats?.totalBusinesses ? Math.round(((stats.activeSubscriptions) / stats.totalBusinesses) * 100) : 0}% tier coverage
                   </p>
                 </div>
@@ -713,7 +748,7 @@ export default function SuperAdminDashboard() {
                 <div className="border border-slate-900 bg-slate-900/20 backdrop-blur-md rounded-2xl p-5 hover:border-slate-800 transition-all">
                   <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Annual SaaS Revenue</span>
                   <p className="text-4xl font-extrabold mt-3 text-indigo-400">₦{stats?.totalSaaSRevenue?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) ?? "0.00"}</p>
-                  <p className="text-xs text-slate-500 mt-2">
+                  <p className="text-[10px] text-slate-500 mt-2">
                     Est. Monthly: ₦{stats?.monthlySaaSRevenue?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) ?? "0.00"}
                   </p>
                 </div>
@@ -822,14 +857,30 @@ export default function SuperAdminDashboard() {
                                 </div>
                               </td>
                               <td className="py-4 px-6 text-center">
-                                <div>
-                                  <span className={`px-2 py-0.5 rounded-full text-xs font-bold border ${
-                                    b.subscriptionStatus === "Active" ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" :
+                                <div className="flex flex-col items-center gap-1.5">
+                                  {/* Approval/Activation Status */}
+                                  {!b.isApproved ? (
+                                    <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/10 text-amber-400 border border-amber-500/20 animate-pulse">
+                                      Pending Approval
+                                    </span>
+                                  ) : b.isActive ? (
+                                    <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                                      Active
+                                    </span>
+                                  ) : (
+                                    <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-red-500/10 text-red-400 border border-red-500/20">
+                                      Suspended
+                                    </span>
+                                  )}
+                                  
+                                  {/* Subscription Status */}
+                                  <span className={`px-2 py-0.5 rounded text-[9px] font-semibold border ${
+                                    b.subscriptionStatus === "Active" ? "bg-indigo-500/10 text-indigo-400 border-indigo-500/20" :
                                     b.subscriptionStatus === "Trialing" ? "bg-blue-500/10 text-blue-400 border-blue-500/20" :
                                     b.subscriptionStatus === "PastDue" ? "bg-amber-500/10 text-amber-400 border-amber-500/20" :
                                     "bg-red-500/10 text-red-400 border-red-500/20"
                                   }`}>
-                                    {b.subscriptionStatus}
+                                    Sub: {b.subscriptionStatus}
                                   </span>
                                 </div>
                               </td>
@@ -841,7 +892,15 @@ export default function SuperAdminDashboard() {
                                   >
                                     Edit Plan
                                   </button>
-                                  {b.isActive ? (
+                                  {!b.isApproved ? (
+                                    <button
+                                      onClick={() => handleApprove(b.id)}
+                                      disabled={actionLoading}
+                                      className="px-3 py-1.5 rounded-lg bg-emerald-500 text-white hover:bg-emerald-600 text-xs font-bold transition-all shadow-md shadow-emerald-500/20 cursor-pointer"
+                                    >
+                                      Approve
+                                    </button>
+                                  ) : b.isActive ? (
                                     <button
                                       onClick={() => handleSuspend(b.id)}
                                       disabled={actionLoading}

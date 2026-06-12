@@ -10,6 +10,7 @@ public class Business
     public string Subdomain { get; set; } = string.Empty;
     public Guid OwnerId { get; set; }
     public bool IsActive { get; set; } = true;
+    public bool IsApproved { get; set; } = true;
     public bool SharedStockMode { get; set; } = false;
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 

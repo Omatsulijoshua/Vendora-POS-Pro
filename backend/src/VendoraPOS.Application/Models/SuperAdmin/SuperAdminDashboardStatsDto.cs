@@ -8,6 +8,7 @@ public class SuperAdminDashboardStatsDto
     public int TotalBusinesses { get; set; }
     public int ActiveBusinesses { get; set; }
     public int SuspendedBusinesses { get; set; }
+    public int PendingApprovalBusinesses { get; set; }
     public int ActiveSubscriptions { get; set; }
     public decimal TotalSaaSRevenue { get; set; }
     public decimal MonthlySaaSRevenue { get; set; }
