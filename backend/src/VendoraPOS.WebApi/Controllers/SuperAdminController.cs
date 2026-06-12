@@ -392,7 +392,37 @@ public class SuperAdminController : ControllerBase
         var payments = await _context.SaaSPayments
             .OrderByDescending(p => p.CreatedAt)
             .ToListAsync();
-        return Ok(payments);
+
+        var businesses = await _context.Businesses
+            .IgnoreQueryFilters()
+            .ToListAsync();
+
+        var users = await _userManager.Users
+            .IgnoreQueryFilters()
+            .ToListAsync();
+
+        var result = payments.Select(p => {
+            var biz = businesses.FirstOrDefault(b => b.Id == p.BusinessId);
+            var owner = biz != null ? users.FirstOrDefault(u => u.Id == biz.OwnerId) : null;
+            return new
+            {
+                p.Id,
+                p.BusinessId,
+                p.BusinessName,
+                p.Amount,
+                p.PlanName,
+                p.DurationMonths,
+                p.PaymentMethod,
+                p.PaymentStatus,
+                p.ReceiptUrl,
+                p.Reference,
+                p.CreatedAt,
+                p.ProcessedAt,
+                OwnerEmail = owner?.Email
+            };
+        }).ToList();
+
+        return Ok(result);
     }
 
     [HttpPost("payments/{id}/approve")]

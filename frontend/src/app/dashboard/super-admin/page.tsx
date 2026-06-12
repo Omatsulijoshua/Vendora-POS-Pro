@@ -1395,6 +1395,11 @@ export default function SuperAdminDashboard() {
                               <td className="py-3.5 px-4 font-bold text-slate-200 font-sans">
                                 <div>
                                   <p>{p.businessName}</p>
+                                  {p.ownerEmail && (
+                                    <p className="text-[10px] text-indigo-400 font-medium font-mono">
+                                      {p.ownerEmail}
+                                    </p>
+                                  )}
                                   <p className="text-[10px] text-slate-500 font-medium">
                                     {p.planName} Tier • {p.durationMonths} {p.durationMonths === 1 ? "mo" : "mos"}
                                   </p>
