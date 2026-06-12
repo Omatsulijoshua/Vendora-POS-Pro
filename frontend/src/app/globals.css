@@ -7,9 +7,9 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-sans);
-  --font-mono: var(--font-geist-mono);
-  --font-heading: var(--font-sans);
+  --font-sans: var(--font-plus-jakarta), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: monospace;
+  --font-heading: var(--font-outfit), ui-sans-serif, system-ui, sans-serif;
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -47,19 +47,19 @@
   --radius-3xl: calc(var(--radius) * 2.2);
   --radius-4xl: calc(var(--radius) * 2.6);
 
-  /* Overrides for default Tailwind colors to match theme */
+  /* Overrides for default Tailwind colors to match theme dynamically */
   --color-primary-hover: var(--primary-hover);
-  --color-indigo-650: var(--primary);
-  --color-indigo-600: var(--primary);
-  --color-indigo-500: var(--primary);
-  --color-indigo-400: var(--accent);
-  --color-purple-650: var(--primary);
-  --color-purple-655: var(--primary);
-  --color-purple-600: var(--primary);
-  --color-purple-700: var(--primary-hover);
-  --color-purple-750: var(--primary-hover);
-  --color-purple-500: var(--accent);
-  --color-violet-400: var(--accent);
+  --color-indigo-650: var(--indigo-600);
+  --color-indigo-600: var(--indigo-600);
+  --color-indigo-500: var(--indigo-500);
+  --color-indigo-400: var(--indigo-400);
+  --color-purple-650: var(--purple-650);
+  --color-purple-655: var(--purple-655);
+  --color-purple-600: var(--purple-600);
+  --color-purple-700: var(--purple-700);
+  --color-purple-750: var(--purple-750);
+  --color-purple-500: var(--purple-500);
+  --color-violet-400: var(--violet-400);
   
   --color-slate-950: var(--slate-950);
   --color-slate-900: var(--slate-900);
@@ -76,9 +76,9 @@
 
 :root {
   /* Dynamic Slate Color Fallbacks */
-  --slate-950: #ffffff;
+  --slate-950: #f8fafc;
   --slate-900: #ffffff;
-  --slate-850: #f8fafc;
+  --slate-850: #f1f5f9;
   --slate-800: #e2e8f0;
   --slate-700: #cbd5e1;
   --slate-600: #94a3b8;
@@ -87,6 +87,18 @@
   --slate-300: #334155;
   --slate-200: #1e293b;
   --slate-100: #0f172a;
+
+  /* Theme variables - Indigo/Purple Map to Deep Blue for crisp light layout */
+  --indigo-600: #1E3A8A;
+  --indigo-500: #2563eb;
+  --indigo-400: #1d4ed8;
+  --purple-650: #1E3A8A;
+  --purple-655: #1E3A8A;
+  --purple-600: #1E3A8A;
+  --purple-700: #172b64;
+  --purple-750: #172b64;
+  --purple-500: #1E3A8A;
+  --violet-400: #1E3A8A;
 
   /* Semantic palette */
   --background: #f8fafc; /* Beautiful soft slate-50 background instead of plain white */
@@ -113,7 +125,7 @@
   --input: #e2e8f0;
   --ring: var(--primary);
   
-  --radius: 0.625rem;
+  --radius: 0.75rem;
 
   --sidebar: var(--card);
   --sidebar-foreground: var(--foreground);
@@ -129,28 +141,62 @@
   --chart-3: #f59e0b;
   --chart-4: #ef4444;
   --chart-5: #8b5cf6;
+
+  /* Card overrides in light mode */
+  --card-bg: #ffffff;
+  --card-border: rgba(226, 232, 240, 0.85);
+  --card-border-hover: rgba(30, 58, 138, 0.2);
+  --card-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.02), 
+                 0 2px 8px -1px rgba(15, 23, 42, 0.01),
+                 inset 0 1px 0 0 rgba(255, 255, 255, 0.6);
+  --card-shadow-hover: 0 12px 30px -4px rgba(15, 23, 42, 0.05), 
+                       0 4px 12px -2px rgba(15, 23, 42, 0.02),
+                       inset 0 1px 0 0 rgba(255, 255, 255, 0.8);
+
+  /* Input Variables in light mode */
+  --input-bg: #ffffff;
+  --input-border: #cbd5e1;
+  --input-shadow: inset 0 1px 2px rgba(15, 23, 42, 0.02);
+  --input-focus-ring: rgba(30, 58, 138, 0.15);
+
+  /* Table Variables in light mode */
+  --table-header-bg: #f8fafc;
+  --table-row-border: rgba(226, 232, 240, 0.6);
+  --table-hover-bg: rgba(15, 23, 42, 0.015);
 }
 
 .dark {
   /* Dynamic Slate Color Fallbacks for dark mode */
-  --slate-950: #070e1e;
-  --slate-900: #0c1527;
-  --slate-850: #132038;
-  --slate-800: #1f3054;
-  --slate-700: #2c3e6b;
+  --slate-950: #050b18;
+  --slate-900: #0b1325;
+  --slate-850: #111c33;
+  --slate-800: #1d2d52;
+  --slate-700: #2a3c6b;
   --slate-600: #475569;
-  --slate-500: #64748b;
-  --slate-400: #94a3b8;
-  --slate-300: #cbd5e1;
-  --slate-200: #e2e8f0;
+  --slate-500: #8a9fc4;
+  --slate-400: #cbd5e1;
+  --slate-300: #e2e8f0;
+  --slate-200: #f1f5f9;
   --slate-100: #f8fafc;
 
+  /* Theme variables - Indigo/Purple map to neon brights for dark layout */
+  --indigo-600: #3b82f6;
+  --indigo-500: #60a5fa;
+  --indigo-400: #93c5fd;
+  --purple-650: #8b5cf6;
+  --purple-655: #a78bfa;
+  --purple-600: #8b5cf6;
+  --purple-700: #7c3aed;
+  --purple-750: #6d28d9;
+  --purple-500: #a78bfa;
+  --violet-400: #c084fc;
+
   /* Semantic palette */
-  --background: #070e1e; /* Deep blue-black */
+  --background: #050b18; /* Deep blue-black */
   --foreground: #f8fafc;
-  --card: #0c1527; /* Navy card */
+  --card: #0b1325; /* Navy card */
   --card-foreground: #f8fafc;
-  --popover: #0c1527;
+  --popover: #0b1325;
   --popover-foreground: #f8fafc;
 
   --primary: #1E3A8A;      /* Brand Deep Blue */
@@ -160,14 +206,14 @@
   --accent: #10B981;       /* Brand Emerald Green */
   --accent-foreground: #ffffff;
 
-  --secondary: #132038;
+  --secondary: #111c33;
   --secondary-foreground: #f8fafc;
   
-  --muted: #132038;
-  --muted-foreground: #94a3b8;
+  --muted: #111c33;
+  --muted-foreground: #8a9fc4;
   
-  --border: #1f3054;
-  --input: #1f3054;
+  --border: #1d2d52;
+  --input: #1d2d52;
   --ring: var(--primary);
 
   --sidebar: var(--card);
@@ -184,29 +230,67 @@
   --chart-3: #f59e0b;
   --chart-4: #ef4444;
   --chart-5: #8b5cf6;
+
+  /* Card overrides in dark mode */
+  --card-bg: #0b1325;
+  --card-border: rgba(30, 58, 138, 0.25);
+  --card-border-hover: rgba(59, 130, 246, 0.45);
+  --card-shadow: 0 4px 24px -2px rgba(0, 0, 0, 0.3), 
+                 0 2px 8px -1px rgba(0, 0, 0, 0.2),
+                 inset 0 1px 0 0 rgba(255, 255, 255, 0.03);
+  --card-shadow-hover: 0 16px 40px -4px rgba(0, 0, 0, 0.5), 
+                       0 4px 16px -2px rgba(0, 0, 0, 0.3),
+                       inset 0 1px 0 0 rgba(255, 255, 255, 0.05);
+
+  /* Input Variables in dark mode */
+  --input-bg: #0b1325;
+  --input-border: rgba(30, 58, 138, 0.45);
+  --input-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.2);
+  --input-focus-ring: rgba(59, 130, 246, 0.25);
+
+  /* Table Variables in dark mode */
+  --table-header-bg: #080f1d;
+  --table-row-border: rgba(30, 58, 138, 0.15);
+  --table-hover-bg: rgba(255, 255, 255, 0.02);
 }
 
 @layer base {
   * {
     @apply border-border outline-ring/50;
   }
+  
+  html, body, input, select, textarea, button {
+    font-family: var(--font-plus-jakarta), "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
+  }
+  
+  h1, h2, h3, h4, h5, h6, .font-heading {
+    font-family: var(--font-outfit), "Outfit", ui-sans-serif, system-ui, sans-serif;
+    letter-spacing: -0.025em;
+  }
+
+  code, pre, .font-mono {
+    font-family: monospace !important;
+  }
+
   body {
     @apply bg-background text-foreground transition-colors duration-300;
     background-image: radial-gradient(at 0% 0%, rgba(30, 58, 138, 0.03) 0px, transparent 50%), 
                       radial-gradient(at 100% 100%, rgba(16, 185, 129, 0.02) 0px, transparent 50%);
     background-attachment: fixed;
   }
+  
   .dark body {
-    background-image: radial-gradient(at 0% 0%, rgba(30, 58, 138, 0.15) 0px, transparent 50%), 
-                      radial-gradient(at 100% 100%, rgba(16, 185, 129, 0.08) 0px, transparent 50%);
+    background-image: radial-gradient(at 0% 0%, rgba(30, 58, 138, 0.12) 0px, transparent 50%), 
+                      radial-gradient(at 100% 100%, rgba(16, 185, 129, 0.06) 0px, transparent 50%);
   }
+  
   html {
     @apply font-sans scroll-smooth;
   }
 }
 
 /* ==========================================================================
-   Entrance & Scroll Reveal Animations
+   Entrance, Floating & Viewport Scroll Reveal Animations
    ========================================================================== */
 .scroll-reveal {
   animation: reveal-on-load 0.8s cubic-bezier(0.16, 1, 0.3, 1) both;
@@ -242,153 +326,200 @@
   }
 }
 
-/* ==========================================================================
-   Premium Light Mode Component Styling Overrides
-   ========================================================================== */
-
-/* Ambient Body background transitions */
-body {
-  background-image: radial-gradient(at 5% 5%, rgba(30, 58, 138, 0.05) 0px, transparent 40%), 
-                    radial-gradient(at 95% 95%, rgba(16, 185, 129, 0.04) 0px, transparent 40%),
-                    radial-gradient(at 50% 50%, rgba(30, 58, 138, 0.01) 0px, transparent 60%);
-  background-attachment: fixed;
+/* Floating background mesh nodes keyframes */
+@keyframes float-blob-1 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(30px, 45px) scale(1.1); }
+}
+@keyframes float-blob-2 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(-40px, -20px) scale(0.9); }
+}
+@keyframes float-blob-3 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(25px, -35px) scale(1.05); }
 }
 
-/* Enhance glassmorphic cards in light mode with subtle borders, shadows and scaling transitions */
+.animate-float-1 { animation: float-blob-1 18s infinite ease-in-out; }
+.animate-float-2 { animation: float-blob-2 22s infinite ease-in-out; }
+.animate-float-3 { animation: float-blob-3 15s infinite ease-in-out; }
+
+/* ==========================================================================
+   Premium Glassmorphic Overrides (For Card & Panel Elements)
+   ========================================================================== */
+.bg-slate-900\/20,
+.bg-slate-900\/10,
+.bg-slate-950\/20,
+.bg-slate-950\/40,
+.bg-slate-900\/30,
+.bg-card {
+  background-color: var(--card-bg) !important;
+  border: 1px solid var(--card-border) !important;
+  box-shadow: var(--card-shadow) !important;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  backdrop-filter: blur(16px) !important;
+}
+
+.bg-slate-900\/20:hover,
+.bg-slate-900\/10:hover,
+.bg-slate-950\/20:hover,
+.bg-slate-900\/30:hover {
+  transform: translateY(-4px) !important;
+  border-color: var(--card-border-hover) !important;
+  box-shadow: var(--card-shadow-hover) !important;
+}
+
+/* Light mode specific border overrides */
 html:not(.dark) .border-slate-900,
 html:not(.dark) .border-slate-850,
 html:not(.dark) .border-slate-800,
 html:not(.dark) [class*="border-slate-700/50"],
 html:not(.dark) [class*="border-slate-800/60"] {
-  border-color: rgba(226, 232, 240, 0.8) !important;
+  border-color: var(--card-border) !important;
 }
 
-html:not(.dark) [class*="bg-slate-900/20"],
-html:not(.dark) [class*="bg-slate-900/30"],
-html:not(.dark) [class*="bg-slate-950/20"],
-html:not(.dark) [class*="bg-slate-950/40"],
-html:not(.dark) [class*="bg-slate-900/10"] {
-  background-color: rgba(255, 255, 255, 0.75) !important;
-  backdrop-filter: blur(20px);
-  border: 1px solid rgba(226, 232, 240, 0.8) !important;
-  box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.03), 
-              0 2px 8px -1px rgba(15, 23, 42, 0.02),
-              inset 0 1px 0 0 rgba(255, 255, 255, 0.6) !important;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-html:not(.dark) [class*="bg-slate-900/20"]:hover,
-html:not(.dark) [class*="bg-slate-900/30"]:hover,
-html:not(.dark) [class*="bg-slate-950/20"]:hover,
-html:not(.dark) [class*="bg-slate-950/40"]:hover,
-html:not(.dark) [class*="bg-slate-900/10"]:hover {
-  background-color: rgba(255, 255, 255, 0.85) !important;
-  box-shadow: 0 12px 30px -4px rgba(15, 23, 42, 0.06), 
-              0 4px 12px -2px rgba(15, 23, 42, 0.03),
-              inset 0 1px 0 0 rgba(255, 255, 255, 0.8) !important;
-  border-color: rgba(30, 58, 138, 0.15) !important;
-  transform: translateY(-1px);
-}
-
-/* Light Mode Hover States */
+/* Hover States for non-card items */
 html:not(.dark) [class*="hover:bg-slate-900/5"]:hover {
   background-color: rgba(15, 23, 42, 0.03) !important;
 }
 html:not(.dark) [class*="hover:bg-slate-900/10"]:hover {
   background-color: rgba(15, 23, 42, 0.05) !important;
 }
-html:not(.dark) .hover\:bg-slate-800:hover {
-  background-color: #f1f5f9 !important;
-}
-html:not(.dark) .hover\:bg-slate-850:hover {
-  background-color: #f8fafc !important;
+
+/* ==========================================================================
+   Form Control Upgrades (Inputs, Selects, Textareas)
+   ========================================================================== */
+input, select, textarea {
+  background-color: var(--input-bg) !important;
+  color: var(--foreground) !important;
+  border: 1px solid var(--input-border) !important;
+  border-radius: 12px !important;
+  padding: 0.625rem 0.875rem !important;
+  font-size: 0.875rem !important;
+  transition: all 0.2s ease-in-out !important;
+  box-shadow: var(--input-shadow) !important;
 }
 
-/* Input Fields and Selects in Light Mode */
-html:not(.dark) input.bg-slate-900,
-html:not(.dark) select.bg-slate-900,
-html:not(.dark) textarea.bg-slate-900,
-html:not(.dark) input,
-html:not(.dark) select,
-html:not(.dark) textarea {
-  background-color: #ffffff !important;
-  color: #0f172a !important;
-  border: 1px solid #cbd5e1 !important;
-  box-shadow: inset 0 1px 2px rgba(15, 23, 42, 0.02) !important;
-  transition: border-color 0.2s, box-shadow 0.2s;
-}
-
-html:not(.dark) input.bg-slate-900:focus,
-html:not(.dark) select.bg-slate-900:focus,
-html:not(.dark) input:focus,
-html:not(.dark) select:focus,
-html:not(.dark) textarea:focus {
+input:focus, select:focus, textarea:focus {
   border-color: var(--primary) !important;
-  box-shadow: 0 0 0 3px rgba(30, 58, 138, 0.08), 
-              inset 0 1px 2px rgba(15, 23, 42, 0.02) !important;
+  box-shadow: 0 0 0 3px var(--input-focus-ring) !important;
   outline: none !important;
 }
 
-/* Premium dynamic button animations in light mode */
-html:not(.dark) button.bg-indigo-600,
-html:not(.dark) button.bg-primary,
-html:not(.dark) .bg-primary {
-  box-shadow: 0 4px 14px 0 rgba(30, 58, 138, 0.12) !important;
-  transition: transform 0.2s, box-shadow 0.2s;
-}
-html:not(.dark) button.bg-indigo-600:hover,
-html:not(.dark) button.bg-primary:hover,
-html:not(.dark) .bg-primary:hover {
-  box-shadow: 0 6px 20px 0 rgba(30, 58, 138, 0.22) !important;
-  transform: translateY(-1px);
-}
-html:not(.dark) button.bg-indigo-600:active,
-html:not(.dark) button.bg-primary:active,
-html:not(.dark) .bg-primary:active {
-  transform: translateY(0);
+/* ==========================================================================
+   Interactive Button Elevators (Action Fills & Animations)
+   ========================================================================== */
+button.bg-primary,
+.bg-primary {
+  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-hover) 100%) !important;
+  box-shadow: 0 4px 14px 0 rgba(30, 58, 138, 0.15) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
 }
 
-html:not(.dark) button.bg-emerald-600,
-html:not(.dark) button.bg-accent,
-html:not(.dark) .bg-accent {
-  box-shadow: 0 4px 14px 0 rgba(16, 185, 129, 0.12) !important;
-  transition: transform 0.2s, box-shadow 0.2s;
-}
-html:not(.dark) button.bg-emerald-600:hover,
-html:not(.dark) button.bg-accent:hover,
-html:not(.dark) .bg-accent:hover {
-  box-shadow: 0 6px 20px 0 rgba(16, 185, 129, 0.22) !important;
-  transform: translateY(-1px);
+button.bg-primary:hover,
+.bg-primary:hover {
+  transform: translateY(-2px) !important;
+  box-shadow: 0 6px 20px 0 rgba(30, 58, 138, 0.3) !important;
+  filter: brightness(1.1);
 }
 
-/* Table enhancements in Light Mode */
-html:not(.dark) tr {
-  transition: background-color 0.2s ease;
-}
-html:not(.dark) tbody tr:hover {
-  background-color: rgba(15, 23, 42, 0.015) !important;
+button.bg-primary:active,
+.bg-primary:active {
+  transform: translateY(1px) !important;
 }
 
-/* Proper contrast for text slates in Light Mode */
-html:not(.dark) .text-slate-100 {
-  color: #0f172a !important;
+button.bg-accent,
+.bg-accent {
+  background: linear-gradient(135deg, var(--accent) 0%, #059669 100%) !important;
+  box-shadow: 0 4px 14px 0 rgba(16, 185, 129, 0.15) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
 }
-html:not(.dark) .text-slate-200 {
-  color: #1e293b !important;
+
+button.bg-accent:hover,
+.bg-accent:hover {
+  transform: translateY(-2px) !important;
+  box-shadow: 0 6px 20px 0 rgba(16, 185, 129, 0.3) !important;
+  filter: brightness(1.1);
 }
-html:not(.dark) .text-slate-300 {
-  color: #334155 !important;
+
+button.bg-accent:active,
+.bg-accent:active {
+  transform: translateY(1px) !important;
 }
+
+/* Secondary Slate Buttons */
+.bg-slate-900 {
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+.bg-slate-900:hover {
+  transform: translateY(-1.5px) !important;
+  box-shadow: 0 4px 12px -2px rgba(15, 23, 42, 0.05) !important;
+}
+
+/* ==========================================================================
+   Polished Table Registries
+   ========================================================================== */
+table {
+  border-collapse: separate !important;
+  border-spacing: 0 !important;
+  width: 100% !important;
+}
+
+th {
+  background-color: var(--table-header-bg) !important;
+  color: var(--muted-foreground) !important;
+  font-weight: 700 !important;
+  text-transform: uppercase !important;
+  font-size: 0.65rem !important;
+  letter-spacing: 0.05em !important;
+  padding: 1rem 1.25rem !important;
+  border-bottom: 1px solid var(--card-border) !important;
+}
+
+td {
+  padding: 1rem 1.25rem !important;
+  border-bottom: 1px solid var(--table-row-border) !important;
+  font-size: 0.8125rem !important;
+  color: var(--foreground) !important;
+}
+
+tr {
+  transition: all 0.2s ease !important;
+}
+
+tbody tr:hover {
+  background-color: var(--table-hover-bg) !important;
+  transform: scale(1.002);
+}
+
+tbody tr:last-child td {
+  border-bottom: none !important;
+}
+
+/* Alternating lists / list row overrides */
+.hover\:bg-slate-900\/10:hover {
+  background-color: var(--table-hover-bg) !important;
+}
+.hover\:bg-slate-900\/5:hover {
+  background-color: var(--table-hover-bg) !important;
+}
+.hover\:bg-slate-800:hover {
+  background-color: var(--slate-850) !important;
+}
+.hover\:bg-slate-850:hover {
+  background-color: var(--slate-850) !important;
+}
+
+/* Text slate overrides */
+html:not(.dark) .text-slate-100 { color: var(--slate-100) !important; }
+html:not(.dark) .text-slate-200 { color: var(--slate-200) !important; }
+html:not(.dark) .text-slate-300 { color: var(--slate-300) !important; }
 html:not(.dark) .text-slate-350,
-html:not(.dark) .text-slate-400 {
-  color: #475569 !important;
-}
-html:not(.dark) .text-slate-500 {
-  color: #64748b !important;
-}
-html:not(.dark) .text-slate-550 {
-  color: #4b5563 !important;
-}
+html:not(.dark) .text-slate-400 { color: var(--slate-400) !important; }
+html:not(.dark) .text-slate-500 { color: var(--slate-500) !important; }
+html:not(.dark) .text-slate-550 { color: var(--slate-500) !important; }
 
 /* Custom premium scrollbars */
 ::-webkit-scrollbar {
