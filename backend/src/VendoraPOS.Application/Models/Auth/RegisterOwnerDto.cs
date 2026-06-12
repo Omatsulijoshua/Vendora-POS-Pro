@@ -23,4 +23,6 @@ public class RegisterOwnerDto
 
     [Required]
     public string Subdomain { get; set; } = string.Empty;
+
+    public bool WantsTrial { get; set; } = false;
 }

@@ -1813,6 +1813,84 @@ export default function CashierDashboard() {
           )}
         </div>
       )}
+      {/* Account Pending Approval Lock Overlay */}
+      {user?.isApproved === false && (
+        <div className="fixed inset-0 bg-slate-950/85 backdrop-blur-lg flex justify-center items-center p-4 z-50 animate-in fade-in duration-300">
+          <div className="w-full max-w-md p-8 bg-slate-900 border border-indigo-900/30 rounded-2xl shadow-2xl text-center space-y-6">
+            <div className="w-16 h-16 bg-indigo-950/50 border border-indigo-800/40 rounded-full flex items-center justify-center mx-auto text-indigo-400 text-2xl shadow-lg animate-pulse">
+              ⏳
+            </div>
+            <div className="space-y-2">
+              <h3 className="text-xl font-black text-slate-100">Pending Approval</h3>
+              <p className="text-xs text-slate-405 leading-relaxed">
+                Your business account is pending approval by the system administrator. You will be notified once it is approved.
+              </p>
+            </div>
+            <div className="pt-2">
+              <button
+                type="button"
+                onClick={logout}
+                className="w-full py-3 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold rounded-xl transition-all border border-slate-700 cursor-pointer"
+              >
+                Log Out
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Business Suspended Lock Overlay */}
+      {user?.isApproved !== false && user?.isBusinessActive === false && (
+        <div className="fixed inset-0 bg-slate-950/85 backdrop-blur-lg flex justify-center items-center p-4 z-50 animate-in fade-in duration-300">
+          <div className="w-full max-w-md p-8 bg-slate-900 border border-red-900/30 rounded-2xl shadow-2xl text-center space-y-6">
+            <div className="w-16 h-16 bg-red-950/50 border border-red-800/40 rounded-full flex items-center justify-center mx-auto text-red-400 text-2xl shadow-lg">
+              🚫
+            </div>
+            <div className="space-y-2">
+              <h3 className="text-xl font-black text-slate-100">Business Suspended</h3>
+              <p className="text-xs text-slate-405 leading-relaxed">
+                Your business account has been suspended. Please contact the platform administrator.
+              </p>
+            </div>
+            <div className="pt-2">
+              <button
+                type="button"
+                onClick={logout}
+                className="w-full py-3 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold rounded-xl transition-all border border-slate-700 cursor-pointer"
+              >
+                Log Out
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Subscription Expired Lock Overlay */}
+      {user?.isApproved !== false && user?.isBusinessActive !== false && user?.isSubscriptionActive === false && (
+        <div className="fixed inset-0 bg-slate-950/85 backdrop-blur-lg flex justify-center items-center p-4 z-50 animate-in fade-in duration-300">
+          <div className="w-full max-w-md p-8 bg-slate-900 border border-red-900/30 rounded-2xl shadow-2xl text-center space-y-6">
+            <div className="w-16 h-16 bg-red-950/50 border border-red-800/40 rounded-full flex items-center justify-center mx-auto text-red-400 text-2xl shadow-lg animate-bounce">
+              ⚠️
+            </div>
+            <div className="space-y-2">
+              <h3 className="text-xl font-black text-slate-100">Subscription Expired</h3>
+              <p className="text-xs text-slate-405 leading-relaxed">
+                Access to operational features is locked because your business subscription is inactive or has expired. Please contact the business owner to renew.
+              </p>
+            </div>
+            <div className="pt-2">
+              <button
+                type="button"
+                onClick={logout}
+                className="w-full py-3 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold rounded-xl transition-all border border-slate-700 cursor-pointer"
+              >
+                Log Out
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <ChangePasswordModal
         isOpen={showChangePasswordModal}
         onClose={() => setShowChangePasswordModal(false)}

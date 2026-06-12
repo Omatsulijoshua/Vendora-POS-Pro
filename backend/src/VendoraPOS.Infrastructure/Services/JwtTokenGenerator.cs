@@ -46,6 +46,8 @@ public class JwtTokenGenerator : IJwtTokenGenerator
 
         // Add tenant and branch ID if present
         bool isSubscriptionActive = true;
+        bool isApproved = true;
+        bool isBusinessActive = true;
         if (user.BusinessId.HasValue)
         {
             claims.Add(new Claim("business_id", user.BusinessId.Value.ToString()));
@@ -56,15 +58,20 @@ public class JwtTokenGenerator : IJwtTokenGenerator
 
             if (business != null)
             {
+                isApproved = business.IsApproved;
+                isBusinessActive = business.IsActive;
+
                 var isExpired = business.SubscriptionExpiresAt.HasValue && business.SubscriptionExpiresAt.Value < DateTime.UtcNow;
                 var isInactive = business.SubscriptionStatus != "Active";
-                if (isExpired || isInactive)
+                if (isExpired || isInactive || !isApproved || !isBusinessActive)
                 {
                     isSubscriptionActive = false;
                 }
             }
         }
         claims.Add(new Claim("is_subscription_active", isSubscriptionActive.ToString().ToLower()));
+        claims.Add(new Claim("is_approved", isApproved.ToString().ToLower()));
+        claims.Add(new Claim("is_business_active", isBusinessActive.ToString().ToLower()));
         if (user.BranchId.HasValue)
         {
             claims.Add(new Claim("branch_id", user.BranchId.Value.ToString()));

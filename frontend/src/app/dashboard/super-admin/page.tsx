@@ -1391,7 +1391,20 @@ export default function SuperAdminDashboard() {
                         </thead>
                         <tbody className="divide-y divide-slate-900 text-slate-350 bg-slate-950/5">
                           {payments.map((p) => (
-                            <tr key={p.id} className="hover:bg-slate-900/10 transition-colors">
+                            <tr 
+                              key={p.id} 
+                              onClick={() => {
+                                if (p.receiptUrl) {
+                                  setSelectedReceiptUrl(p.receiptUrl);
+                                  setShowReceiptModal(true);
+                                } else {
+                                  setErrorMessage("No receipt upload available for this transaction.");
+                                  setTimeout(() => setErrorMessage(""), 4000);
+                                }
+                              }}
+                              className={`hover:bg-slate-900/10 transition-colors ${p.receiptUrl ? "cursor-pointer" : ""}`}
+                              title={p.receiptUrl ? "Click row to view receipt" : "No receipt uploaded"}
+                            >
                               <td className="py-3.5 px-4 font-bold text-slate-200 font-sans">
                                 <div>
                                   <p>{p.businessName}</p>
@@ -1432,7 +1445,8 @@ export default function SuperAdminDashboard() {
                                 <div className="flex items-center justify-end space-x-1.5">
                                   {p.receiptUrl && (
                                     <button
-                                      onClick={() => {
+                                      onClick={(e) => {
+                                        e.stopPropagation();
                                         setSelectedReceiptUrl(p.receiptUrl);
                                         setShowReceiptModal(true);
                                       }}
@@ -1444,14 +1458,20 @@ export default function SuperAdminDashboard() {
                                   {p.paymentStatus === "Pending" && (
                                     <>
                                       <button
-                                        onClick={() => handleApprovePayment(p.id)}
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleApprovePayment(p.id);
+                                        }}
                                         disabled={actionLoading}
                                         className="px-2 py-1 rounded bg-emerald-500/10 hover:bg-emerald-500/20 text-[10px] font-bold text-emerald-400 border border-emerald-500/20 transition-colors"
                                       >
                                         Approve
                                       </button>
                                       <button
-                                        onClick={() => handleRejectPayment(p.id)}
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleRejectPayment(p.id);
+                                        }}
                                         disabled={actionLoading}
                                         className="px-2 py-1 rounded bg-red-500/10 hover:bg-red-500/20 text-[10px] font-bold text-red-400 border border-red-500/20 transition-colors"
                                       >
@@ -1622,7 +1642,7 @@ export default function SuperAdminDashboard() {
             
             <div className="relative aspect-video w-full overflow-hidden rounded-xl border border-slate-900 bg-slate-900/10 flex items-center justify-center">
               <img 
-                src={selectedReceiptUrl.startsWith("http") ? selectedReceiptUrl : `${baseUrl}${selectedReceiptUrl}`} 
+                src={selectedReceiptUrl.startsWith("http") ? selectedReceiptUrl : (selectedReceiptUrl.startsWith("/") ? `${baseUrl}${selectedReceiptUrl}` : `${baseUrl}/${selectedReceiptUrl}`)} 
                 alt="Payment Receipt" 
                 className="max-h-[350px] w-auto object-contain"
                 onError={(e) => {

@@ -11,4 +11,6 @@ public class AuthResponseDto
     public Guid? BusinessId { get; set; }
     public Guid? BranchId { get; set; }
     public bool IsSubscriptionActive { get; set; } = true;
+    public bool IsApproved { get; set; } = true;
+    public bool IsBusinessActive { get; set; } = true;
 }

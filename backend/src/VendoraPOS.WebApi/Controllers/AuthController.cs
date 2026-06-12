@@ -89,9 +89,11 @@ public class AuthController : ControllerBase
                 Subdomain = model.Subdomain.ToLower(),
                 OwnerId = user.Id,
                 IsActive = true,
-                IsApproved = false,
-                SubscriptionStatus = "Inactive",
-                SubscriptionExpiresAt = DateTime.UtcNow
+                IsApproved = model.WantsTrial,
+                SubscriptionTier = model.WantsTrial ? "Starter" : "Pro",
+                SubscriptionStatus = model.WantsTrial ? "Active" : "Inactive",
+                SubscriptionPrice = model.WantsTrial ? 15000.00m : 600000.00m,
+                SubscriptionExpiresAt = model.WantsTrial ? DateTime.UtcNow.AddDays(7) : DateTime.UtcNow
             };
 
             _context.Businesses.Add(business);
@@ -169,6 +171,8 @@ public class AuthController : ControllerBase
 
         // Check if tenant is suspended or subscription is inactive (only for non-SuperAdmin users)
         bool isSubscriptionActive = true;
+        bool isApproved = true;
+        bool isBusinessActive = true;
         if (user.BusinessId.HasValue)
         {
             var business = await _context.Businesses
@@ -177,32 +181,14 @@ public class AuthController : ControllerBase
 
             if (business != null)
             {
-                if (!business.IsApproved)
-                {
-                    var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "127.0.0.1";
-                    await _auditLogService.LogAsync("LoginFailurePendingApproval", "Failed login: business account is pending approval", model.Email, user.BusinessId, ipAddress);
-                    return StatusCode(403, new { Message = "Your business account is pending approval by the system administrator. You will be notified once it is approved." });
-                }
-
-                if (!business.IsActive)
-                {
-                    var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "127.0.0.1";
-                    await _auditLogService.LogAsync("LoginFailureSuspended", "Failed login: business is suspended", model.Email, user.BusinessId, ipAddress);
-                    return StatusCode(403, new { Message = "Your business account has been suspended. Please contact the administrator." });
-                }
+                isApproved = business.IsApproved;
+                isBusinessActive = business.IsActive;
 
                 var isExpired = business.SubscriptionExpiresAt.HasValue && business.SubscriptionExpiresAt.Value < DateTime.UtcNow;
                 var isInactive = business.SubscriptionStatus != "Active";
 
-                if (isExpired || isInactive)
+                if (isExpired || isInactive || !isApproved || !isBusinessActive)
                 {
-                    var isOwner = roles.Contains(UserRole.Owner.ToString());
-                    if (!isOwner)
-                    {
-                        var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "127.0.0.1";
-                        await _auditLogService.LogAsync("LoginFailureSubscriptionExpired", "Failed login: business subscription expired", model.Email, user.BusinessId, ipAddress);
-                        return StatusCode(402, new { Message = "The business subscription has expired or is inactive. Please contact the business owner." });
-                    }
                     isSubscriptionActive = false;
                 }
             }
@@ -222,7 +208,9 @@ public class AuthController : ControllerBase
             Role = roles.FirstOrDefault() ?? string.Empty,
             BusinessId = user.BusinessId,
             BranchId = user.BranchId,
-            IsSubscriptionActive = isSubscriptionActive
+            IsSubscriptionActive = isSubscriptionActive,
+            IsApproved = isApproved,
+            IsBusinessActive = isBusinessActive
         });
     }
 
@@ -248,6 +236,8 @@ public class AuthController : ControllerBase
         var roles = await _userManager.GetRolesAsync(user);
 
         bool isSubscriptionActive = true;
+        bool isApproved = true;
+        bool isBusinessActive = true;
         if (user.BusinessId.HasValue)
         {
             var business = await _context.Businesses
@@ -256,9 +246,12 @@ public class AuthController : ControllerBase
 
             if (business != null)
             {
+                isApproved = business.IsApproved;
+                isBusinessActive = business.IsActive;
+
                 var isExpired = business.SubscriptionExpiresAt.HasValue && business.SubscriptionExpiresAt.Value < DateTime.UtcNow;
                 var isInactive = business.SubscriptionStatus != "Active";
-                if (isExpired || isInactive)
+                if (isExpired || isInactive || !isApproved || !isBusinessActive)
                 {
                     isSubscriptionActive = false;
                 }
@@ -272,7 +265,9 @@ public class AuthController : ControllerBase
             Role = roles.FirstOrDefault() ?? string.Empty,
             BusinessId = user.BusinessId,
             BranchId = user.BranchId,
-            IsSubscriptionActive = isSubscriptionActive
+            IsSubscriptionActive = isSubscriptionActive,
+            IsApproved = isApproved,
+            IsBusinessActive = isBusinessActive
         });
     }
 

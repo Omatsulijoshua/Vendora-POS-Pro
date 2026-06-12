@@ -18,6 +18,7 @@ export default function RegisterPage() {
   const [subdomain, setSubdomain] = useState("");
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [wantsTrial, setWantsTrial] = useState(false);
 
   const { registerOwner } = useAuth();
   const router = useRouter();
@@ -85,7 +86,8 @@ export default function RegisterPage() {
         email.trim(),
         password,
         businessName.trim(),
-        subdomain.trim()
+        subdomain.trim(),
+        wantsTrial
       );
       router.push("/dashboard");
     } catch (err: any) {
@@ -268,6 +270,27 @@ export default function RegisterPage() {
                 <p className="text-xs text-muted-foreground mt-2">
                   Only lowercase letters, numbers, and hyphens allowed.
                 </p>
+              </div>
+
+              {/* Trial Option Card */}
+              <div className="p-4 rounded-xl border border-indigo-500/20 bg-indigo-500/5 hover:bg-indigo-500/10 transition-all space-y-3">
+                <div className="flex items-start justify-between">
+                  <div className="space-y-0.5">
+                    <label className="text-sm font-bold text-slate-200 flex items-center gap-1.5 cursor-pointer">
+                      <span>🚀 Start with a 1-Week Free Trial</span>
+                      <span className="px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-400 text-[9px] font-bold uppercase tracking-wider">Free</span>
+                    </label>
+                    <p className="text-[11px] text-slate-400 leading-normal">
+                      Get instant automatic access to our Starter plan for 7 days. No credit card required.
+                    </p>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={wantsTrial}
+                    onChange={(e) => setWantsTrial(e.target.checked)}
+                    className="w-4 h-4 rounded border-slate-700 bg-slate-900 text-indigo-650 focus:ring-indigo-650 cursor-pointer accent-indigo-600 mt-1"
+                  />
+                </div>
               </div>
 
               <div className="flex space-x-4 pt-2">

@@ -13,6 +13,8 @@ export interface UserProfile {
   businessId?: string;
   branchId?: string;
   isSubscriptionActive?: boolean;
+  isApproved?: boolean;
+  isBusinessActive?: boolean;
 }
 
 interface DecodedToken {
@@ -24,6 +26,8 @@ interface DecodedToken {
   business_id?: string;
   branch_id?: string;
   is_subscription_active?: string;
+  is_approved?: string;
+  is_business_active?: string;
   exp: number;
 }
 
@@ -38,7 +42,8 @@ interface AuthContextType {
     email: string,
     password: string,
     businessName: string,
-    subdomain: string
+    subdomain: string,
+    wantsTrial: boolean
   ) => Promise<void>;
   logout: () => void;
   switchBusiness: (businessId: string) => Promise<void>;
@@ -82,6 +87,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             businessId: decoded.business_id,
             branchId: decoded.branch_id,
             isSubscriptionActive: decoded.is_subscription_active === "true",
+            isApproved: decoded.is_approved !== "false",
+            isBusinessActive: decoded.is_business_active !== "false",
           });
         } else {
           localStorage.removeItem("vendorapos_token");
@@ -111,6 +118,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       businessId: decoded.business_id,
       branchId: decoded.branch_id,
       isSubscriptionActive: decoded.is_subscription_active === "true",
+      isApproved: decoded.is_approved !== "false",
+      isBusinessActive: decoded.is_business_active !== "false",
     });
   };
 
@@ -136,7 +145,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     email: string,
     password: string,
     businessName: string,
-    subdomain: string
+    subdomain: string,
+    wantsTrial: boolean
   ) => {
     const res = await fetch(`${API_URL}/auth/register-owner`, {
       method: "POST",
@@ -148,6 +158,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         password,
         businessName,
         subdomain,
+        wantsTrial,
       }),
     });
 
