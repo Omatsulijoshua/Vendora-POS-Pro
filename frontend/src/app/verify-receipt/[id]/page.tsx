@@ -1,4 +1,5 @@
 "use client";
+import { API_URL } from "@/lib/utils";
 
 import React, { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
@@ -17,7 +18,7 @@ export default function VerifyReceiptPage() {
     const fetchVerification = async () => {
       try {
         setLoading(true);
-        const res = await fetch(`http://localhost:5149/api/sales/verify/${id}`);
+        const res = await fetch(`${API_URL}/sales/verify/${id}`);
         if (!res.ok) {
           if (res.status === 404) {
             throw new Error("Invalid receipt verification ID. This receipt could not be verified.");

@@ -1,4 +1,5 @@
 "use client";
+import { API_URL } from "@/lib/utils";
 
 import React, { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/context/AuthContext";
@@ -104,7 +105,7 @@ export default function CashierDashboard() {
       };
 
       try {
-        const res = await fetch("http://localhost:5149/api/sales", {
+        const res = await fetch(`${API_URL}/sales`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -142,7 +143,7 @@ export default function CashierDashboard() {
     if (!token) return;
     try {
       setLoadingStats(true);
-      const res = await fetch("http://localhost:5149/api/sales/cashier-stats", {
+      const res = await fetch(`${API_URL}/sales/cashier-stats`, {
         headers: { "Authorization": `Bearer ${token}` }
       });
       if (res.ok) {
@@ -160,7 +161,7 @@ export default function CashierDashboard() {
     if (!token) return;
     try {
       setLoadingHistory(true);
-      const res = await fetch("http://localhost:5149/api/sales", {
+      const res = await fetch(`${API_URL}/sales`, {
         headers: { "Authorization": `Bearer ${token}` }
       });
       if (res.ok) {
@@ -203,7 +204,7 @@ export default function CashierDashboard() {
     setCouponError("");
     setCouponSuccess("");
     try {
-      const res = await fetch(`http://localhost:5149/api/coupons/validate/${couponCode.trim()}?cartTotal=${subtotal}`, {
+      const res = await fetch(`${API_URL}/coupons/validate/${couponCode.trim()}?cartTotal=${subtotal}`, {
         headers: { "Authorization": `Bearer ${token}` }
       });
       if (!res.ok) {
@@ -236,7 +237,7 @@ export default function CashierDashboard() {
       return;
     }
     try {
-      const res = await fetch(`http://localhost:5149/api/branches/${user.branchId}`, {
+      const res = await fetch(`${API_URL}/branches/${user.branchId}`, {
         headers: { "Authorization": `Bearer ${token}` }
       });
       if (res.ok) {
@@ -256,7 +257,7 @@ export default function CashierDashboard() {
   const fetchProducts = async () => {
     try {
       setLoadingProducts(true);
-      const res = await fetch("http://localhost:5149/api/products", {
+      const res = await fetch(`${API_URL}/products`, {
         headers: { "Authorization": `Bearer ${token}` }
       });
       if (res.ok) {
@@ -284,8 +285,8 @@ export default function CashierDashboard() {
     if (!token) return;
     try {
       const url = user?.branchId 
-        ? `http://localhost:5149/api/receipts?branchId=${user.branchId}`
-        : `http://localhost:5149/api/receipts`;
+        ? `${API_URL}/receipts?branchId=${user.branchId}`
+        : `${API_URL}/receipts`;
       const res = await fetch(url, {
         headers: { "Authorization": `Bearer ${token}` }
       });
@@ -310,7 +311,7 @@ export default function CashierDashboard() {
     if (appliedCoupon) {
       const checkMinCart = async () => {
         try {
-          const res = await fetch(`http://localhost:5149/api/coupons/validate/${appliedCoupon.code}?cartTotal=${subtotal}`, {
+          const res = await fetch(`${API_URL}/coupons/validate/${appliedCoupon.code}?cartTotal=${subtotal}`, {
             headers: { "Authorization": `Bearer ${token}` }
           });
           if (res.ok) {
@@ -421,7 +422,7 @@ export default function CashierDashboard() {
     };
 
     try {
-      const res = await fetch("http://localhost:5149/api/sales", {
+      const res = await fetch(`${API_URL}/sales`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -523,7 +524,7 @@ export default function CashierDashboard() {
     if (!barcode) return;
 
     try {
-      const res = await fetch(`http://localhost:5149/api/products/barcode/${barcode}`, {
+      const res = await fetch(`${API_URL}/products/barcode/${barcode}`, {
         headers: { "Authorization": `Bearer ${token}` }
       });
       

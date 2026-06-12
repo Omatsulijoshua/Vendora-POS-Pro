@@ -1,4 +1,5 @@
 "use client";
+import { API_URL } from "@/lib/utils";
 
 import React, { useState, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
@@ -32,7 +33,7 @@ export default function OwnerDashboard() {
     if (!token) return;
     setLoadingNotifications(true);
     try {
-      const res = await fetch("http://localhost:5149/api/notifications", {
+      const res = await fetch(`${API_URL}/notifications`, {
         headers: {
           "Authorization": `Bearer ${token}`
         }
@@ -51,7 +52,7 @@ export default function OwnerDashboard() {
   const handleMarkAsRead = async (id: string) => {
     if (!token) return;
     try {
-      const res = await fetch(`http://localhost:5149/api/notifications/${id}/read`, {
+      const res = await fetch(`${API_URL}/notifications/${id}/read`, {
         method: "PUT",
         headers: {
           "Authorization": `Bearer ${token}`
@@ -248,7 +249,7 @@ export default function OwnerDashboard() {
   const fetchBusinesses = async () => {
     try {
       setLoadingBusinesses(true);
-      const res = await fetch("http://localhost:5149/api/businesses/my-businesses", {
+      const res = await fetch(`${API_URL}/businesses/my-businesses`, {
         headers: { "Authorization": `Bearer ${token}` }
       });
       if (res.ok) {
@@ -268,7 +269,7 @@ export default function OwnerDashboard() {
     try {
       setLoadingBilling(true);
       setBillingError(null);
-      const res = await fetch("http://localhost:5149/api/billing/status", {
+      const res = await fetch(`${API_URL}/billing/status`, {
         headers: { "Authorization": `Bearer ${token}` }
       });
       if (res.ok) {
@@ -324,7 +325,7 @@ export default function OwnerDashboard() {
           const formData = new FormData();
           formData.append("file", manualReceiptFile);
 
-          const uploadRes = await fetch("http://localhost:5149/api/billing/upload-receipt", {
+          const uploadRes = await fetch(`${API_URL}/billing/upload-receipt`, {
             method: "POST",
             headers: {
               "Authorization": `Bearer ${token}`
@@ -342,7 +343,7 @@ export default function OwnerDashboard() {
           setManualReceiptUrl(receiptUrl);
         }
 
-        const res = await fetch("http://localhost:5149/api/billing/pay-manual", {
+        const res = await fetch(`${API_URL}/billing/pay-manual`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -379,7 +380,7 @@ export default function OwnerDashboard() {
   const fetchBranches = async () => {
     try {
       setLoadingBranches(true);
-      const res = await fetch("http://localhost:5149/api/branches", {
+      const res = await fetch(`${API_URL}/branches`, {
         headers: { "Authorization": `Bearer ${token}` }
       });
       if (res.ok) {
@@ -397,7 +398,7 @@ export default function OwnerDashboard() {
   const fetchStaff = async () => {
     try {
       setLoadingStaff(true);
-      const res = await fetch("http://localhost:5149/api/staff", {
+      const res = await fetch(`${API_URL}/staff`, {
         headers: { "Authorization": `Bearer ${token}` }
       });
       if (res.ok) {
@@ -415,7 +416,7 @@ export default function OwnerDashboard() {
   const fetchCategories = async () => {
     try {
       setLoadingCategories(true);
-      const res = await fetch("http://localhost:5149/api/categories", {
+      const res = await fetch(`${API_URL}/categories`, {
         headers: { "Authorization": `Bearer ${token}` }
       });
       if (res.ok) {
@@ -433,7 +434,7 @@ export default function OwnerDashboard() {
   const fetchProducts = async () => {
     try {
       setLoadingProducts(true);
-      const res = await fetch("http://localhost:5149/api/products", {
+      const res = await fetch(`${API_URL}/products`, {
         headers: { "Authorization": `Bearer ${token}` }
       });
       if (res.ok) {
@@ -451,7 +452,7 @@ export default function OwnerDashboard() {
   const fetchTransfers = async () => {
     try {
       setLoadingTransfers(true);
-      const res = await fetch("http://localhost:5149/api/stocktransfers", {
+      const res = await fetch(`${API_URL}/stocktransfers`, {
         headers: { "Authorization": `Bearer ${token}` }
       });
       if (res.ok) {
@@ -475,7 +476,7 @@ export default function OwnerDashboard() {
       if (bId) params.append("branchId", bId);
       if (cId) params.append("cashierId", cId);
 
-      const res = await fetch(`http://localhost:5149/api/sales?${params.toString()}`, {
+      const res = await fetch(`${API_URL}/sales?${params.toString()}`, {
         headers: { "Authorization": `Bearer ${token}` }
       });
       if (res.ok) {
@@ -495,8 +496,8 @@ export default function OwnerDashboard() {
     try {
       setLoadingStats(true);
       const url = user?.businessId
-        ? `http://localhost:5149/api/businesses/owner-stats?businessId=${user.businessId}`
-        : "http://localhost:5149/api/businesses/owner-stats";
+        ? `${API_URL}/businesses/owner-stats?businessId=${user.businessId}`
+        : `${API_URL}/businesses/owner-stats`;
       const res = await fetch(url, {
         headers: { "Authorization": `Bearer ${token}` }
       });
@@ -514,7 +515,7 @@ export default function OwnerDashboard() {
   const fetchDiscounts = async () => {
     try {
       setLoadingDiscounts(true);
-      const res = await fetch("http://localhost:5149/api/discounts", {
+      const res = await fetch(`${API_URL}/discounts`, {
         headers: { "Authorization": `Bearer ${token}` }
       });
       if (res.ok) {
@@ -531,7 +532,7 @@ export default function OwnerDashboard() {
   const fetchCoupons = async () => {
     try {
       setLoadingCoupons(true);
-      const res = await fetch("http://localhost:5149/api/coupons", {
+      const res = await fetch(`${API_URL}/coupons`, {
         headers: { "Authorization": `Bearer ${token}` }
       });
       if (res.ok) {
@@ -549,8 +550,8 @@ export default function OwnerDashboard() {
     if (!token) return;
     try {
       const url = branchId 
-        ? `http://localhost:5149/api/receipts?branchId=${branchId}`
-        : `http://localhost:5149/api/receipts`;
+        ? `${API_URL}/receipts?branchId=${branchId}`
+        : `${API_URL}/receipts`;
       const res = await fetch(url, {
         headers: { "Authorization": `Bearer ${token}` }
       });
@@ -590,7 +591,7 @@ export default function OwnerDashboard() {
         customBrandingColor: receiptCustomBrandingColor
       };
       
-      const res = await fetch("http://localhost:5149/api/receipts", {
+      const res = await fetch(`${API_URL}/receipts`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -625,7 +626,7 @@ export default function OwnerDashboard() {
     formData.append("file", file);
     
     try {
-      const res = await fetch("http://localhost:5149/api/receipts/upload-logo", {
+      const res = await fetch(`${API_URL}/receipts/upload-logo`, {
         method: "POST",
         headers: {
           "Authorization": `Bearer ${token}`
@@ -742,7 +743,7 @@ export default function OwnerDashboard() {
   // Toggle Shared Stock Mode
   const handleToggleSharedStockMode = async () => {
     try {
-      const res = await fetch("http://localhost:5149/api/businesses/toggle-shared-stock", {
+      const res = await fetch(`${API_URL}/businesses/toggle-shared-stock`, {
         method: "PUT",
         headers: {
           "Authorization": `Bearer ${token}`
@@ -767,7 +768,7 @@ export default function OwnerDashboard() {
     setTransferError("");
     setTransferSubmitting(true);
     try {
-      const res = await fetch("http://localhost:5149/api/stocktransfers", {
+      const res = await fetch(`${API_URL}/stocktransfers`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -802,7 +803,7 @@ export default function OwnerDashboard() {
 
   const handleApproveTransfer = async (id: string) => {
     try {
-      const res = await fetch(`http://localhost:5149/api/stocktransfers/${id}/approve`, {
+      const res = await fetch(`${API_URL}/stocktransfers/${id}/approve`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -826,7 +827,7 @@ export default function OwnerDashboard() {
     const reason = prompt("Enter rejection reason:");
     if (reason === null) return;
     try {
-      const res = await fetch(`http://localhost:5149/api/stocktransfers/${id}/reject`, {
+      const res = await fetch(`${API_URL}/stocktransfers/${id}/reject`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -849,7 +850,7 @@ export default function OwnerDashboard() {
   const handleCancelTransfer = async (id: string) => {
     if (!confirm("Are you sure you want to cancel this transfer?")) return;
     try {
-      const res = await fetch(`http://localhost:5149/api/stocktransfers/${id}/cancel`, {
+      const res = await fetch(`${API_URL}/stocktransfers/${id}/cancel`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -872,7 +873,7 @@ export default function OwnerDashboard() {
   async function fetchAuditLogs() {
     try {
       setLoadingAuditLogs(true);
-      const res = await fetch("http://localhost:5149/api/audit-logs", {
+      const res = await fetch(`${API_URL}/audit-logs`, {
         headers: { "Authorization": `Bearer ${token}` }
       });
       if (res.ok) {
@@ -890,7 +891,7 @@ export default function OwnerDashboard() {
     if (!confirm("Are you sure you want to refund this transaction? This will restock all items and cannot be undone.")) return;
     try {
       setRefundingSaleId(id);
-      const res = await fetch(`http://localhost:5149/api/sales/${id}/refund`, {
+      const res = await fetch(`${API_URL}/sales/${id}/refund`, {
         method: "POST",
         headers: {
           "Authorization": `Bearer ${token}`
@@ -933,7 +934,7 @@ export default function OwnerDashboard() {
         isActive: true
       };
 
-      const res = await fetch("http://localhost:5149/api/discounts", {
+      const res = await fetch(`${API_URL}/discounts`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -980,7 +981,7 @@ export default function OwnerDashboard() {
         isActive: true
       };
 
-      const res = await fetch("http://localhost:5149/api/coupons", {
+      const res = await fetch(`${API_URL}/coupons`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -1013,7 +1014,7 @@ export default function OwnerDashboard() {
   const handleDeleteDiscount = async (id: string) => {
     if (!confirm("Are you sure you want to delete this discount?")) return;
     try {
-      const res = await fetch(`http://localhost:5149/api/discounts/${id}`, {
+      const res = await fetch(`${API_URL}/discounts/${id}`, {
         method: "DELETE",
         headers: { "Authorization": `Bearer ${token}` }
       });
@@ -1029,7 +1030,7 @@ export default function OwnerDashboard() {
   const handleDeleteCoupon = async (id: string) => {
     if (!confirm("Are you sure you want to delete this coupon?")) return;
     try {
-      const res = await fetch(`http://localhost:5149/api/coupons/${id}`, {
+      const res = await fetch(`${API_URL}/coupons/${id}`, {
         method: "DELETE",
         headers: { "Authorization": `Bearer ${token}` }
       });
@@ -1056,7 +1057,7 @@ export default function OwnerDashboard() {
         endDate: discount.endDate,
         isActive: !discount.isActive
       };
-      const res = await fetch(`http://localhost:5149/api/discounts/${discount.id}`, {
+      const res = await fetch(`${API_URL}/discounts/${discount.id}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -1085,7 +1086,7 @@ export default function OwnerDashboard() {
         endDate: coupon.endDate,
         isActive: !coupon.isActive
       };
-      const res = await fetch(`http://localhost:5149/api/coupons/${coupon.id}`, {
+      const res = await fetch(`${API_URL}/coupons/${coupon.id}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -1107,7 +1108,7 @@ export default function OwnerDashboard() {
     setBusinessError("");
     setBusinessSubmitting(true);
     try {
-      const res = await fetch("http://localhost:5149/api/businesses", {
+      const res = await fetch(`${API_URL}/businesses`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -1138,7 +1139,7 @@ export default function OwnerDashboard() {
     setBranchError("");
     setBranchSubmitting(true);
     try {
-      const res = await fetch("http://localhost:5149/api/branches", {
+      const res = await fetch(`${API_URL}/branches`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -1174,7 +1175,7 @@ export default function OwnerDashboard() {
     setStaffError("");
     setStaffSubmitting(true);
     try {
-      const res = await fetch("http://localhost:5149/api/staff", {
+      const res = await fetch(`${API_URL}/staff`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -1209,7 +1210,7 @@ export default function OwnerDashboard() {
 
   const handleToggleStaffActive = async (staffId: string) => {
     try {
-      const res = await fetch(`http://localhost:5149/api/staff/${staffId}/toggle-active`, {
+      const res = await fetch(`${API_URL}/staff/${staffId}/toggle-active`, {
         method: "PUT",
         headers: { "Authorization": `Bearer ${token}` }
       });
@@ -1244,7 +1245,7 @@ export default function OwnerDashboard() {
     setResetStaffSubmitting(true);
 
     try {
-      const res = await fetch(`http://localhost:5149/api/staff/${selectedResetStaff.id}/reset-password`, {
+      const res = await fetch(`${API_URL}/staff/${selectedResetStaff.id}/reset-password`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -1275,7 +1276,7 @@ export default function OwnerDashboard() {
     setCatError("");
     setCatSubmitting(true);
     try {
-      const res = await fetch("http://localhost:5149/api/categories", {
+      const res = await fetch(`${API_URL}/categories`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -1304,7 +1305,7 @@ export default function OwnerDashboard() {
     setCatError("");
     setCatSubmitting(true);
     try {
-      const res = await fetch(`http://localhost:5149/api/categories/${selectedCategory.id}`, {
+      const res = await fetch(`${API_URL}/categories/${selectedCategory.id}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -1332,7 +1333,7 @@ export default function OwnerDashboard() {
   const handleDeleteCategory = async (id: string) => {
     if (!confirm("Are you sure you want to delete this category?")) return;
     try {
-      const res = await fetch(`http://localhost:5149/api/categories/${id}`, {
+      const res = await fetch(`${API_URL}/categories/${id}`, {
         method: "DELETE",
         headers: { "Authorization": `Bearer ${token}` }
       });
@@ -1359,7 +1360,7 @@ export default function OwnerDashboard() {
         }));
 
     try {
-      const res = await fetch("http://localhost:5149/api/products", {
+      const res = await fetch(`${API_URL}/products`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -1433,7 +1434,7 @@ export default function OwnerDashboard() {
     formData.append("file", importFile);
 
     try {
-      const res = await fetch("http://localhost:5149/api/products/import-csv", {
+      const res = await fetch(`${API_URL}/products/import-csv`, {
         method: "POST",
         headers: {
           "Authorization": `Bearer ${token}`
@@ -1462,7 +1463,7 @@ export default function OwnerDashboard() {
     setProdError("");
     setProdSubmitting(true);
     try {
-      const res = await fetch(`http://localhost:5149/api/products/${selectedProduct.id}`, {
+      const res = await fetch(`${API_URL}/products/${selectedProduct.id}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -1497,7 +1498,7 @@ export default function OwnerDashboard() {
   const handleDeleteProduct = async (id: string) => {
     if (!confirm("Are you sure you want to delete this product?")) return;
     try {
-      const res = await fetch(`http://localhost:5149/api/products/${id}`, {
+      const res = await fetch(`${API_URL}/products/${id}`, {
         method: "DELETE",
         headers: { "Authorization": `Bearer ${token}` }
       });
@@ -1528,7 +1529,7 @@ export default function OwnerDashboard() {
         reason: adjReason.trim()
       };
 
-      const res = await fetch(`http://localhost:5149/api/products/${selectedProduct.id}/${endpoint}`, {
+      const res = await fetch(`${API_URL}/products/${selectedProduct.id}/${endpoint}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -1556,7 +1557,7 @@ export default function OwnerDashboard() {
 
   const fetchAdjustmentLogs = async (productId: string) => {
     try {
-      const res = await fetch(`http://localhost:5149/api/products/${productId}/adjustment-logs`, {
+      const res = await fetch(`${API_URL}/products/${productId}/adjustment-logs`, {
         headers: { "Authorization": `Bearer ${token}` }
       });
       if (res.ok) {
@@ -3622,7 +3623,7 @@ export default function OwnerDashboard() {
                   onClick={async () => {
                     if (!token) return;
                     try {
-                      await fetch("http://localhost:5149/api/notifications/check-subscription-reminders", {
+                      await fetch(`${API_URL}/notifications/check-subscription-reminders`, {
                         method: "POST",
                         headers: {
                           "Authorization": `Bearer ${token}`

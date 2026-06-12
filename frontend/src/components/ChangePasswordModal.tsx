@@ -1,3 +1,4 @@
+import { API_URL } from "@/lib/utils";
 import React, { useState } from "react";
 
 interface ChangePasswordModalProps {
@@ -32,7 +33,7 @@ export default function ChangePasswordModal({ isOpen, onClose, token }: ChangePa
     setSubmitting(true);
 
     try {
-      const res = await fetch("http://localhost:5149/api/auth/change-password", {
+      const res = await fetch(`${API_URL}/auth/change-password`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
