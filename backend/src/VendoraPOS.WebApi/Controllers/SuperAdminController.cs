@@ -298,4 +298,157 @@ public class SuperAdminController : ControllerBase
 
         return Ok(cashierList);
     }
+
+    [HttpGet("payment-settings")]
+    public async Task<IActionResult> GetPaymentSettings()
+    {
+        var settings = await _context.SaaSPaymentSettings.FirstOrDefaultAsync();
+        if (settings == null)
+        {
+            settings = new SaaSPaymentSetting
+            {
+                BankName = "Opay Microfinance bank",
+                AccountName = "Joshua Toritseju Omatsul",
+                AccountNumber = "6110540847",
+                OPayFeesPercent = 1.5m
+            };
+            _context.SaaSPaymentSettings.Add(settings);
+            await _context.SaveChangesAsync();
+        }
+        return Ok(settings);
+    }
+
+    [HttpPut("payment-settings")]
+    public async Task<IActionResult> UpdatePaymentSettings([FromBody] SaaSPaymentSetting model)
+    {
+        var settings = await _context.SaaSPaymentSettings.FirstOrDefaultAsync();
+        if (settings == null)
+        {
+            settings = new SaaSPaymentSetting();
+            _context.SaaSPaymentSettings.Add(settings);
+        }
+
+        settings.BankName = model.BankName;
+        settings.AccountName = model.AccountName;
+        settings.AccountNumber = model.AccountNumber;
+        settings.OPayFeesPercent = model.OPayFeesPercent;
+        settings.UpdatedAt = DateTime.UtcNow;
+
+        await _context.SaveChangesAsync();
+
+        var adminEmail = User.FindFirst(ClaimTypes.Email)?.Value ?? "admin@vendorapos.com";
+        var ip = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "127.0.0.1";
+
+        await _auditLogService.LogAsync(
+            "SaaSPaymentSettingsUpdated",
+            $"Updated SaaS manual payment bank settings: Bank={model.BankName}, Account={model.AccountName}, AccountNo={model.AccountNumber}, OPayFee={model.OPayFeesPercent}%",
+            adminEmail,
+            null,
+            ip
+        );
+
+        return Ok(settings);
+    }
+
+    [HttpGet("payments")]
+    public async Task<IActionResult> GetPayments()
+    {
+        var payments = await _context.SaaSPayments
+            .OrderByDescending(p => p.CreatedAt)
+            .ToListAsync();
+        return Ok(payments);
+    }
+
+    [HttpPost("payments/{id}/approve")]
+    public async Task<IActionResult> ApprovePayment(Guid id)
+    {
+        var payment = await _context.SaaSPayments.FirstOrDefaultAsync(p => p.Id == id);
+        if (payment == null)
+        {
+            return NotFound(new { Message = "Payment not found." });
+        }
+
+        if (payment.PaymentStatus != "Pending")
+        {
+            return BadRequest(new { Message = "Only pending payments can be approved." });
+        }
+
+        var business = await _context.Businesses.IgnoreQueryFilters().FirstOrDefaultAsync(b => b.Id == payment.BusinessId);
+        if (business == null)
+        {
+            return NotFound(new { Message = "Business tenant not found." });
+        }
+
+        payment.PaymentStatus = "Approved";
+        payment.ProcessedAt = DateTime.UtcNow;
+
+        // Update business subscription
+        business.SubscriptionTier = payment.PlanName;
+        business.SubscriptionStatus = "Active";
+        
+        decimal monthlyRate = payment.PlanName.ToLowerInvariant() switch
+        {
+            "starter" => 15000m,
+            "pro" => 50000m,
+            "enterprise" => 150000m,
+            _ => 50000m
+        };
+        business.SubscriptionPrice = monthlyRate;
+
+        DateTime currentExpires = business.SubscriptionExpiresAt ?? DateTime.UtcNow;
+        if (currentExpires < DateTime.UtcNow)
+        {
+            currentExpires = DateTime.UtcNow;
+        }
+        business.SubscriptionExpiresAt = currentExpires.AddMonths(payment.DurationMonths);
+
+        // Audit Trail
+        var adminEmail = User.FindFirst(ClaimTypes.Email)?.Value ?? "admin@vendorapos.com";
+        var ip = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "127.0.0.1";
+
+        await _auditLogService.LogAsync(
+            "SaaSPaymentApproved",
+            $"Approved manual payment (Id: {payment.Id}) of ₦{payment.Amount:N2} for {business.Name}. Expanded subscription by {payment.DurationMonths} months.",
+            adminEmail,
+            payment.BusinessId,
+            ip
+        );
+
+        await _context.SaveChangesAsync();
+
+        return Ok(new { Message = "Payment approved and subscription extended successfully." });
+    }
+
+    [HttpPost("payments/{id}/reject")]
+    public async Task<IActionResult> RejectPayment(Guid id)
+    {
+        var payment = await _context.SaaSPayments.FirstOrDefaultAsync(p => p.Id == id);
+        if (payment == null)
+        {
+            return NotFound(new { Message = "Payment not found." });
+        }
+
+        if (payment.PaymentStatus != "Pending")
+        {
+            return BadRequest(new { Message = "Only pending payments can be rejected." });
+        }
+
+        payment.PaymentStatus = "Rejected";
+        payment.ProcessedAt = DateTime.UtcNow;
+
+        var adminEmail = User.FindFirst(ClaimTypes.Email)?.Value ?? "admin@vendorapos.com";
+        var ip = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "127.0.0.1";
+
+        await _auditLogService.LogAsync(
+            "SaaSPaymentRejected",
+            $"Rejected manual payment (Id: {payment.Id}) of ₦{payment.Amount:N2} for Business Id {payment.BusinessId}.",
+            adminEmail,
+            payment.BusinessId,
+            ip
+        );
+
+        await _context.SaveChangesAsync();
+
+        return Ok(new { Message = "Payment rejected successfully." });
+    }
 }

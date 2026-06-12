@@ -55,7 +55,23 @@ export default function SuperAdminDashboard() {
   
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTab, setActiveTab] = useState<"businesses" | "auditLogs" | "sale-records">("businesses");
-  const [sidebarTab, setSidebarTab] = useState<"home" | "billing">("home");
+  const [sidebarTab, setSidebarTab] = useState<"home" | "subscription" | "payment">("home");
+
+  // SaaS Payments and settings states
+  const [payments, setPayments] = useState<any[]>([]);
+  const [loadingPayments, setLoadingPayments] = useState(false);
+  const [paymentSettings, setPaymentSettings] = useState<any>(null);
+  const [loadingSettings, setLoadingSettings] = useState(false);
+
+  // Form states for settings
+  const [bankName, setBankName] = useState("");
+  const [accountName, setAccountName] = useState("");
+  const [accountNumber, setAccountNumber] = useState("");
+  const [opayFeesPercent, setOpayFeesPercent] = useState<number>(1.5);
+
+  // Manual payment actions / modals
+  const [showReceiptModal, setShowReceiptModal] = useState(false);
+  const [selectedReceiptUrl, setSelectedReceiptUrl] = useState("");
   
   // Sales records states
   const [sales, setSales] = useState<any[]>([]);
@@ -128,6 +144,122 @@ export default function SuperAdminDashboard() {
     }
   }, [token]);
 
+  const fetchPayments = useCallback(async () => {
+    try {
+      setLoadingPayments(true);
+      const res = await fetch(`${baseUrl}/api/superadmin/payments`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setPayments(data);
+      }
+    } catch (err) {
+      console.error("Failed to fetch SaaS payments", err);
+    } finally {
+      setLoadingPayments(false);
+    }
+  }, [token]);
+
+  const fetchPaymentSettings = useCallback(async () => {
+    try {
+      setLoadingSettings(true);
+      const res = await fetch(`${baseUrl}/api/superadmin/payment-settings`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setPaymentSettings(data);
+        setBankName(data.bankName || "");
+        setAccountName(data.accountName || "");
+        setAccountNumber(data.accountNumber || "");
+        setOpayFeesPercent(data.opayFeesPercent ?? 1.5);
+      }
+    } catch (err) {
+      console.error("Failed to fetch payment settings", err);
+    } finally {
+      setLoadingSettings(false);
+    }
+  }, [token]);
+
+  const handleSavePaymentSettings = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setActionLoading(true);
+    try {
+      const res = await fetch(`${baseUrl}/api/superadmin/payment-settings`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          bankName,
+          accountName,
+          accountNumber,
+          opayFeesPercent: Number(opayFeesPercent),
+        }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setPaymentSettings(data);
+        flashSuccess("Payment settings updated successfully.");
+      } else {
+        const err = await res.json();
+        flashError(err.message || "Failed to update payment settings.");
+      }
+    } catch (err: any) {
+      flashError(err.message || "Network error. Failed to save settings.");
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleApprovePayment = async (id: string) => {
+    if (!window.confirm("Are you sure you want to APPROVE this payment? This will activate/extend the tenant subscription.")) return;
+    setActionLoading(true);
+    try {
+      const res = await fetch(`${baseUrl}/api/superadmin/payments/${id}/approve`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) {
+        flashSuccess("Payment approved and subscription extended!");
+        fetchPayments();
+        fetchBusinesses();
+        fetchStats();
+      } else {
+        const err = await res.json();
+        flashError(err.message || "Failed to approve payment.");
+      }
+    } catch (err: any) {
+      flashError(err.message || "Failed to approve payment.");
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleRejectPayment = async (id: string) => {
+    if (!window.confirm("Are you sure you want to REJECT this payment?")) return;
+    setActionLoading(true);
+    try {
+      const res = await fetch(`${baseUrl}/api/superadmin/payments/${id}/reject`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) {
+        flashSuccess("Payment rejected.");
+        fetchPayments();
+      } else {
+        const err = await res.json();
+        flashError(err.message || "Failed to reject payment.");
+      }
+    } catch (err: any) {
+      flashError(err.message || "Failed to reject payment.");
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
   const fetchFilterBranches = async (businessId: string) => {
     if (!businessId) {
       setFilterBranches([]);
@@ -191,9 +323,15 @@ export default function SuperAdminDashboard() {
 
   const loadAllData = useCallback(async () => {
     setLoading(true);
-    await Promise.all([fetchStats(), fetchBusinesses(), fetchAuditLogs()]);
+    await Promise.all([
+      fetchStats(), 
+      fetchBusinesses(), 
+      fetchAuditLogs(),
+      fetchPayments(),
+      fetchPaymentSettings()
+    ]);
     setLoading(false);
-  }, [fetchStats, fetchBusinesses, fetchAuditLogs]);
+  }, [fetchStats, fetchBusinesses, fetchAuditLogs, fetchPayments, fetchPaymentSettings]);
 
   useEffect(() => {
     if (token) {
@@ -397,9 +535,23 @@ export default function SuperAdminDashboard() {
               </button>
 
               <button
-                onClick={() => setSidebarTab("billing")}
+                onClick={() => setSidebarTab("subscription")}
                 className={`w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-xs font-bold transition-all duration-200 ${
-                  sidebarTab === "billing"
+                  sidebarTab === "subscription"
+                    ? "bg-indigo-600/10 text-indigo-400 border-l-4 border-indigo-500 font-extrabold shadow-sm"
+                    : "text-slate-400 hover:text-slate-200 hover:bg-slate-900/40"
+                }`}
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
+                </svg>
+                <span>Subscription</span>
+              </button>
+
+              <button
+                onClick={() => setSidebarTab("payment")}
+                className={`w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-xs font-bold transition-all duration-200 ${
+                  sidebarTab === "payment"
                     ? "bg-indigo-600/10 text-indigo-400 border-l-4 border-indigo-500 font-extrabold shadow-sm"
                     : "text-slate-400 hover:text-slate-200 hover:bg-slate-900/40"
                 }`}
@@ -407,7 +559,7 @@ export default function SuperAdminDashboard() {
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
                 </svg>
-                <span>Payment & Subscription</span>
+                <span>Payment</span>
               </button>
             </nav>
           </div>
@@ -841,7 +993,7 @@ export default function SuperAdminDashboard() {
                 </div>
               )}
             </>
-          ) : (
+          ) : sidebarTab === "subscription" ? (
             <div className="space-y-8 animate-in fade-in duration-300">
               {/* Header */}
               <div className="relative overflow-hidden rounded-2xl border border-slate-900 bg-slate-900/10 p-6 sm:p-8">
@@ -915,7 +1067,7 @@ export default function SuperAdminDashboard() {
                           <td className="py-4 px-6 font-bold text-slate-200">
                             <div>
                               <p>{b.name}</p>
-                              <p className="text-[10px] text-slate-500 font-mono mt-0.5">{b.subdomain}.vendorapos.com</p>
+                              <p className="text-[10px] text-slate-550 font-mono mt-0.5">{b.subdomain}.vendorapos.com</p>
                             </div>
                           </td>
                           <td className="py-4 px-6 text-center">
@@ -977,6 +1129,195 @@ export default function SuperAdminDashboard() {
                       )}
                     </tbody>
                   </table>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-8 animate-in fade-in duration-300">
+              {/* Header */}
+              <div className="relative overflow-hidden rounded-2xl border border-slate-900 bg-slate-900/10 p-6 sm:p-8">
+                <div className="absolute top-[-30%] right-[-10%] w-[350px] h-[350px] bg-emerald-600/10 rounded-full blur-[90px]" />
+                <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                  <div>
+                    <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-100 tracking-tight">
+                      SaaS Payment Registry
+                    </h2>
+                    <p className="text-slate-400 mt-1 sm:mt-2 text-sm sm:text-base">
+                      Approve pending manual bank transfers, track payment transactions, and customize default bank settings.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                {/* Left bank configuration form */}
+                <div className="lg:col-span-1 border border-slate-900 bg-slate-900/10 rounded-2xl p-6 space-y-6 backdrop-blur-sm">
+                  <div>
+                    <h3 className="font-extrabold text-slate-200 text-sm">Bank Transfer Settings</h3>
+                    <p className="text-[11px] text-slate-500 mt-0.5">Define bank transfer credentials visible to business owners.</p>
+                  </div>
+
+                  <form onSubmit={handleSavePaymentSettings} className="space-y-4 text-xs">
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-slate-400 uppercase">Bank Name</label>
+                      <input
+                        type="text"
+                        value={bankName}
+                        onChange={(e) => setBankName(e.target.value)}
+                        className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-slate-200 focus:outline-none focus:border-indigo-500/50"
+                        placeholder="Opay Microfinance bank"
+                        required
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-slate-400 uppercase">Account Name</label>
+                      <input
+                        type="text"
+                        value={accountName}
+                        onChange={(e) => setAccountName(e.target.value)}
+                        className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-slate-200 focus:outline-none focus:border-indigo-500/50"
+                        placeholder="Joshua Toritseju Omatsul"
+                        required
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-slate-400 uppercase">Account Number</label>
+                      <input
+                        type="text"
+                        value={accountNumber}
+                        onChange={(e) => setAccountNumber(e.target.value)}
+                        className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-slate-200 focus:outline-none focus:border-indigo-500/50"
+                        placeholder="6110540847"
+                        required
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-slate-400 uppercase">OPay Fee Percentage (%)</label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        value={opayFeesPercent}
+                        onChange={(e) => setOpayFeesPercent(Number(e.target.value))}
+                        className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-slate-200 focus:outline-none focus:border-indigo-500/50 font-mono"
+                        placeholder="1.5"
+                        required
+                      />
+                    </div>
+
+                    <button
+                      type="submit"
+                      disabled={actionLoading}
+                      className="w-full py-2.5 bg-indigo-650 hover:bg-indigo-600 disabled:bg-slate-900 disabled:text-slate-600 border border-indigo-500/20 text-white rounded-xl font-bold transition-all shadow-md active:scale-95"
+                    >
+                      {actionLoading ? "Saving Settings..." : "Save Settings"}
+                    </button>
+                  </form>
+                </div>
+
+                {/* Right payments registry list */}
+                <div className="lg:col-span-2 border border-slate-900 bg-slate-900/10 rounded-2xl p-6 space-y-6 backdrop-blur-sm">
+                  <div>
+                    <h3 className="font-extrabold text-slate-200 text-sm">SaaS Transaction History</h3>
+                    <p className="text-[11px] text-slate-500 mt-0.5">Real-time payments log from OPay checkout and manual transfers.</p>
+                  </div>
+
+                  {loadingPayments ? (
+                    <div className="text-center py-12 text-slate-500 text-xs">
+                      Loading payment transactions...
+                    </div>
+                  ) : payments.length === 0 ? (
+                    <div className="text-center py-12 text-slate-500 text-xs bg-slate-950/20 border border-slate-900/50 rounded-xl">
+                      No billing payments found.
+                    </div>
+                  ) : (
+                    <div className="overflow-x-auto border border-slate-900 rounded-xl">
+                      <table className="w-full text-left border-collapse text-xs">
+                        <thead>
+                          <tr className="border-b border-slate-900 bg-slate-950/30 text-slate-400 font-semibold">
+                            <th className="py-3.5 px-4">Business / Tenant</th>
+                            <th className="py-3.5 px-4 text-center">Method</th>
+                            <th className="py-3.5 px-4 text-right">Amount</th>
+                            <th className="py-3.5 px-4 text-center">Status</th>
+                            <th className="py-3.5 px-4">Ref / Created</th>
+                            <th className="py-3.5 px-4 text-right">Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-900 text-slate-350 bg-slate-950/5">
+                          {payments.map((p) => (
+                            <tr key={p.id} className="hover:bg-slate-900/10 transition-colors">
+                              <td className="py-3.5 px-4 font-bold text-slate-200 font-sans">
+                                <div>
+                                  <p>{p.businessName}</p>
+                                  <p className="text-[10px] text-slate-500 font-medium">
+                                    {p.planName} Tier • {p.durationMonths} {p.durationMonths === 1 ? "mo" : "mos"}
+                                  </p>
+                                </div>
+                              </td>
+                              <td className="py-3.5 px-4 text-center font-bold">
+                                <span className={`px-2 py-0.5 rounded text-[10px] ${p.paymentMethod === "OPay" ? "bg-indigo-950/40 text-indigo-400 border border-indigo-900/20" : "bg-teal-950/40 text-teal-400 border border-teal-900/20"}`}>
+                                  {p.paymentMethod}
+                                </span>
+                              </td>
+                              <td className="py-3.5 px-4 text-right font-mono font-bold text-slate-200">
+                                ₦{p.amount?.toLocaleString()}
+                              </td>
+                              <td className="py-3.5 px-4 text-center">
+                                <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${
+                                  p.paymentStatus === "Approved" ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" :
+                                  p.paymentStatus === "Pending" ? "bg-amber-500/10 text-amber-400 border-amber-500/20" :
+                                  "bg-red-500/10 text-red-400 border-red-500/20"
+                                }`}>
+                                  {p.paymentStatus}
+                                </span>
+                              </td>
+                              <td className="py-3.5 px-4">
+                                <div className="space-y-0.5">
+                                  <p className="text-slate-300 font-medium max-w-[120px] truncate" title={p.reference}>{p.reference || "N/A"}</p>
+                                  <p className="text-[10px] text-slate-500 font-mono">{new Date(p.createdAt).toLocaleDateString()}</p>
+                                </div>
+                              </td>
+                              <td className="py-3.5 px-4 text-right">
+                                <div className="flex items-center justify-end space-x-1.5">
+                                  {p.receiptUrl && (
+                                    <button
+                                      onClick={() => {
+                                        setSelectedReceiptUrl(p.receiptUrl);
+                                        setShowReceiptModal(true);
+                                      }}
+                                      className="px-2 py-1 rounded bg-slate-900 border border-slate-800 text-[10px] font-semibold text-slate-300 hover:text-slate-100 transition-colors"
+                                    >
+                                      Receipt
+                                    </button>
+                                  )}
+                                  {p.paymentStatus === "Pending" && (
+                                    <>
+                                      <button
+                                        onClick={() => handleApprovePayment(p.id)}
+                                        disabled={actionLoading}
+                                        className="px-2 py-1 rounded bg-emerald-500/10 hover:bg-emerald-500/20 text-[10px] font-bold text-emerald-400 border border-emerald-500/20 transition-colors"
+                                      >
+                                        Approve
+                                      </button>
+                                      <button
+                                        onClick={() => handleRejectPayment(p.id)}
+                                        disabled={actionLoading}
+                                        className="px-2 py-1 rounded bg-red-500/10 hover:bg-red-500/20 text-[10px] font-bold text-red-400 border border-red-500/20 transition-colors"
+                                      >
+                                        Reject
+                                      </button>
+                                    </>
+                                  )}
+                                </div>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -1110,6 +1451,48 @@ export default function SuperAdminDashboard() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+      {/* SaaS Manual Payment Receipt Modal */}
+      {showReceiptModal && selectedReceiptUrl && (
+        <div className="fixed inset-0 bg-slate-950/85 backdrop-blur-md flex justify-center items-center p-4 z-50 animate-in fade-in duration-200">
+          <div className="w-full max-w-lg p-6 bg-slate-950 border border-slate-900 rounded-2xl shadow-2xl flex flex-col space-y-4">
+            <div className="flex justify-between items-center pb-3 border-b border-slate-900">
+              <h3 className="font-extrabold text-slate-200 text-sm">Transaction Proof / Receipt</h3>
+              <button 
+                onClick={() => {
+                  setShowReceiptModal(false);
+                  setSelectedReceiptUrl("");
+                }} 
+                className="text-slate-400 hover:text-slate-200 text-sm font-bold"
+              >
+                ✕
+              </button>
+            </div>
+            
+            <div className="relative aspect-video w-full overflow-hidden rounded-xl border border-slate-900 bg-slate-900/10 flex items-center justify-center">
+              <img 
+                src={selectedReceiptUrl.startsWith("http") ? selectedReceiptUrl : `${baseUrl}${selectedReceiptUrl}`} 
+                alt="Payment Receipt" 
+                className="max-h-[350px] w-auto object-contain"
+                onError={(e) => {
+                  console.error("Receipt failed to load");
+                }}
+              />
+            </div>
+            
+            <div className="flex justify-end pt-2">
+              <button
+                onClick={() => {
+                  setShowReceiptModal(false);
+                  setSelectedReceiptUrl("");
+                }}
+                className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-slate-100 text-xs font-bold rounded-xl transition-all"
+              >
+                Close View
+              </button>
+            </div>
           </div>
         </div>
       )}

@@ -32,6 +32,8 @@ public class ApplicationDbContext : IdentityDbContext<User, IdentityRole<Guid>, 
     public DbSet<ReceiptSetting> ReceiptSettings => Set<ReceiptSetting>();
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
     public DbSet<Notification> Notifications => Set<Notification>();
+    public DbSet<SaaSPayment> SaaSPayments => Set<SaaSPayment>();
+    public DbSet<SaaSPaymentSetting> SaaSPaymentSettings => Set<SaaSPaymentSetting>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -483,6 +485,29 @@ public class ApplicationDbContext : IdentityDbContext<User, IdentityRole<Guid>, 
 
             // Logical multi-tenant query filter
             entity.HasQueryFilter(n => !_tenantProvider.TenantId.HasValue || n.BusinessId == _tenantProvider.TenantId);
+        });
+
+        // Configure SaaSPayment
+        builder.Entity<SaaSPayment>(entity =>
+        {
+            entity.HasKey(p => p.Id);
+            entity.Property(p => p.Amount).HasPrecision(18, 2);
+            entity.Property(p => p.BusinessName).IsRequired().HasMaxLength(200);
+            entity.Property(p => p.PlanName).IsRequired().HasMaxLength(50);
+            entity.Property(p => p.PaymentMethod).IsRequired().HasMaxLength(50);
+            entity.Property(p => p.PaymentStatus).IsRequired().HasMaxLength(50);
+            entity.Property(p => p.ReceiptUrl).HasMaxLength(1000);
+            entity.Property(p => p.Reference).HasMaxLength(500);
+        });
+
+        // Configure SaaSPaymentSetting
+        builder.Entity<SaaSPaymentSetting>(entity =>
+        {
+            entity.HasKey(s => s.Id);
+            entity.Property(s => s.BankName).IsRequired().HasMaxLength(200);
+            entity.Property(s => s.AccountName).IsRequired().HasMaxLength(200);
+            entity.Property(s => s.AccountNumber).IsRequired().HasMaxLength(50);
+            entity.Property(s => s.OPayFeesPercent).HasPrecision(5, 2);
         });
     }
 }

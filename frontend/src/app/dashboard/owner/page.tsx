@@ -74,6 +74,15 @@ export default function OwnerDashboard() {
   const [billingSubmitting, setBillingSubmitting] = useState(false);
   const [billingCycle, setBillingCycle] = useState<"Monthly" | "Yearly">("Yearly");
 
+  // OPay & Manual Billing States
+  const [selectedPlan, setSelectedPlan] = useState<string>("Pro");
+  const [selectedDuration, setSelectedDuration] = useState<number>(1);
+  const [paymentMethod, setPaymentMethod] = useState<"OPay" | "Manual">("OPay");
+  const [manualReference, setManualReference] = useState<string>("");
+  const [manualReceiptFile, setManualReceiptFile] = useState<File | null>(null);
+  const [manualReceiptUrl, setManualReceiptUrl] = useState<string>("");
+  const [billingSuccessMessage, setBillingSuccessMessage] = useState<string | null>(null);
+
   // Modals visibility
   const [showAddBusinessModal, setShowAddBusinessModal] = useState(false);
   const [showAddBranchModal, setShowAddBranchModal] = useState(false);
@@ -277,64 +286,90 @@ export default function OwnerDashboard() {
     }
   };
 
-  const handleCheckout = async (tier: string) => {
-    if (!token) return;
-    try {
-      setBillingSubmitting(true);
-      setBillingError(null);
-      const res = await fetch("http://localhost:5149/api/billing/checkout", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          tier,
-          billingCycle,
-          successUrl: window.location.href,
-          cancelUrl: window.location.href
-        })
-      });
-
-      const data = await res.json();
-      if (res.ok && data.checkoutUrl) {
-        window.location.href = data.checkoutUrl;
-      } else {
-        setBillingError(data.message || "Failed to initiate checkout.");
-      }
-    } catch (err) {
-      console.error(err);
-      setBillingError("Network error. Failed to initiate checkout.");
-    } finally {
-      setBillingSubmitting(false);
+  const getPlanRate = (tier: string) => {
+    switch (tier.toLowerCase()) {
+      case "starter": return 15000;
+      case "pro": return 50000;
+      case "enterprise": return 150000;
+      default: return 50000;
     }
   };
 
-  const handlePortalRedirect = async () => {
+  const handleCheckout = async () => {
     if (!token) return;
     try {
       setBillingSubmitting(true);
       setBillingError(null);
-      const res = await fetch("http://localhost:5149/api/billing/portal", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          returnUrl: window.location.href
-        })
-      });
+      setBillingSuccessMessage(null);
 
-      const data = await res.json();
-      if (res.ok && data.portalUrl) {
-        window.location.href = data.portalUrl;
+      const baseRate = getPlanRate(selectedPlan);
+      const baseCost = baseRate * selectedDuration;
+
+      if (paymentMethod === "OPay") {
+        const fee = baseCost * 0.015;
+        const total = baseCost + fee;
+        window.location.href = `/payment/opay?amount=${total}&businessId=${billingStatus?.id}&plan=${selectedPlan}&duration=${selectedDuration}`;
       } else {
-        setBillingError(data.message || "Failed to open billing portal.");
+        if (!manualReference) {
+          setBillingError("Sender name / reference is required for manual payment.");
+          return;
+        }
+        if (!manualReceiptFile && !manualReceiptUrl) {
+          setBillingError("Please upload a transaction receipt image.");
+          return;
+        }
+
+        let receiptUrl = manualReceiptUrl;
+        if (manualReceiptFile) {
+          const formData = new FormData();
+          formData.append("file", manualReceiptFile);
+
+          const uploadRes = await fetch("http://localhost:5149/api/billing/upload-receipt", {
+            method: "POST",
+            headers: {
+              "Authorization": `Bearer ${token}`
+            },
+            body: formData
+          });
+
+          if (!uploadRes.ok) {
+            const err = await uploadRes.json();
+            throw new Error(err.message || "Failed to upload receipt file.");
+          }
+
+          const uploadData = await uploadRes.json();
+          receiptUrl = uploadData.receiptUrl;
+          setManualReceiptUrl(receiptUrl);
+        }
+
+        const res = await fetch("http://localhost:5149/api/billing/pay-manual", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            planName: selectedPlan,
+            durationMonths: selectedDuration,
+            receiptUrl: receiptUrl,
+            reference: manualReference
+          })
+        });
+
+        const data = await res.json();
+        if (res.ok) {
+          setBillingSuccessMessage(data.message || "Receipt submitted successfully! Awaiting Admin approval.");
+          setManualReference("");
+          setManualReceiptFile(null);
+          setManualReceiptUrl("");
+          fetchBillingStatus();
+        } else {
+          setBillingError(data.message || "Failed to submit manual payment.");
+        }
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-      setBillingError("Network error. Failed to open billing portal.");
+      setBillingError(err.message || "Failed to process payment session.");
     } finally {
       setBillingSubmitting(false);
     }
@@ -625,6 +660,14 @@ export default function OwnerDashboard() {
     if (token) {
       fetchBusinesses();
       fetchBranches();
+    }
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("payment") === "success") {
+      setBillingSuccessMessage("Subscription payment completed successfully! Your account is active.");
+      window.history.replaceState({}, document.title, window.location.pathname + "?tab=billing");
+    } else if (params.get("payment") === "failed") {
+      setBillingError("Subscription payment failed or was cancelled.");
+      window.history.replaceState({}, document.title, window.location.pathname + "?tab=billing");
     }
   }, [token, user?.businessId]);
 
@@ -3141,13 +3184,21 @@ export default function OwnerDashboard() {
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-slate-900 pb-5">
               <div>
                 <h3 className="font-bold text-lg text-slate-200">Subscription & Billing</h3>
-                <p className="text-xs text-slate-500">Manage your subscription tier, billing period, and Stripe payment methods</p>
+                <p className="text-xs text-slate-500">Manage your subscription tier, billing period, and localized payment methods</p>
               </div>
             </div>
 
+            {/* Success notifications */}
+            {billingSuccessMessage && (
+              <div className="p-4 bg-green-950/40 border border-green-800 text-green-400 text-xs rounded-xl flex items-center justify-between animate-in fade-in duration-200">
+                <span>{billingSuccessMessage}</span>
+                <button onClick={() => setBillingSuccessMessage(null)} className="text-green-400 font-bold hover:text-green-300">✕</button>
+              </div>
+            )}
+
             {/* Error notifications */}
             {billingError && (
-              <div className="p-4 bg-red-950/40 border border-red-800 text-red-400 text-xs rounded-xl flex items-center justify-between">
+              <div className="p-4 bg-red-950/40 border border-red-800 text-red-400 text-xs rounded-xl flex items-center justify-between animate-in fade-in duration-200">
                 <span>{billingError}</span>
                 <button onClick={() => setBillingError(null)} className="text-red-400 font-bold hover:text-red-300">✕</button>
               </div>
@@ -3193,157 +3244,290 @@ export default function OwnerDashboard() {
                       </div>
 
                       <div className="flex flex-wrap gap-3">
-                        {billingStatus.stripeCustomerId && (
-                          <button
-                            type="button"
-                            onClick={handlePortalRedirect}
-                            disabled={billingSubmitting}
-                            className="px-5 py-2.5 bg-slate-950 border border-slate-800 hover:bg-slate-900 text-slate-300 hover:text-slate-100 text-xs font-bold rounded-xl transition-all shadow-lg flex items-center gap-2"
-                          >
-                            {billingSubmitting ? "Loading..." : "Manage Invoices & Cards"}
-                          </button>
-                        )}
-                        {billingStatus.isMockMode && (
-                          <span className="px-3 py-2 bg-indigo-950/20 text-indigo-400 border border-indigo-900/50 rounded-xl text-[10px] font-semibold flex items-center">
-                            ⚙️ Mock Stripe Mode Enabled
-                          </span>
-                        )}
+                        <span className="px-3 py-2 bg-indigo-950/20 text-indigo-400 border border-indigo-900/50 rounded-xl text-[10px] font-semibold flex items-center">
+                          ⚙️ Local Billing Enabled
+                        </span>
                       </div>
                     </div>
                   </div>
                 )}
 
-                {/* Billing Cycle Switcher */}
-                <div className="flex items-center justify-center gap-4 py-2">
-                  <span className={`text-xs font-bold transition-colors ${billingCycle === "Monthly" ? "text-indigo-400" : "text-slate-500"}`}>Monthly</span>
-                  <button
-                    type="button"
-                    onClick={() => setBillingCycle(billingCycle === "Monthly" ? "Yearly" : "Monthly")}
-                    className="relative w-12 h-6 bg-slate-900 border border-slate-800 rounded-full transition-colors focus:outline-none"
-                  >
-                    <span className={`absolute top-0.5 left-0.5 w-4.5 h-4.5 bg-indigo-500 rounded-full transition-transform ${
-                      billingCycle === "Yearly" ? "translate-x-6" : ""
-                    }`} />
-                  </button>
-                  <span className={`text-xs font-bold transition-colors ${billingCycle === "Yearly" ? "text-indigo-400" : "text-slate-500"} flex items-center gap-1.5`}>
-                    Yearly <span className="px-1.5 py-0.5 bg-green-950/50 text-green-400 border border-green-900/50 rounded text-[9px] font-black uppercase tracking-wider">Save ~17%</span>
-                  </span>
+                {/* Plan Selection Section */}
+                <div className="space-y-4">
+                  <h4 className="font-bold text-sm text-slate-300">1. Select Subscription Tier</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    {/* Starter Card */}
+                    <div 
+                      onClick={() => setSelectedPlan("Starter")}
+                      className={`border cursor-pointer rounded-2xl p-6 flex flex-col justify-between transition-all group relative ${
+                        selectedPlan === "Starter"
+                          ? "border-indigo-500 bg-indigo-500/5 ring-1 ring-indigo-500/30"
+                          : "border-slate-900 bg-slate-950/30 hover:border-slate-800"
+                      }`}
+                    >
+                      <div className="space-y-5">
+                        <div className="space-y-1">
+                          <div className="flex justify-between items-center">
+                            <h5 className="text-md font-bold text-slate-300">Starter</h5>
+                            {selectedPlan === "Starter" && (
+                              <span className="text-[10px] bg-indigo-650 text-white px-2 py-0.5 rounded-full font-bold uppercase">Selected</span>
+                            )}
+                          </div>
+                          <p className="text-xs text-slate-500">Perfect for single-location shops</p>
+                        </div>
+                        <div className="flex items-baseline gap-1 text-slate-100">
+                          <span className="text-3xl font-black font-mono">₦15,000</span>
+                          <span className="text-xs text-slate-500">/mo</span>
+                        </div>
+                        <ul className="space-y-3.5 text-xs text-slate-400 border-t border-slate-900/60 pt-5">
+                          <li className="flex items-center gap-2">✓ 1 Active Business</li>
+                          <li className="flex items-center gap-2">✓ Up to 2 Branch Locations</li>
+                          <li className="flex items-center gap-2">✓ Max 10 Staff Users</li>
+                          <li className="flex items-center gap-2">✓ POS Register Checkout</li>
+                          <li className="flex items-center gap-2">✓ Standard Inventory Logs</li>
+                        </ul>
+                      </div>
+                    </div>
+
+                    {/* Pro Card */}
+                    <div 
+                      onClick={() => setSelectedPlan("Pro")}
+                      className={`border cursor-pointer rounded-2xl p-6 flex flex-col justify-between transition-all group relative ${
+                        selectedPlan === "Pro"
+                          ? "border-indigo-500 bg-indigo-500/5 ring-1 ring-indigo-500/30"
+                          : "border-slate-900 bg-slate-950/30 hover:border-slate-800"
+                      }`}
+                    >
+                      <div className="absolute top-0 right-6 -translate-y-1/2 px-2.5 py-0.5 bg-indigo-600 text-white text-[9px] font-black uppercase tracking-wider rounded-full shadow-lg">
+                        Popular
+                      </div>
+                      <div className="space-y-5">
+                        <div className="space-y-1">
+                          <div className="flex justify-between items-center">
+                            <h5 className="text-md font-bold text-slate-200">Pro</h5>
+                            {selectedPlan === "Pro" && (
+                              <span className="text-[10px] bg-indigo-650 text-white px-2 py-0.5 rounded-full font-bold uppercase">Selected</span>
+                            )}
+                          </div>
+                          <p className="text-xs text-slate-400">Great for multi-branch brands</p>
+                        </div>
+                        <div className="flex items-baseline gap-1 text-slate-100">
+                          <span className="text-3xl font-black font-mono text-indigo-400">₦50,000</span>
+                          <span className="text-xs text-slate-500">/mo</span>
+                        </div>
+                        <ul className="space-y-3.5 text-xs text-slate-300 border-t border-slate-900/60 pt-5">
+                          <li className="flex items-center gap-2">✓ 1 Active Business</li>
+                          <li className="flex items-center gap-2">✓ Up to 10 Branch Locations</li>
+                          <li className="flex items-center gap-2">✓ Unlimited Staff Users</li>
+                          <li className="flex items-center gap-2">✓ Inter-branch Stock Transfers</li>
+                          <li className="flex items-center gap-2">✓ Discounts & Coupon Builder</li>
+                          <li className="flex items-center gap-2">✓ Advanced Analytics & SVG Charts</li>
+                        </ul>
+                      </div>
+                    </div>
+
+                    {/* Enterprise Card */}
+                    <div 
+                      onClick={() => setSelectedPlan("Enterprise")}
+                      className={`border cursor-pointer rounded-2xl p-6 flex flex-col justify-between transition-all group relative ${
+                        selectedPlan === "Enterprise"
+                          ? "border-indigo-500 bg-indigo-500/5 ring-1 ring-indigo-500/30"
+                          : "border-slate-900 bg-slate-950/30 hover:border-slate-800"
+                      }`}
+                    >
+                      <div className="space-y-5">
+                        <div className="space-y-1">
+                          <div className="flex justify-between items-center">
+                            <h5 className="text-md font-bold text-slate-300">Enterprise</h5>
+                            {selectedPlan === "Enterprise" && (
+                              <span className="text-[10px] bg-indigo-650 text-white px-2 py-0.5 rounded-full font-bold uppercase">Selected</span>
+                            )}
+                          </div>
+                          <p className="text-xs text-slate-500">For franchise groups & conglomerates</p>
+                        </div>
+                        <div className="flex items-baseline gap-1 text-slate-100">
+                          <span className="text-3xl font-black font-mono">₦150,000</span>
+                          <span className="text-xs text-slate-500">/mo</span>
+                        </div>
+                        <ul className="space-y-3.5 text-xs text-slate-400 border-t border-slate-900/60 pt-5">
+                          <li className="flex items-center gap-2">✓ Multiple Businesses per Owner</li>
+                          <li className="flex items-center gap-2">✓ Unlimited Branch Locations</li>
+                          <li className="flex items-center gap-2">✓ Unlimited Staff Users</li>
+                          <li className="flex items-center gap-2">✓ Global Stock Consolidation</li>
+                          <li className="flex items-center gap-2">✓ Custom Receipt Styling Overrides</li>
+                          <li className="flex items-center gap-2">✓ 24/7 Dedicated Support</li>
+                        </ul>
+                      </div>
+                    </div>
+                  </div>
                 </div>
 
-                {/* Plan cards */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  {/* Basic Plan */}
-                  <div className="border border-slate-900 bg-slate-950/30 rounded-2xl p-6 flex flex-col justify-between hover:border-slate-800 transition-all group relative">
-                    <div className="space-y-5">
-                      <div className="space-y-1">
-                        <h5 className="text-md font-bold text-slate-300">Basic</h5>
-                        <p className="text-xs text-slate-500">Perfect for single-location shops</p>
+                {/* Duration & Payment Method Grid */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                  {/* Left Column: Duration & Payment Method selection */}
+                  <div className="space-y-6">
+                    <div className="space-y-3">
+                      <h4 className="font-bold text-sm text-slate-300">2. Choose Subscription Duration</h4>
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                        {[1, 3, 6, 12].map((m) => (
+                          <button
+                            key={m}
+                            type="button"
+                            onClick={() => setSelectedDuration(m)}
+                            className={`py-3 px-4 border rounded-xl font-bold text-xs transition-all ${
+                              selectedDuration === m
+                                ? "border-indigo-500 bg-indigo-650/10 text-indigo-400 font-black"
+                                : "border-slate-800 bg-slate-950/20 text-slate-400 hover:border-slate-700 hover:text-slate-200"
+                            }`}
+                          >
+                            {m} {m === 1 ? "Month" : "Months"}
+                          </button>
+                        ))}
                       </div>
-                      <div className="flex items-baseline gap-1 text-slate-100">
-                        <span className="text-3xl font-black font-mono">
-                          {billingCycle === "Monthly" ? "$99" : "$990"}
-                        </span>
-                        <span className="text-xs text-slate-500">/{billingCycle === "Monthly" ? "mo" : "yr"}</span>
-                      </div>
-                      <ul className="space-y-3.5 text-xs text-slate-400 border-t border-slate-900/60 pt-5">
-                        <li className="flex items-center gap-2">✓ 1 Active Business</li>
-                        <li className="flex items-center gap-2">✓ Up to 3 Branch Locations</li>
-                        <li className="flex items-center gap-2">✓ Max 10 Staff Users</li>
-                        <li className="flex items-center gap-2">✓ POS Register Checkout</li>
-                        <li className="flex items-center gap-2">✓ Standard Inventory Logs</li>
-                      </ul>
                     </div>
-                    <div className="pt-6 mt-6 border-t border-slate-900/60">
-                      <button
-                        type="button"
-                        onClick={() => handleCheckout("Basic")}
-                        disabled={billingSubmitting || billingStatus?.subscriptionTier === "Basic"}
-                        className={`w-full py-2.5 rounded-xl text-xs font-bold transition-all ${
-                          billingStatus?.subscriptionTier === "Basic"
-                            ? "bg-slate-900 text-slate-550 cursor-not-allowed border border-slate-800"
-                            : "bg-indigo-650 hover:bg-indigo-750 text-white shadow-lg shadow-indigo-600/10"
-                        }`}
-                      >
-                        {billingStatus?.subscriptionTier === "Basic" ? "Current Tier" : "Select Basic"}
-                      </button>
+
+                    <div className="space-y-3">
+                      <h4 className="font-bold text-sm text-slate-300">3. Choose Payment Method</h4>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <button
+                          type="button"
+                          onClick={() => setPaymentMethod("OPay")}
+                          className={`p-4 border rounded-xl flex items-center justify-between text-left transition-all ${
+                            paymentMethod === "OPay"
+                              ? "border-indigo-500 bg-indigo-650/10"
+                              : "border-slate-800 bg-slate-950/20 hover:border-slate-700"
+                          }`}
+                        >
+                          <div>
+                            <div className="text-xs font-bold text-slate-200">OPay Checkout</div>
+                            <div className="text-[10px] text-slate-500 mt-0.5">Instant checkout with 1.5% OPay fees</div>
+                          </div>
+                          <span className={`w-4 h-4 rounded-full border flex items-center justify-center ${paymentMethod === "OPay" ? "border-indigo-500 text-indigo-500" : "border-slate-700"}`}>
+                            {paymentMethod === "OPay" && <span className="w-2 h-2 rounded-full bg-indigo-500" />}
+                          </span>
+                        </button>
+                        
+                        <button
+                          type="button"
+                          onClick={() => setPaymentMethod("Manual")}
+                          className={`p-4 border rounded-xl flex items-center justify-between text-left transition-all ${
+                            paymentMethod === "Manual"
+                              ? "border-indigo-500 bg-indigo-650/10"
+                              : "border-slate-800 bg-slate-950/20 hover:border-slate-700"
+                          }`}
+                        >
+                          <div>
+                            <div className="text-xs font-bold text-slate-200">Manual Bank Transfer</div>
+                            <div className="text-[10px] text-slate-500 mt-0.5">Upload payment receipt for admin review</div>
+                          </div>
+                          <span className={`w-4 h-4 rounded-full border flex items-center justify-center ${paymentMethod === "Manual" ? "border-indigo-500 text-indigo-500" : "border-slate-700"}`}>
+                            {paymentMethod === "Manual" && <span className="w-2 h-2 rounded-full bg-indigo-500" />}
+                          </span>
+                        </button>
+                      </div>
                     </div>
                   </div>
 
-                  {/* Pro Plan */}
-                  <div className="border border-indigo-900/40 bg-slate-900/10 rounded-2xl p-6 flex flex-col justify-between hover:border-indigo-800/50 transition-all group relative ring-1 ring-indigo-500/20">
-                    <div className="absolute top-0 right-6 -translate-y-1/2 px-2.5 py-0.5 bg-indigo-600 text-white text-[9px] font-black uppercase tracking-wider rounded-full shadow-lg">
-                      Popular
-                    </div>
-                    <div className="space-y-5">
-                      <div className="space-y-1">
-                        <h5 className="text-md font-bold text-slate-200">Pro</h5>
-                        <p className="text-xs text-slate-400">Great for multi-branch brands</p>
+                  {/* Right Column: Checkout details & Action */}
+                  <div className="border border-slate-900 bg-slate-900/10 rounded-2xl p-6 space-y-6 relative overflow-hidden backdrop-blur-sm">
+                    <h4 className="font-bold text-sm text-slate-300 border-b border-slate-900/60 pb-3">4. Order Summary</h4>
+                    
+                    {/* Calculation breakdown */}
+                    <div className="space-y-3.5 text-xs">
+                      <div className="flex justify-between text-slate-400">
+                        <span>Selected Plan:</span>
+                        <span className="font-bold text-slate-200">{selectedPlan} Edition</span>
                       </div>
-                      <div className="flex items-baseline gap-1 text-slate-100">
-                        <span className="text-3xl font-black font-mono text-indigo-400">
-                          {billingCycle === "Monthly" ? "$299" : "$2990"}
+                      <div className="flex justify-between text-slate-400">
+                        <span>Billing Duration:</span>
+                        <span className="font-bold text-slate-200">{selectedDuration} {selectedDuration === 1 ? "Month" : "Months"}</span>
+                      </div>
+                      <div className="flex justify-between text-slate-400">
+                        <span>Base Cost (₦{getPlanRate(selectedPlan).toLocaleString()}/mo):</span>
+                        <span className="font-bold text-slate-200">₦{(getPlanRate(selectedPlan) * selectedDuration).toLocaleString()}</span>
+                      </div>
+                      {paymentMethod === "OPay" && (
+                        <div className="flex justify-between text-slate-400">
+                          <span>OPay Gateway Fee (1.5%):</span>
+                          <span className="font-bold text-slate-200">₦{((getPlanRate(selectedPlan) * selectedDuration) * 0.015).toLocaleString()}</span>
+                        </div>
+                      )}
+                      <div className="border-t border-slate-900/60 pt-4 flex justify-between text-sm font-black text-slate-100">
+                        <span>Total Amount:</span>
+                        <span className="text-indigo-400 font-mono">
+                          ₦{(
+                            (getPlanRate(selectedPlan) * selectedDuration) + 
+                            (paymentMethod === "OPay" ? (getPlanRate(selectedPlan) * selectedDuration) * 0.015 : 0)
+                          ).toLocaleString()}
                         </span>
-                        <span className="text-xs text-slate-500">/{billingCycle === "Monthly" ? "mo" : "yr"}</span>
                       </div>
-                      <ul className="space-y-3.5 text-xs text-slate-355 border-t border-slate-900/60 pt-5">
-                        <li className="flex items-center gap-2">✓ 1 Active Business</li>
-                        <li className="flex items-center gap-2">✓ Up to 10 Branch Locations</li>
-                        <li className="flex items-center gap-2">✓ Unlimited Staff Users</li>
-                        <li className="flex items-center gap-2">✓ Inter-branch Stock Transfers</li>
-                        <li className="flex items-center gap-2">✓ Discounts & Coupon Builder</li>
-                        <li className="flex items-center gap-2">✓ Advanced Analytics & SVG Charts</li>
-                      </ul>
                     </div>
-                    <div className="pt-6 mt-6 border-t border-slate-900/60">
-                      <button
-                        type="button"
-                        onClick={() => handleCheckout("Pro")}
-                        disabled={billingSubmitting || billingStatus?.subscriptionTier === "Pro"}
-                        className={`w-full py-2.5 rounded-xl text-xs font-bold transition-all ${
-                          billingStatus?.subscriptionTier === "Pro"
-                            ? "bg-slate-900 text-slate-555 cursor-not-allowed border border-slate-800"
-                            : "bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg shadow-indigo-500/20"
-                        }`}
-                      >
-                        {billingStatus?.subscriptionTier === "Pro" ? "Current Tier" : "Select Pro"}
-                      </button>
-                    </div>
-                  </div>
 
-                  {/* Enterprise Plan */}
-                  <div className="border border-slate-900 bg-slate-950/30 rounded-2xl p-6 flex flex-col justify-between hover:border-slate-800 transition-all group relative">
-                    <div className="space-y-5">
-                      <div className="space-y-1">
-                        <h5 className="text-md font-bold text-slate-300">Enterprise</h5>
-                        <p className="text-xs text-slate-500">For franchise groups & conglomerates</p>
+                    {/* Manual Bank Instructions */}
+                    {paymentMethod === "Manual" && (
+                      <div className="bg-slate-950/50 border border-slate-900 rounded-xl p-4 space-y-3.5 animate-in fade-in duration-300">
+                        <div className="text-[11px] font-bold text-indigo-400 uppercase tracking-widest">Bank Details to Transfer:</div>
+                        <div className="grid grid-cols-2 gap-y-2 text-xs">
+                          <span className="text-slate-500">Bank:</span>
+                          <span className="text-slate-300 font-medium">{billingStatus?.bankName || "Opay Microfinance bank"}</span>
+
+                          <span className="text-slate-500">Account Name:</span>
+                          <span className="text-slate-300 font-medium">{billingStatus?.accountName || "Joshua Toritseju Omatsul"}</span>
+
+                          <span className="text-slate-500">Account Number:</span>
+                          <span className="text-slate-100 font-mono font-bold select-all">{billingStatus?.accountNumber || "6110540847"}</span>
+                        </div>
+
+                        {/* Reference & File Upload inputs */}
+                        <div className="space-y-3 pt-3 border-t border-slate-900">
+                          <div className="space-y-1">
+                            <label className="text-[10px] font-bold text-slate-500 uppercase">Sender Name / Transfer Reference</label>
+                            <input
+                              type="text"
+                              placeholder="e.g. John Doe / OPay Transfer"
+                              value={manualReference}
+                              onChange={(e) => setManualReference(e.target.value)}
+                              className="w-full px-3.5 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-slate-200 focus:outline-none focus:border-indigo-500/50"
+                            />
+                          </div>
+
+                          <div className="space-y-1">
+                            <label className="text-[10px] font-bold text-slate-500 uppercase">Transaction Receipt / Proof (Image)</label>
+                            <input
+                              type="file"
+                              accept="image/*"
+                              onChange={(e) => {
+                                if (e.target.files && e.target.files[0]) {
+                                  setManualReceiptFile(e.target.files[0]);
+                                }
+                              }}
+                              className="w-full text-xs text-slate-400 file:mr-3.5 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-[11px] file:font-bold file:bg-indigo-650/15 file:text-indigo-400 hover:file:bg-indigo-650/25 cursor-pointer"
+                            />
+                          </div>
+                        </div>
                       </div>
-                      <div className="flex items-baseline gap-1 text-slate-100">
-                        <span className="text-3xl font-black font-mono">
-                          {billingCycle === "Monthly" ? "$999" : "$9990"}
-                        </span>
-                        <span className="text-xs text-slate-500">/{billingCycle === "Monthly" ? "mo" : "yr"}</span>
-                      </div>
-                      <ul className="space-y-3.5 text-xs text-slate-400 border-t border-slate-900/60 pt-5">
-                        <li className="flex items-center gap-2">✓ Multiple Businesses per Owner</li>
-                        <li className="flex items-center gap-2">✓ Unlimited Branch Locations</li>
-                        <li className="flex items-center gap-2">✓ Unlimited Staff Users</li>
-                        <li className="flex items-center gap-2">✓ Global Stock Consolidation</li>
-                        <li className="flex items-center gap-2">✓ Custom Receipt Styling Overrides</li>
-                        <li className="flex items-center gap-2">✓ 24/7 Dedicated Support</li>
-                      </ul>
-                    </div>
-                    <div className="pt-6 mt-6 border-t border-slate-900/60">
+                    )}
+
+                    {/* Checkout CTA Button */}
+                    <div className="pt-2">
                       <button
                         type="button"
-                        onClick={() => handleCheckout("Enterprise")}
-                        disabled={billingSubmitting || billingStatus?.subscriptionTier === "Enterprise"}
-                        className={`w-full py-2.5 rounded-xl text-xs font-bold transition-all ${
-                          billingStatus?.subscriptionTier === "Enterprise"
-                            ? "bg-slate-900 text-slate-555 cursor-not-allowed border border-slate-800"
-                            : "bg-indigo-650 hover:bg-indigo-750 text-white shadow-lg"
-                        }`}
+                        onClick={handleCheckout}
+                        disabled={billingSubmitting}
+                        className="w-full py-3 bg-indigo-650 hover:bg-indigo-600 disabled:bg-slate-900 disabled:text-slate-600 disabled:border-slate-800 disabled:cursor-not-allowed border border-indigo-500/20 text-white rounded-xl font-bold text-xs transition-all shadow-lg shadow-indigo-650/20 flex items-center justify-center gap-2"
                       >
-                        {billingStatus?.subscriptionTier === "Enterprise" ? "Current Tier" : "Select Enterprise"}
+                        {billingSubmitting ? (
+                          <>
+                            <span className="w-3.5 h-3.5 border-2 border-indigo-400 border-t-transparent rounded-full animate-spin" />
+                            Processing Payment...
+                          </>
+                        ) : paymentMethod === "OPay" ? (
+                          `Pay with OPay Checkout (₦${(
+                            (getPlanRate(selectedPlan) * selectedDuration) * 1.015
+                          ).toLocaleString()})`
+                        ) : (
+                          `Submit Manual Payment Receipt`
+                        )}
                       </button>
                     </div>
                   </div>
