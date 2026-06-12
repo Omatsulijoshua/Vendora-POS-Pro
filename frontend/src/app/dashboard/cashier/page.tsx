@@ -592,6 +592,14 @@ export default function CashierDashboard() {
             </div>
             <ThemeToggle />
             <NotificationBell token={token} />
+            {user?.role === "SuperAdmin" && (
+              <button
+                onClick={() => window.location.href = "/dashboard/super-admin"}
+                className="px-3 py-2 rounded-lg bg-indigo-900/40 border border-indigo-855 hover:bg-indigo-800 text-sm font-bold text-indigo-300 hover:text-indigo-100 transition-all cursor-pointer flex items-center gap-1.5"
+              >
+                🛡️ Super Admin Panel
+              </button>
+            )}
             <button
               onClick={() => setShowChangePasswordModal(true)}
               className="px-3 py-2 rounded-lg bg-slate-900 border border-slate-800 hover:bg-slate-800 text-sm font-medium text-slate-300 hover:text-slate-100 transition-all active:scale-[0.98] flex items-center gap-1.5 cursor-pointer"

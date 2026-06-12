@@ -55,13 +55,13 @@ export function middleware(request: NextRequest) {
     if (pathname.startsWith("/dashboard/super-admin") && role !== "SuperAdmin") {
       return NextResponse.redirect(new URL("/dashboard", request.url));
     }
-    if (pathname.startsWith("/dashboard/owner") && role !== "Owner") {
+    if (pathname.startsWith("/dashboard/owner") && role !== "Owner" && role !== "SuperAdmin") {
       return NextResponse.redirect(new URL("/dashboard", request.url));
     }
-    if (pathname.startsWith("/dashboard/manager") && role !== "Manager") {
+    if (pathname.startsWith("/dashboard/manager") && role !== "Manager" && role !== "SuperAdmin") {
       return NextResponse.redirect(new URL("/dashboard", request.url));
     }
-    if (pathname.startsWith("/dashboard/cashier") && role !== "Cashier") {
+    if (pathname.startsWith("/dashboard/cashier") && role !== "Cashier" && role !== "SuperAdmin") {
       return NextResponse.redirect(new URL("/dashboard", request.url));
     }
 

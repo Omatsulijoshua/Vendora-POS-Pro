@@ -271,7 +271,7 @@ public class AuthController : ControllerBase
         });
     }
 
-    [Authorize(Roles = "Owner")]
+    [Authorize(Roles = "Owner,SuperAdmin")]
     [HttpPost("switch-business/{businessId}")]
     public async Task<IActionResult> SwitchBusiness(Guid businessId)
     {
@@ -281,10 +281,10 @@ public class AuthController : ControllerBase
             return Unauthorized();
         }
 
-        // Verify the business exists and belongs to this owner
+        // Verify the business exists (Owners must own it, SuperAdmins can switch to any)
         var business = await _context.Businesses
             .IgnoreQueryFilters()
-            .FirstOrDefaultAsync(b => b.Id == businessId && b.OwnerId == userId);
+            .FirstOrDefaultAsync(b => b.Id == businessId && (b.OwnerId == userId || User.IsInRole("SuperAdmin")));
 
         if (business == null)
         {
@@ -335,7 +335,7 @@ public class AuthController : ControllerBase
         });
     }
 
-    [Authorize(Roles = "Owner")]
+    [Authorize(Roles = "Owner,SuperAdmin")]
     [HttpPost("switch-branch/{branchId}")]
     public async Task<IActionResult> SwitchBranch(string branchId)
     {
@@ -365,10 +365,10 @@ public class AuthController : ControllerBase
                 return BadRequest(new { Message = "Invalid Branch ID format." });
             }
 
-            // Verify the branch belongs to the user's active business
+            // Verify the branch belongs to the user's active business (or bypass if SuperAdmin)
             var branchExists = await _context.Branches
                 .IgnoreQueryFilters()
-                .AnyAsync(b => b.Id == parsedBranchId && b.BusinessId == user.BusinessId);
+                .AnyAsync(b => b.Id == parsedBranchId && (b.BusinessId == user.BusinessId || User.IsInRole("SuperAdmin")));
 
             if (!branchExists)
             {

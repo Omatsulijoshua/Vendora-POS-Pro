@@ -50,7 +50,7 @@ interface SuperAdminAuditLog {
 }
 
 export default function SuperAdminDashboard() {
-  const { user, token, logout } = useAuth();
+  const { user, token, switchBusiness, logout } = useAuth();
   const [stats, setStats] = useState<SuperAdminStats | null>(null);
   const [businesses, setBusinesses] = useState<SuperAdminBusiness[]>([]);
   const [auditLogs, setAuditLogs] = useState<SuperAdminAuditLog[]>([]);
@@ -886,6 +886,19 @@ export default function SuperAdminDashboard() {
                               </td>
                               <td className="py-4 px-6 text-right">
                                 <div className="flex items-center justify-end space-x-2">
+                                  <button
+                                    onClick={async () => {
+                                      try {
+                                        await switchBusiness(b.id);
+                                        window.location.href = "/dashboard/owner";
+                                      } catch (err) {
+                                        console.error("Failed to switch business", err);
+                                      }
+                                    }}
+                                    className="px-3 py-1.5 rounded-lg bg-indigo-500/10 border border-indigo-500/20 text-xs font-bold text-indigo-400 hover:bg-indigo-500 hover:text-white transition-all cursor-pointer"
+                                  >
+                                    Impersonate
+                                  </button>
                                   <button
                                     onClick={() => openSubscriptionModal(b)}
                                     className="px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-800 text-xs font-semibold text-indigo-400 hover:bg-slate-800 transition-colors"
