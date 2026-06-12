@@ -245,24 +245,49 @@
 /* ==========================================================================
    Premium Light Mode Component Styling Overrides
    ========================================================================== */
-html:not(.dark) .bg-slate-900\/10,
-html:not(.dark) .bg-slate-900\/20,
-html:not(.dark) .bg-slate-900\/30,
-html:not(.dark) .bg-slate-900\/40,
-html:not(.dark) .bg-slate-950\/20,
-html:not(.dark) .bg-slate-950\/40 {
-  background-color: rgba(255, 255, 255, 0.85) !important;
-  backdrop-filter: blur(16px);
-  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.02), 
-              0 8px 10px -6px rgba(0, 0, 0, 0.02), 
-              inset 0 1px 0 0 rgba(255, 255, 255, 0.6) !important;
+
+/* Ambient Body background transitions */
+body {
+  background-image: radial-gradient(at 5% 5%, rgba(30, 58, 138, 0.05) 0px, transparent 40%), 
+                    radial-gradient(at 95% 95%, rgba(16, 185, 129, 0.04) 0px, transparent 40%),
+                    radial-gradient(at 50% 50%, rgba(30, 58, 138, 0.01) 0px, transparent 60%);
+  background-attachment: fixed;
 }
 
-/* Light Mode Borders */
+/* Enhance glassmorphic cards in light mode with subtle borders, shadows and scaling transitions */
 html:not(.dark) .border-slate-900,
 html:not(.dark) .border-slate-850,
-html:not(.dark) .border-slate-800 {
-  border-color: rgba(226, 232, 240, 0.9) !important;
+html:not(.dark) .border-slate-800,
+html:not(.dark) .border-slate-700\/50,
+html:not(.dark) .border-slate-800\/60 {
+  border-color: rgba(226, 232, 240, 0.8) !important;
+}
+
+html:not(.dark) .bg-slate-900\/20,
+html:not(.dark) .bg-slate-900\/30,
+html:not(.dark) .bg-slate-950\/20,
+html:not(.dark) .bg-slate-950\/40,
+html:not(.dark) .bg-slate-900\/10 {
+  background-color: rgba(255, 255, 255, 0.75) !important;
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(226, 232, 240, 0.8) !important;
+  box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.03), 
+              0 2px 8px -1px rgba(15, 23, 42, 0.02),
+              inset 0 1px 0 0 rgba(255, 255, 255, 0.6) !important;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+html:not(.dark) .bg-slate-900\/20:hover,
+html:not(.dark) .bg-slate-900\/30:hover,
+html:not(.dark) .bg-slate-950\/20:hover,
+html:not(.dark) .bg-slate-950\/40:hover,
+html:not(.dark) .bg-slate-900\/10:hover {
+  background-color: rgba(255, 255, 255, 0.85) !important;
+  box-shadow: 0 12px 30px -4px rgba(15, 23, 42, 0.06), 
+              0 4px 12px -2px rgba(15, 23, 42, 0.03),
+              inset 0 1px 0 0 rgba(255, 255, 255, 0.8) !important;
+  border-color: rgba(30, 58, 138, 0.15) !important;
+  transform: translateY(-1px);
 }
 
 /* Light Mode Hover States */
@@ -282,15 +307,66 @@ html:not(.dark) .hover\:bg-slate-850:hover {
 /* Input Fields and Selects in Light Mode */
 html:not(.dark) input.bg-slate-900,
 html:not(.dark) select.bg-slate-900,
-html:not(.dark) textarea.bg-slate-900 {
+html:not(.dark) textarea.bg-slate-900,
+html:not(.dark) input,
+html:not(.dark) select,
+html:not(.dark) textarea {
   background-color: #ffffff !important;
   color: #0f172a !important;
-  border-color: #cbd5e1 !important;
+  border: 1px solid #cbd5e1 !important;
+  box-shadow: inset 0 1px 2px rgba(15, 23, 42, 0.02) !important;
+  transition: border-color 0.2s, box-shadow 0.2s;
 }
+
 html:not(.dark) input.bg-slate-900:focus,
-html:not(.dark) select.bg-slate-900:focus {
+html:not(.dark) select.bg-slate-900:focus,
+html:not(.dark) input:focus,
+html:not(.dark) select:focus,
+html:not(.dark) textarea:focus {
   border-color: var(--primary) !important;
-  box-shadow: 0 0 0 2px rgba(30, 58, 138, 0.1) !important;
+  box-shadow: 0 0 0 3px rgba(30, 58, 138, 0.08), 
+              inset 0 1px 2px rgba(15, 23, 42, 0.02) !important;
+  outline: none !important;
+}
+
+/* Premium dynamic button animations in light mode */
+html:not(.dark) button.bg-indigo-600,
+html:not(.dark) button.bg-primary,
+html:not(.dark) .bg-primary {
+  box-shadow: 0 4px 14px 0 rgba(30, 58, 138, 0.12) !important;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+html:not(.dark) button.bg-indigo-600:hover,
+html:not(.dark) button.bg-primary:hover,
+html:not(.dark) .bg-primary:hover {
+  box-shadow: 0 6px 20px 0 rgba(30, 58, 138, 0.22) !important;
+  transform: translateY(-1px);
+}
+html:not(.dark) button.bg-indigo-600:active,
+html:not(.dark) button.bg-primary:active,
+html:not(.dark) .bg-primary:active {
+  transform: translateY(0);
+}
+
+html:not(.dark) button.bg-emerald-600,
+html:not(.dark) button.bg-accent,
+html:not(.dark) .bg-accent {
+  box-shadow: 0 4px 14px 0 rgba(16, 185, 129, 0.12) !important;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+html:not(.dark) button.bg-emerald-600:hover,
+html:not(.dark) button.bg-accent:hover,
+html:not(.dark) .bg-accent:hover {
+  box-shadow: 0 6px 20px 0 rgba(16, 185, 129, 0.22) !important;
+  transform: translateY(-1px);
+}
+
+/* Table enhancements in Light Mode */
+html:not(.dark) tr {
+  transition: background-color 0.2s ease;
+}
+html:not(.dark) tbody tr:hover {
+  background-color: rgba(15, 23, 42, 0.015) !important;
 }
 
 /* Proper contrast for text slates in Light Mode */
@@ -312,4 +388,26 @@ html:not(.dark) .text-slate-500 {
 }
 html:not(.dark) .text-slate-550 {
   color: #4b5563 !important;
+}
+
+/* Custom premium scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(100, 116, 139, 0.18);
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(100, 116, 139, 0.32);
+}
+.dark ::-webkit-scrollbar-thumb {
+  background: rgba(248, 250, 252, 0.08);
+}
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: rgba(248, 250, 252, 0.16);
 }
