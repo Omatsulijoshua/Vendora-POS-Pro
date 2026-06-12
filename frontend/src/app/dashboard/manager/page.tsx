@@ -479,7 +479,7 @@ export default function ManagerDashboard() {
     }
   };
 
-  const fetchDiscounts = async () => {
+  async function fetchDiscounts() {
     try {
       setLoadingDiscounts(true);
       const res = await fetch("http://localhost:5149/api/discounts", {
@@ -494,9 +494,9 @@ export default function ManagerDashboard() {
     } finally {
       setLoadingDiscounts(false);
     }
-  };
+  }
 
-  const fetchCoupons = async () => {
+  async function fetchCoupons() {
     try {
       setLoadingCoupons(true);
       const res = await fetch("http://localhost:5149/api/coupons", {
@@ -511,7 +511,7 @@ export default function ManagerDashboard() {
     } finally {
       setLoadingCoupons(false);
     }
-  };
+  }
 
   // Submit Discount
   const handleAddDiscount = async (e: React.FormEvent) => {

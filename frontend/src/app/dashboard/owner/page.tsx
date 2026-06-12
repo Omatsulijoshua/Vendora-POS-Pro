@@ -869,7 +869,7 @@ export default function OwnerDashboard() {
     }
   };
 
-  const fetchAuditLogs = async () => {
+  async function fetchAuditLogs() {
     try {
       setLoadingAuditLogs(true);
       const res = await fetch("http://localhost:5149/api/audit-logs", {
@@ -884,7 +884,7 @@ export default function OwnerDashboard() {
     } finally {
       setLoadingAuditLogs(false);
     }
-  };
+  }
 
   const handleRefundSale = async (id: string) => {
     if (!confirm("Are you sure you want to refund this transaction? This will restock all items and cannot be undone.")) return;

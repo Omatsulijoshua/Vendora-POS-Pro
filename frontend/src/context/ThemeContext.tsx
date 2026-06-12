@@ -14,6 +14,15 @@ const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [theme, setTheme] = useState<Theme>("dark"); // Default to dark mode
 
+  const applyTheme = (t: Theme) => {
+    const root = window.document.documentElement;
+    if (t === "dark") {
+      root.classList.add("dark");
+    } else {
+      root.classList.remove("dark");
+    }
+  };
+
   useEffect(() => {
     const stored = localStorage.getItem("vendora-theme") as Theme | null;
     if (stored) {
@@ -26,15 +35,6 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       applyTheme(initial);
     }
   }, []);
-
-  const applyTheme = (t: Theme) => {
-    const root = window.document.documentElement;
-    if (t === "dark") {
-      root.classList.add("dark");
-    } else {
-      root.classList.remove("dark");
-    }
-  };
 
   const toggleTheme = () => {
     const newTheme = theme === "light" ? "dark" : "light";

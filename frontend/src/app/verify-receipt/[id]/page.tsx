@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
+import Link from "next/link";
 import { ShieldCheck, AlertTriangle, Receipt, Calendar, User, Store, MapPin, Phone, CreditCard } from "lucide-react";
 
 export default function VerifyReceiptPage() {
@@ -63,12 +64,12 @@ export default function VerifyReceiptPage() {
           <p className="text-slate-400 text-sm leading-relaxed">
             {error || "We could not find any transaction records matching this receipt code."}
           </p>
-          <a
+          <Link
             href="/"
             className="mt-6 px-6 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold rounded-xl transition-colors"
           >
             Go to Portal
-          </a>
+          </Link>
         </div>
       </div>
     );
