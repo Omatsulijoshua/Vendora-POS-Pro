@@ -155,4 +155,6 @@ app.UseAuthorization();
 
 app.MapControllers();
 
+app.MapGet("/", () => Results.Ok(new { status = "Healthy", service = "Vendora POS API", timestamp = DateTime.UtcNow }));
+
 app.Run();
