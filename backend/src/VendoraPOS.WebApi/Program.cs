@@ -155,6 +155,16 @@ app.UseAuthorization();
 
 app.MapControllers();
 
-app.MapGet("/", () => Results.Ok(new { status = "Healthy", service = "Vendora POS API", timestamp = DateTime.UtcNow }));
+app.MapGet("/", (IConfiguration config) => {
+    var conn = config.GetConnectionString("DefaultConnection") ?? "";
+    var isLocalhost = conn.Contains("localhost") || conn.Contains("127.0.0.1");
+    return Results.Ok(new { 
+        status = "Healthy", 
+        service = "Vendora POS API", 
+        timestamp = DateTime.UtcNow,
+        databaseType = isLocalhost ? "Localhost (Fallback)" : "Cloud (Neon/Other)",
+        databaseConfigured = !string.IsNullOrEmpty(conn)
+    });
+});
 
 app.Run();
