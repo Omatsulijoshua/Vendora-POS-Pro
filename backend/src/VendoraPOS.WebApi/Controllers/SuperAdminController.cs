@@ -459,7 +459,7 @@ public class SuperAdminController : ControllerBase
             "enterprise" => 150000m,
             _ => 50000m
         };
-        business.SubscriptionPrice = monthlyRate;
+        business.SubscriptionPrice = monthlyRate * 12;
 
         DateTime currentExpires = business.SubscriptionExpiresAt ?? DateTime.UtcNow;
         if (currentExpires < DateTime.UtcNow)

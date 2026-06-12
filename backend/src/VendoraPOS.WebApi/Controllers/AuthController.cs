@@ -89,7 +89,9 @@ public class AuthController : ControllerBase
                 Subdomain = model.Subdomain.ToLower(),
                 OwnerId = user.Id,
                 IsActive = true,
-                IsApproved = false
+                IsApproved = false,
+                SubscriptionStatus = "Inactive",
+                SubscriptionExpiresAt = DateTime.UtcNow
             };
 
             _context.Businesses.Add(business);
@@ -190,7 +192,7 @@ public class AuthController : ControllerBase
                 }
 
                 var isExpired = business.SubscriptionExpiresAt.HasValue && business.SubscriptionExpiresAt.Value < DateTime.UtcNow;
-                var isInactive = business.SubscriptionStatus == "Cancelled" || business.SubscriptionStatus == "Past Due";
+                var isInactive = business.SubscriptionStatus != "Active";
 
                 if (isExpired || isInactive)
                 {
@@ -255,7 +257,7 @@ public class AuthController : ControllerBase
             if (business != null)
             {
                 var isExpired = business.SubscriptionExpiresAt.HasValue && business.SubscriptionExpiresAt.Value < DateTime.UtcNow;
-                var isInactive = business.SubscriptionStatus == "Cancelled" || business.SubscriptionStatus == "Past Due";
+                var isInactive = business.SubscriptionStatus != "Active";
                 if (isExpired || isInactive)
                 {
                     isSubscriptionActive = false;
@@ -323,7 +325,7 @@ public class AuthController : ControllerBase
         var token = _jwtTokenGenerator.GenerateToken(user, roles);
 
         var isExpired = business.SubscriptionExpiresAt.HasValue && business.SubscriptionExpiresAt.Value < DateTime.UtcNow;
-        var isInactive = business.SubscriptionStatus == "Cancelled" || business.SubscriptionStatus == "Past Due";
+        var isInactive = business.SubscriptionStatus != "Active";
         bool isSubscriptionActive = !(isExpired || isInactive);
 
         return Ok(new AuthResponseDto
@@ -401,7 +403,7 @@ public class AuthController : ControllerBase
             if (business != null)
             {
                 var isExpired = business.SubscriptionExpiresAt.HasValue && business.SubscriptionExpiresAt.Value < DateTime.UtcNow;
-                var isInactive = business.SubscriptionStatus == "Cancelled" || business.SubscriptionStatus == "Past Due";
+                var isInactive = business.SubscriptionStatus != "Active";
                 if (isExpired || isInactive)
                 {
                     isSubscriptionActive = false;

@@ -74,10 +74,10 @@ if ($null -eq $targetBusiness) {
 Write-Host "  - Business: $($targetBusiness.name)" -ForegroundColor Gray
 Write-Host "  - Subdomain: $($targetBusiness.subdomain)" -ForegroundColor Gray
 Write-Host "  - Subscription Tier: $($targetBusiness.subscriptionTier) (Default: Pro)" -ForegroundColor Gray
-Write-Host "  - Subscription Status: $($targetBusiness.subscriptionStatus) (Default: Active)" -ForegroundColor Gray
+Write-Host "  - Subscription Status: $($targetBusiness.subscriptionStatus) (Default: Inactive)" -ForegroundColor Gray
 Write-Host "  - Subscription Price: $($targetBusiness.subscriptionPrice) (Default: 299.00)" -ForegroundColor Gray
 
-if ($targetBusiness.subscriptionTier -ne "Pro" -or $targetBusiness.subscriptionStatus -ne "Active" -or $targetBusiness.subscriptionPrice -ne 299.00) {
+if ($targetBusiness.subscriptionTier -ne "Pro" -or $targetBusiness.subscriptionStatus -ne "Inactive" -or $targetBusiness.subscriptionPrice -ne 299.00) {
     Write-Host "[ERROR] Default subscription values on business creation were not populated correctly." -ForegroundColor Red; Exit 1
 }
 Write-Host "[SUCCESS] Business listing and subscription info verified." -ForegroundColor Green

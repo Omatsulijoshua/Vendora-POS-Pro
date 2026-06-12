@@ -57,7 +57,7 @@ public class JwtTokenGenerator : IJwtTokenGenerator
             if (business != null)
             {
                 var isExpired = business.SubscriptionExpiresAt.HasValue && business.SubscriptionExpiresAt.Value < DateTime.UtcNow;
-                var isInactive = business.SubscriptionStatus == "Cancelled" || business.SubscriptionStatus == "Past Due";
+                var isInactive = business.SubscriptionStatus != "Active";
                 if (isExpired || isInactive)
                 {
                     isSubscriptionActive = false;

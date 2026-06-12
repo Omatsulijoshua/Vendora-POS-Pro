@@ -144,74 +144,7 @@ public class BillingController : ControllerBase
     [HttpPost("pay-opay")]
     public async Task<IActionResult> PayOPay([FromBody] PayOPayRequest request)
     {
-        var businessId = _tenantProvider.TenantId;
-        if (!businessId.HasValue)
-        {
-            return BadRequest(new { Message = "Active business context is required." });
-        }
-
-        var business = await _context.Businesses
-            .IgnoreQueryFilters()
-            .FirstOrDefaultAsync(b => b.Id == businessId.Value);
-
-        if (business == null)
-        {
-            return NotFound(new { Message = "Business not found." });
-        }
-
-        if (string.IsNullOrEmpty(request.PlanName))
-        {
-            return BadRequest(new { Message = "PlanName is required." });
-        }
-
-        // Calculate cost based on plan rates
-        decimal rate = GetPlanRate(request.PlanName);
-        decimal baseAmount = rate * request.DurationMonths;
-        decimal fee = baseAmount * 0.015m;
-        decimal totalAmount = baseAmount + fee;
-
-        var payment = new SaaSPayment
-        {
-            BusinessId = business.Id,
-            BusinessName = business.Name,
-            Amount = totalAmount,
-            PlanName = request.PlanName,
-            DurationMonths = request.DurationMonths,
-            PaymentMethod = "OPay",
-            PaymentStatus = "Approved",
-            CreatedAt = DateTime.UtcNow,
-            ProcessedAt = DateTime.UtcNow
-        };
-
-        _context.SaaSPayments.Add(payment);
-
-        // Update the business subscription immediately
-        business.SubscriptionTier = request.PlanName;
-        business.SubscriptionStatus = "Active";
-        business.SubscriptionPrice = rate; // Monthly/base tier price
-        
-        DateTime currentExpires = business.SubscriptionExpiresAt ?? DateTime.UtcNow;
-        if (currentExpires < DateTime.UtcNow)
-        {
-            currentExpires = DateTime.UtcNow;
-        }
-        business.SubscriptionExpiresAt = currentExpires.AddMonths(request.DurationMonths);
-
-        // Audit Trail
-        var audit = new AuditLog
-        {
-            BusinessId = business.Id,
-            Action = "SaaSPaymentApproved",
-            Details = $"Completed OPay simulated checkout of ₦{totalAmount:N2} (includes ₦{fee:N2} fees). Subscription extended by {request.DurationMonths} months.",
-            UserEmail = User.Identity?.Name ?? "system@vendorainventory.com",
-            IpAddress = HttpContext.Connection.RemoteIpAddress?.ToString(),
-            CreatedAt = DateTime.UtcNow
-        };
-        _context.AuditLogs.Add(audit);
-
-        await _context.SaveChangesAsync();
-
-        return Ok(new { Message = "Payment complete. Subscription activated.", PaymentId = payment.Id });
+        return BadRequest(new { Message = "OPay checkout is currently disabled. Please use manual bank transfer payment." });
     }
 
     [HttpPost("upload-receipt")]

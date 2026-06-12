@@ -16,9 +16,9 @@ public class Business
 
     // Subscription details
     public string SubscriptionTier { get; set; } = "Pro";
-    public string SubscriptionStatus { get; set; } = "Active";
-    public decimal SubscriptionPrice { get; set; } = 299.00m;
-    public DateTime? SubscriptionExpiresAt { get; set; } = DateTime.UtcNow.AddYears(1);
+    public string SubscriptionStatus { get; set; } = "Inactive";
+    public decimal SubscriptionPrice { get; set; } = 600000.00m;
+    public DateTime? SubscriptionExpiresAt { get; set; }
     public string? StripeCustomerId { get; set; }
     public string? StripeSubscriptionId { get; set; }
 

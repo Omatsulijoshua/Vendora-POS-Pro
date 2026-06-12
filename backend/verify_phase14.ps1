@@ -41,7 +41,7 @@ Write-Host "`n[2/6] Querying initial subscription status..." -ForegroundColor Ye
 $status = Invoke-RestMethod -Uri "$baseUrl/api/billing/status" -Method Get -Headers $ownerHeaders
 Write-Host "Initial Plan: $($status.subscriptionTier), Status: $($status.subscriptionStatus), Expires: $($status.subscriptionExpiresAt)" -ForegroundColor Gray
 
-if ($status.subscriptionTier -ne "Pro" -or $status.subscriptionStatus -ne "Active" -or $status.isMockMode -ne $true) {
+if ($status.subscriptionTier -ne "Pro" -or $status.subscriptionStatus -ne "Inactive" -or $status.isMockMode -ne $true) {
     Write-Host "[ERROR] Default pricing/mock configuration is invalid." -ForegroundColor Red; Exit 1
 }
 Write-Host "[SUCCESS] Default subscription context verified." -ForegroundColor Green

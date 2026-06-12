@@ -58,6 +58,34 @@ $ownerBHeaders = @{
     "Authorization" = "Bearer $ownerBToken"
 }
 
+# Activate Business A and Business B subscriptions via SuperAdmin so cashiers/managers can log in
+$superLoginBody = @{
+    email = "admin@vendorapos.com"
+    password = "AdminPassword123!"
+} | ConvertTo-Json
+$superLoginRes = Invoke-RestMethod -Uri "$baseUrl/api/auth/login" -Method Post -Body $superLoginBody -Headers $headers
+$superToken = $superLoginRes.token
+$superHeaders = @{
+    "Content-Type" = "application/json"
+    "Authorization" = "Bearer $superToken"
+}
+$subBodyA = @{
+    subscriptionTier = "Pro"
+    subscriptionStatus = "Active"
+    subscriptionPrice = 299.00
+    subscriptionExpiresAt = (Get-Date).AddYears(1).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
+} | ConvertTo-Json
+$null = Invoke-RestMethod -Uri "$baseUrl/api/superadmin/businesses/$businessAId/subscription" -Method Put -Body $subBodyA -Headers $superHeaders
+
+$subBodyB = @{
+    subscriptionTier = "Pro"
+    subscriptionStatus = "Active"
+    subscriptionPrice = 299.00
+    subscriptionExpiresAt = (Get-Date).AddYears(1).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
+} | ConvertTo-Json
+$null = Invoke-RestMethod -Uri "$baseUrl/api/superadmin/businesses/$businessBId/subscription" -Method Put -Body $subBodyB -Headers $superHeaders
+Write-Host "[SUCCESS] Activated Business A and Business B subscriptions via SuperAdmin." -ForegroundColor Green
+
 # Under Business A: Create Branch A1 and Branch A2
 $branch1Res = Invoke-RestMethod -Uri "$baseUrl/api/branches" -Method Post -Body (@{ name = "Branch A1"; address = "100 A1 St"; phone = "555-0001" } | ConvertTo-Json) -Headers $ownerAHeaders
 $branchA1Id = $branch1Res.id

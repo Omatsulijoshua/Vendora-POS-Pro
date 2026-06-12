@@ -96,7 +96,9 @@ public class BusinessesController : ControllerBase
             OwnerId = userId,
             IsActive = true,
             SharedStockMode = false,
-            CreatedAt = DateTime.UtcNow
+            CreatedAt = DateTime.UtcNow,
+            SubscriptionStatus = "Inactive",
+            SubscriptionExpiresAt = DateTime.UtcNow
         };
 
         _context.Businesses.Add(business);

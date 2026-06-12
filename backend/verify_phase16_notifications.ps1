@@ -35,6 +35,26 @@ $ownerHeaders = @{
     "Authorization" = "Bearer $ownerToken"
 }
 
+# Activate Business Subscription via SuperAdmin so cashier can log in
+$superLoginBody = @{
+    email = "admin@vendorapos.com"
+    password = "AdminPassword123!"
+} | ConvertTo-Json
+$superLoginRes = Invoke-RestMethod -Uri "$baseUrl/api/auth/login" -Method Post -Body $superLoginBody -Headers $headers
+$superToken = $superLoginRes.token
+$superHeaders = @{
+    "Content-Type" = "application/json"
+    "Authorization" = "Bearer $superToken"
+}
+$subBody = @{
+    subscriptionTier = "Pro"
+    subscriptionStatus = "Active"
+    subscriptionPrice = 299.00
+    subscriptionExpiresAt = (Get-Date).AddYears(1).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
+} | ConvertTo-Json
+$null = Invoke-RestMethod -Uri "$baseUrl/api/superadmin/businesses/$businessId/subscription" -Method Put -Body $subBody -Headers $superHeaders
+Write-Host "[SUCCESS] Business subscription activated via SuperAdmin." -ForegroundColor Green
+
 # 2. Create Branch, Cashier, Category, and Product for Low Stock Test
 Write-Host "`n[2] Creating entities for low stock checkout..." -ForegroundColor Yellow
 

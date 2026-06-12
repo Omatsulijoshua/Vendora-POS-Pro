@@ -18,35 +18,8 @@ function OPayCheckoutContent() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const handlePayment = async () => {
-    setLoading(true);
-    setErrorMessage(null);
-
-    try {
-      const res = await fetch("http://localhost:5149/api/billing/pay-opay", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          planName: plan,
-          durationMonths: parseInt(duration, 10)
-        })
-      });
-
-      if (res.ok) {
-        alert("Payment Successful!");
-        router.push("/dashboard/owner?tab=billing&payment=success");
-      } else {
-        const data = await res.json();
-        setErrorMessage(data.message || "Error processing payment via API");
-      }
-    } catch (error) {
-      console.error("Error:", error);
-      setErrorMessage("An error occurred during checkout.");
-    } finally {
-      setLoading(false);
-    }
+    alert("Use manual payment");
+    return;
   };
 
   return (
@@ -58,6 +31,9 @@ function OPayCheckoutContent() {
         </div>
         
         <div className="p-8">
+          <div className="mb-4 p-3 bg-amber-50 border border-amber-250 text-amber-700 text-xs rounded-lg text-center font-medium">
+            ⚠️ OPay Checkout is currently disabled. Please use manual bank transfer payment.
+          </div>
           <div className="text-center mb-8">
             <span className="text-xs text-[#636e72] block mb-1 uppercase tracking-wider font-semibold">Total Amount to Pay</span>
             <h2 className="text-4xl font-extrabold text-[#2d3436]">
@@ -109,10 +85,9 @@ function OPayCheckoutContent() {
 
           <button 
             onClick={handlePayment}
-            disabled={loading}
-            className="w-full p-4 bg-[#00b894] hover:bg-[#00a884] text-white rounded-lg font-bold transition-all transform hover:-translate-y-0.5 active:translate-y-0 disabled:opacity-70 disabled:pointer-events-none shadow-md shadow-[#00b894]/20"
+            className="w-full p-4 bg-gray-200 text-gray-700 hover:bg-gray-300 rounded-lg font-bold shadow-md cursor-pointer transition-all text-sm"
           >
-            {loading ? "Processing..." : "Pay Now"}
+            OPay Checkout - Use Manual Payment
           </button>
           
           <p className="text-center mt-4 text-[10px] text-[#636e72] leading-relaxed">

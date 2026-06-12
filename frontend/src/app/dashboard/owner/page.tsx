@@ -77,7 +77,7 @@ export default function OwnerDashboard() {
   // OPay & Manual Billing States
   const [selectedPlan, setSelectedPlan] = useState<string>("Pro");
   const [selectedDuration, setSelectedDuration] = useState<number>(1);
-  const [paymentMethod, setPaymentMethod] = useState<"OPay" | "Manual">("OPay");
+  const [paymentMethod, setPaymentMethod] = useState<"OPay" | "Manual">("Manual");
   const [manualReference, setManualReference] = useState<string>("");
   const [manualReceiptFile, setManualReceiptFile] = useState<File | null>(null);
   const [manualReceiptUrl, setManualReceiptUrl] = useState<string>("");
@@ -306,9 +306,9 @@ export default function OwnerDashboard() {
       const baseCost = baseRate * selectedDuration;
 
       if (paymentMethod === "OPay") {
-        const fee = baseCost * 0.015;
-        const total = baseCost + fee;
-        window.location.href = `/payment/opay?amount=${total}&businessId=${billingStatus?.id}&plan=${selectedPlan}&duration=${selectedDuration}`;
+        alert("Use manual payment");
+        setBillingSubmitting(false);
+        return;
       } else {
         if (!manualReference) {
           setBillingError("Sender name / reference is required for manual payment.");
@@ -3391,12 +3391,10 @@ export default function OwnerDashboard() {
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <button
                           type="button"
-                          onClick={() => setPaymentMethod("OPay")}
-                          className={`p-4 border rounded-xl flex items-center justify-between text-left transition-all ${
-                            paymentMethod === "OPay"
-                              ? "border-indigo-500 bg-indigo-650/10"
-                              : "border-slate-800 bg-slate-950/20 hover:border-slate-700"
-                          }`}
+                          onClick={() => {
+                            alert("Use manual payment");
+                          }}
+                          className="p-4 border border-slate-800 bg-slate-950/10 opacity-50 cursor-not-allowed rounded-xl flex items-center justify-between text-left transition-all"
                         >
                           <div>
                             <div className="text-xs font-bold text-slate-200">OPay Checkout</div>
