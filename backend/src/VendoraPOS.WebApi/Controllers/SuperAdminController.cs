@@ -451,4 +451,155 @@ public class SuperAdminController : ControllerBase
 
         return Ok(new { Message = "Payment rejected successfully." });
     }
+
+    [HttpPost("send-broadcast")]
+    public async Task<IActionResult> SendBroadcast([FromBody] SendBroadcastRequest request)
+    {
+        if (string.IsNullOrEmpty(request.Title) || string.IsNullOrEmpty(request.Message))
+        {
+            return BadRequest(new { Message = "Title and Message are required." });
+        }
+
+        // Determine target roles
+        var targetRoles = new List<string>();
+        if (request.TargetAudience.Equals("All", StringComparison.OrdinalIgnoreCase))
+        {
+            targetRoles.Add("Owner");
+            targetRoles.Add("Manager");
+            targetRoles.Add("Cashier");
+        }
+        else if (request.TargetAudience.Equals("Admins", StringComparison.OrdinalIgnoreCase))
+        {
+            targetRoles.Add("Owner");
+        }
+        else if (request.TargetAudience.Equals("Managers", StringComparison.OrdinalIgnoreCase))
+        {
+            targetRoles.Add("Manager");
+        }
+        else
+        {
+            return BadRequest(new { Message = "Invalid target audience. Choose All, Admins, or Managers." });
+        }
+
+        // Fetch target users based on roles
+        var targetUsers = await _context.Users
+            .IgnoreQueryFilters()
+            .Where(u => _context.UserRoles.Any(ur => ur.UserId == u.Id && 
+                _context.Roles.Any(r => r.Id == ur.RoleId && targetRoles.Contains(r.Name))))
+            .ToListAsync();
+
+        var notifications = new List<Notification>();
+        foreach (var u in targetUsers)
+        {
+            notifications.Add(new Notification
+            {
+                BusinessId = u.BusinessId,
+                BranchId = u.BranchId,
+                RecipientEmail = u.Email ?? string.Empty,
+                Title = request.Title,
+                Message = request.Message,
+                Type = "General",
+                Channel = "In-App",
+                IsRead = false,
+                SentAt = DateTime.UtcNow
+            });
+        }
+
+        if (notifications.Any())
+        {
+            _context.Notifications.AddRange(notifications);
+            await _context.SaveChangesAsync();
+        }
+
+        // Log audit log
+        var adminEmail = User.FindFirst(ClaimTypes.Email)?.Value ?? "admin@vendorapos.com";
+        var ip = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "127.0.0.1";
+        await _auditLogService.LogAsync(
+            "BroadcastNotificationSent",
+            $"Sent broadcast notification ({request.TargetAudience}): Title='{request.Title}', Message='{request.Message}' to {targetUsers.Count} users",
+            adminEmail,
+            null,
+            ip
+        );
+
+        return Ok(new { Message = $"Broadcast sent successfully to {targetUsers.Count} users." });
+    }
+
+    [HttpPost("clear-test-data")]
+    public async Task<IActionResult> ClearTestData()
+    {
+        // Get all non-admin user IDs
+        var superAdminRole = await _context.Roles.FirstOrDefaultAsync(r => r.Name == "SuperAdmin");
+        var superAdminUserIds = superAdminRole != null
+            ? await _context.UserRoles.Where(ur => ur.RoleId == superAdminRole.Id).Select(ur => ur.UserId).ToListAsync()
+            : new List<Guid>();
+
+        var nonAdminUsers = await _context.Users
+            .IgnoreQueryFilters()
+            .Where(u => !superAdminUserIds.Contains(u.Id))
+            .ToListAsync();
+
+        // 1. Break the circular dependency cycle. Null out User references to Branches and Businesses first.
+        foreach (var u in nonAdminUsers)
+        {
+            u.BranchId = null;
+            u.BusinessId = null;
+        }
+        await _context.SaveChangesAsync();
+
+        // 2. Clear out all dependent child tables
+        _context.StockAdjustmentLogs.RemoveRange(await _context.StockAdjustmentLogs.IgnoreQueryFilters().ToListAsync());
+        _context.StockTransfers.RemoveRange(await _context.StockTransfers.IgnoreQueryFilters().ToListAsync());
+        _context.SaleItems.RemoveRange(await _context.SaleItems.IgnoreQueryFilters().ToListAsync());
+        _context.Sales.RemoveRange(await _context.Sales.IgnoreQueryFilters().ToListAsync());
+        _context.Discounts.RemoveRange(await _context.Discounts.IgnoreQueryFilters().ToListAsync());
+        _context.Coupons.RemoveRange(await _context.Coupons.IgnoreQueryFilters().ToListAsync());
+        _context.ReceiptSettings.RemoveRange(await _context.ReceiptSettings.IgnoreQueryFilters().ToListAsync());
+        _context.ProductStocks.RemoveRange(await _context.ProductStocks.IgnoreQueryFilters().ToListAsync());
+        _context.Products.RemoveRange(await _context.Products.IgnoreQueryFilters().ToListAsync());
+        _context.Categories.RemoveRange(await _context.Categories.IgnoreQueryFilters().ToListAsync());
+        _context.Branches.RemoveRange(await _context.Branches.IgnoreQueryFilters().ToListAsync());
+        await _context.SaveChangesAsync();
+
+        // 3. Clear businesses (this deletes business records, breaking OwnerId -> User dependencies since users are still alive)
+        _context.Businesses.RemoveRange(await _context.Businesses.IgnoreQueryFilters().ToListAsync());
+        await _context.SaveChangesAsync();
+
+        // 4. Clear non-admin users
+        _context.Users.RemoveRange(nonAdminUsers);
+        await _context.SaveChangesAsync();
+
+        // 5. Clear payments & notifications
+        _context.SaaSPayments.RemoveRange(await _context.SaaSPayments.IgnoreQueryFilters().ToListAsync());
+        _context.Notifications.RemoveRange(await _context.Notifications.IgnoreQueryFilters().ToListAsync());
+
+        // 6. Remove audit logs except super-admin audit logs
+        var nonAdminAuditLogs = await _context.AuditLogs
+            .IgnoreQueryFilters()
+            .Where(al => al.BusinessId != null)
+            .ToListAsync();
+        _context.AuditLogs.RemoveRange(nonAdminAuditLogs);
+
+        await _context.SaveChangesAsync();
+
+        // Log audit log for accountability
+        var adminEmail = User.FindFirst(ClaimTypes.Email)?.Value ?? "admin@vendorapos.com";
+        var ip = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "127.0.0.1";
+        await _auditLogService.LogAsync(
+            "SystemDataCleared",
+            "Cleared all test business tenants, transaction records, products, branches, and non-admin user accounts from the database.",
+            adminEmail,
+            null,
+            ip
+        );
+
+        return Ok(new { Message = "All test and mock data has been deleted from the database successfully." });
+    }
+}
+
+public class SendBroadcastRequest
+{
+    public string TargetAudience { get; set; } = string.Empty; // "All", "Admins", "Managers"
+    public string Title { get; set; } = string.Empty;
+    public string Message { get; set; } = string.Empty;
 }

@@ -6,6 +6,7 @@ import { Printer } from "lucide-react";
 import { Logo } from "@/components/Logo";
 import { ThemeToggle } from "@/context/ThemeContext";
 import ChangePasswordModal from "@/components/ChangePasswordModal";
+import NotificationBell from "@/components/NotificationBell";
 
 interface CartItem {
   id: string;
@@ -589,6 +590,7 @@ export default function CashierDashboard() {
               <p className="text-xs text-slate-500">Branch: {branchName}</p>
             </div>
             <ThemeToggle />
+            <NotificationBell token={token} />
             <button
               onClick={() => setShowChangePasswordModal(true)}
               className="px-3 py-2 rounded-lg bg-slate-900 border border-slate-800 hover:bg-slate-800 text-sm font-medium text-slate-300 hover:text-slate-100 transition-all active:scale-[0.98] flex items-center gap-1.5 cursor-pointer"

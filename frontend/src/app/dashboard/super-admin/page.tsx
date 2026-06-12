@@ -5,6 +5,7 @@ import { useAuth } from "@/context/AuthContext";
 import { Logo } from "@/components/Logo";
 import { ThemeToggle } from "@/context/ThemeContext";
 import ChangePasswordModal from "@/components/ChangePasswordModal";
+import NotificationBell from "@/components/NotificationBell";
 
 interface SuperAdminStats {
   totalBusinesses: number;
@@ -72,6 +73,13 @@ export default function SuperAdminDashboard() {
   // Manual payment actions / modals
   const [showReceiptModal, setShowReceiptModal] = useState(false);
   const [selectedReceiptUrl, setSelectedReceiptUrl] = useState("");
+
+  // Broadcast states
+  const [showBroadcastSidebar, setShowBroadcastSidebar] = useState(false);
+  const [broadcastAudience, setBroadcastAudience] = useState<"All" | "Admins" | "Managers">("All");
+  const [broadcastTitle, setBroadcastTitle] = useState("");
+  const [broadcastMessage, setBroadcastMessage] = useState("");
+  const [broadcastSubmitting, setBroadcastSubmitting] = useState(false);
   
   // Sales records states
   const [sales, setSales] = useState<any[]>([]);
@@ -321,6 +329,69 @@ export default function SuperAdminDashboard() {
     }
   }, [token]);
 
+  const handleSendBroadcast = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!broadcastTitle || !broadcastMessage) {
+      flashError("Title and Message are required.");
+      return;
+    }
+    setBroadcastSubmitting(true);
+    try {
+      const res = await fetch(`${baseUrl}/api/superadmin/send-broadcast`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          targetAudience: broadcastAudience,
+          title: broadcastTitle,
+          message: broadcastMessage
+        })
+      });
+      if (res.ok) {
+        flashSuccess(`Broadcast notification sent successfully to target audience.`);
+        setBroadcastTitle("");
+        setBroadcastMessage("");
+        setShowBroadcastSidebar(false);
+      } else {
+        const err = await res.json();
+        flashError(err.message || "Failed to send broadcast.");
+      }
+    } catch (err: any) {
+      flashError(err.message || "Network error sending broadcast.");
+    } finally {
+      setBroadcastSubmitting(false);
+    }
+  };
+
+  const handleClearTestData = async () => {
+    if (!window.confirm("⚠️ WARNING: This will permanently DELETE all test businesses, branches, staff, products, stock logs, transfers, sales, discounts, and payments from the system. This action CANNOT be undone. Proceed?")) {
+      return;
+    }
+    if (!window.confirm("Final Confirmation: Are you absolutely sure you want to PURGE all testing data?")) {
+      return;
+    }
+    setActionLoading(true);
+    try {
+      const res = await fetch(`${baseUrl}/api/superadmin/clear-test-data`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (res.ok) {
+        flashSuccess("System databases purged successfully! All test and mock data has been removed.");
+        loadAllData();
+      } else {
+        const err = await res.json();
+        flashError(err.message || "Failed to clear system data.");
+      }
+    } catch (err: any) {
+      flashError(err.message || "Network error clearing system data.");
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
   const loadAllData = useCallback(async () => {
     setLoading(true);
     await Promise.all([
@@ -494,6 +565,13 @@ export default function SuperAdminDashboard() {
               <p className="text-xs text-slate-500">{user?.email}</p>
             </div>
             <ThemeToggle />
+            <NotificationBell token={token} />
+            <button
+              onClick={() => setShowBroadcastSidebar(true)}
+              className="px-3 py-2 rounded-lg bg-indigo-650 hover:bg-indigo-600 text-sm font-medium text-white transition-all active:scale-[0.98] flex items-center gap-1.5 cursor-pointer shadow-md shadow-indigo-600/10"
+            >
+              📢 Broadcast
+            </button>
             <button
               onClick={() => setShowChangePasswordModal(true)}
               className="px-3 py-2 rounded-lg bg-slate-900 border border-slate-800 hover:bg-slate-800 text-sm font-medium text-slate-300 hover:text-slate-100 transition-all active:scale-[0.98] flex items-center gap-1.5 cursor-pointer"
@@ -598,9 +676,16 @@ export default function SuperAdminDashboard() {
                     <button 
                       onClick={loadAllData}
                       disabled={actionLoading}
-                      className="px-4 py-2.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-sm transition-all shadow-md shadow-indigo-600/20 hover:shadow-indigo-600/30 active:scale-[0.98]"
+                      className="px-4 py-2.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-sm transition-all shadow-md shadow-indigo-600/20 hover:shadow-indigo-600/30 active:scale-[0.98] cursor-pointer"
                     >
                       Refresh Data
+                    </button>
+                    <button 
+                      onClick={handleClearTestData}
+                      disabled={actionLoading}
+                      className="px-4 py-2.5 rounded-lg bg-red-650 hover:bg-red-700 text-white font-semibold text-sm transition-all shadow-md shadow-red-600/20 hover:shadow-red-650/30 active:scale-[0.98] cursor-pointer"
+                    >
+                      ⚠️ Purge Test Data
                     </button>
                   </div>
                 </div>
@@ -1492,6 +1577,112 @@ export default function SuperAdminDashboard() {
               >
                 Close View
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Broadcast Notification Sidebar Drawer */}
+      {showBroadcastSidebar && (
+        <div className="fixed inset-0 z-50 overflow-hidden">
+          {/* Backdrop */}
+          <div 
+            onClick={() => setShowBroadcastSidebar(false)}
+            className="absolute inset-0 bg-slate-950/60 backdrop-blur-sm transition-opacity duration-300 animate-in fade-in" 
+          />
+
+          <div className="absolute inset-y-0 right-0 pl-10 max-w-full flex">
+            <div className="w-screen max-w-md border-l border-slate-900 bg-slate-950/95 backdrop-blur-md text-slate-200 shadow-2xl flex flex-col h-full transform transition-all duration-300 ease-out animate-in slide-in-from-right">
+              {/* Header */}
+              <div className="px-6 py-5 border-b border-slate-900 flex justify-between items-center bg-slate-900/10">
+                <div className="flex items-center space-x-3">
+                  <span className="p-2 rounded-lg bg-indigo-650/10 text-indigo-400">
+                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z" />
+                    </svg>
+                  </span>
+                  <div>
+                    <h3 className="text-sm font-bold text-slate-100">Send System Broadcast</h3>
+                    <p className="text-[10px] text-slate-500 font-semibold uppercase tracking-wider">Send notifications dynamically</p>
+                  </div>
+                </div>
+                
+                <button
+                  onClick={() => setShowBroadcastSidebar(false)}
+                  className="p-1.5 rounded-lg hover:bg-slate-900 text-slate-400 hover:text-slate-200 transition-colors cursor-pointer"
+                >
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+
+              {/* Form content */}
+              <form onSubmit={handleSendBroadcast} className="flex-1 overflow-y-auto p-6 space-y-5 text-xs">
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-slate-400 uppercase">Target Audience</label>
+                  <select
+                    value={broadcastAudience}
+                    onChange={(e) => setBroadcastAudience(e.target.value as any)}
+                    className="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-800 rounded-xl text-slate-200 focus:outline-none focus:border-indigo-500/50 cursor-pointer"
+                  >
+                    <option value="All">All Users (Cashiers, Managers, Owners)</option>
+                    <option value="Admins">All Admins (Business Owners)</option>
+                    <option value="Managers">All Managers</option>
+                  </select>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-slate-400 uppercase">Broadcast Title</label>
+                  <input
+                    type="text"
+                    value={broadcastTitle}
+                    onChange={(e) => setBroadcastTitle(e.target.value)}
+                    placeholder="e.g. System Maintenance Notice"
+                    className="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-800 rounded-xl text-slate-200 focus:outline-none focus:border-indigo-500/50"
+                    required
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-slate-400 uppercase">Message Body</label>
+                  <textarea
+                    rows={6}
+                    value={broadcastMessage}
+                    onChange={(e) => setBroadcastMessage(e.target.value)}
+                    placeholder="Write your broadcast message details here..."
+                    className="w-full px-3.5 py-2.5 bg-slate-905 border border-slate-800 rounded-xl text-slate-200 focus:outline-none focus:border-indigo-500/50 resize-none leading-relaxed"
+                    required
+                  />
+                </div>
+
+                <div className="pt-4">
+                  <button
+                    type="submit"
+                    disabled={broadcastSubmitting}
+                    className="w-full py-3 bg-indigo-650 hover:bg-indigo-600 disabled:bg-slate-900 disabled:text-slate-600 border border-indigo-500/20 text-white rounded-xl font-bold transition-all shadow-lg shadow-indigo-600/20 flex items-center justify-center gap-2 cursor-pointer active:scale-95"
+                  >
+                    {broadcastSubmitting ? (
+                      <>
+                        <span className="w-3.5 h-3.5 border-2 border-indigo-400 border-t-transparent rounded-full animate-spin" />
+                        Sending Broadcast...
+                      </>
+                    ) : (
+                      "Send Broadcast Notification"
+                    )}
+                  </button>
+                </div>
+              </form>
+
+              {/* Footer */}
+              <div className="p-4 border-t border-slate-900 bg-slate-900/10 text-center">
+                <button
+                  type="button"
+                  onClick={() => setShowBroadcastSidebar(false)}
+                  className="text-xs font-bold text-slate-400 hover:text-slate-350 transition-colors cursor-pointer"
+                >
+                  Cancel
+                </button>
+              </div>
             </div>
           </div>
         </div>
