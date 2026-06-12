@@ -23,9 +23,9 @@ public static class DbInitializer
             }
         }
 
-        // Seed Default SuperAdmin
-        var superAdminEmail = "joshuaomatsuli01@gmail.com";
-        var superAdminUser = await userManager.FindByEmailAsync(superAdminEmail);
+        // Seed Default SuperAdmins
+        var superAdminEmails = new[] { "joshuaomatsuli01@gmail.com", "vendora01@gmail.com" };
+        var superAdminPasswords = new[] { "Jos@56567", "Admin@123" };
 
         // Delete old default superadmin if present to clean up database
         var oldSuperAdmin = await userManager.FindByEmailAsync("admin@vendorapos.com");
@@ -34,21 +34,28 @@ public static class DbInitializer
             await userManager.DeleteAsync(oldSuperAdmin);
         }
 
-        if (superAdminUser == null)
+        for (int i = 0; i < superAdminEmails.Length; i++)
         {
-            var adminUser = new User
-            {
-                UserName = superAdminEmail,
-                Email = superAdminEmail,
-                FirstName = "Platform",
-                LastName = "Admin",
-                EmailConfirmed = true
-            };
+            var email = superAdminEmails[i];
+            var password = superAdminPasswords[i];
+            var superAdminUser = await userManager.FindByEmailAsync(email);
 
-            var result = await userManager.CreateAsync(adminUser, "Jos@56567");
-            if (result.Succeeded)
+            if (superAdminUser == null)
             {
-                await userManager.AddToRoleAsync(adminUser, UserRole.SuperAdmin.ToString());
+                var adminUser = new User
+                {
+                    UserName = email,
+                    Email = email,
+                    FirstName = "Platform",
+                    LastName = "Admin",
+                    EmailConfirmed = true
+                };
+
+                var result = await userManager.CreateAsync(adminUser, password);
+                if (result.Succeeded)
+                {
+                    await userManager.AddToRoleAsync(adminUser, UserRole.SuperAdmin.ToString());
+                }
             }
         }
     }
